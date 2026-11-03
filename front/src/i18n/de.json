@@ -1,0 +1,400 @@
+{
+  "app": {
+    "titre": "AI-Care Assistant",
+    "sousTitre": "KI-Assistent für Pflegeteams",
+    "donneesFictives": "Fiktive Daten – Demonstration"
+  },
+  "modes": {
+    "titre": "Arbeitsmodus",
+    "alertesEnAttente": "{n} offen",
+    "alarmes": "Alarme",
+    "documents": "Dokumente",
+    "cotisations": "Rentenbeiträge",
+    "garde": "Dienstbericht"
+  },
+  "resident": {
+    "label": "Bewohner",
+    "obligatoire": "(Pflichtfeld)",
+    "placeholder": "Zimmer auswählen…",
+    "option": "Zimmer {chambre} – {resident}"
+  },
+  "modeA": {
+    "titre": "Was möchten Sie tun?",
+    "description": "Wählen Sie ein Zimmer und dann eine Aktion.",
+    "choisirChambre": "Wählen Sie zuerst ein Zimmer aus, um die Aktionen zu aktivieren.",
+    "analyseIA": "Zusätzliche Analyse des KI-Assistenten hinzufügen (die Kontrollregeln antworten immer sofort)",
+    "actions": {
+      "rapportGarde": "Dienstbericht erstellen",
+      "resumeEpa": "ePA-Zusammenfassung",
+      "pointsVigilance": "Aufmerksamkeitspunkte",
+      "verifierDocument": "Dokument prüfen"
+    }
+  },
+  "modeB": {
+    "titre": "Anweisung verfassen",
+    "description": "Formulieren Sie eine Frage zum gewählten Bewohner: Sie wird geprüft, bevor sie an den KI-Assistenten weitergegeben wird.",
+    "consigne": "Ihre Anweisung",
+    "placeholder": "Z. B.: Fasse die wichtigsten Punkte der Nacht für diesen Bewohner zusammen.",
+    "aide": "Ein oder zwei Sätze genügen. Geben Sie keine Namen oder persönlichen Daten ein: Der Bewohner ist bereits ausgewählt.",
+    "compteur": "{n} / {max} Zeichen",
+    "exemplesTitre": "Beispiele (zum Übernehmen anklicken)",
+    "exemples": {
+      "nuit": "Fasse die wichtigsten Punkte der Nacht für diesen Bewohner zusammen.",
+      "medecin": "Was hat sich seit dem letzten Arztbesuch geändert?",
+      "transmission": "Bereite eine Übergabe für das Nachmittagsteam vor.",
+      "hydratation": "Erinnere an die Hinweise zu Ernährung und Flüssigkeitszufuhr."
+    },
+    "envoyer": "Anweisung senden",
+    "choisirResident": "Die Auswahl eines Bewohners ist verpflichtend.",
+    "controle": "Die Anweisung wird geprüft, bevor sie an den KI-Assistenten weitergegeben wird."
+  },
+  "etage": {
+    "titre": "Dienstbericht einer Etage",
+    "aide": "Für jeden Bewohner der Etage wird nacheinander ein Bericht der letzten 12 Stunden vorbereitet. Sie lesen ihn durch und bestätigen anschließend die Etage.",
+    "label": "Etage",
+    "placeholder": "Etage auswählen…",
+    "option": "Etage {etage} – {n} Bewohner",
+    "bouton": "Dienstbericht der Etage",
+    "ouvrirAuto": "Automatischen Bericht von {heure} öffnen ({n} fertig)",
+    "ouvrirRecent": "Letzten Bericht von {heure} öffnen ({n} fertig)",
+    "demarrage": "Bericht der Etage {etage} wird vorbereitet…",
+    "contexte": "Anfrage: Dienstbericht – Etage {etage}, letzte 12 Stunden",
+    "enCours": "{fait} von {total} Berichten fertig: Der KI-Assistent bereitet die nächsten vor…",
+    "termine": "{fait} von {total} Berichten vorbereitet.",
+    "progression": "Fortschritt des Etagenberichts",
+    "carte": "Zimmer {chambre} – {resident}",
+    "erreurResident": "Bericht für diesen Bewohner nicht möglich: {detail}",
+    "relire": "Vom KI-Assistenten erstellte Berichte: Lesen Sie sie durch und korrigieren Sie sie bei Bedarf. Vor der Bestätigung wird nichts gespeichert.",
+    "valider": "Etage bestätigen ({n} Bericht(e))",
+    "confirmation": "✓ {n} Bericht(e) um {heure} bestätigt und gespeichert.",
+    "refuses": "{n} Bericht(e) konnten nicht gespeichert werden (bereits bestätigt oder nicht gefunden).",
+    "annuler": "Vorbereitung abbrechen",
+    "annulationEnCours": "Abbruch… (die laufende Erstellung wird zuerst beendet)",
+    "annulee": "Vorbereitung abgebrochen: {fait} fertige(r) Bericht(e) müssen noch gelesen und bestätigt werden; die übrigen Bewohner wurden nicht bearbeitet.",
+    "interrompue": "Vorbereitung unterbrochen (Server angehalten): {fait} fertige(r) Bericht(e) müssen noch gelesen und bestätigt werden; starten Sie den Etagenbericht für die übrigen neu.",
+    "avecErreurs": "Einige Berichte konnten nicht vorbereitet werden: Starten Sie den Etagenbericht neu oder bearbeiten Sie diese Zimmer einzeln."
+  },
+  "alarmes": {
+    "chambre": "Zimmer {chambre}",
+    "courrier": "Schreiben: {titre} ({expediteur})",
+    "contradictions": "Widersprüche",
+    "ouvrirVerification": "Prüfung öffnen",
+    "voirPage": "Seite Meldungen öffnen",
+    "titre": "Sensoralarme",
+    "entete": "ALARM – {libelle} – Zimmer {chambre}",
+    "acquitter": "Quittieren",
+    "risques": "Bekannte Risiken",
+    "allergies": "Allergien",
+    "medication": "Risikomedikation",
+    "contexte": "Kontext (KI-Assistent)",
+    "contexteEnCours": "Kontext des KI-Assistenten wird vorbereitet… Die obigen Fakten stammen aus der Pflegeakte.",
+    "contexteDiffere": "Kontext des KI-Assistenten nicht vorbereitet: Ein anderer Alarm wird gerade analysiert. Die obigen Fakten stammen aus der Pflegeakte.",
+    "contexteIndisponible": "Kontext des KI-Assistenten nicht verfügbar. Die obigen Fakten stammen aus der Pflegeakte.",
+    "connexionPerdue": "Verbindung zum Server verloren: Die angezeigten Alarme und Dokumente sind möglicherweise nicht mehr aktuell. Neuer Versuch läuft."
+  },
+  "analyse": {
+    "titre": "Zusätzliche Analyse des KI-Assistenten",
+    "enCours": "Zusätzliche Analyse des KI-Assistenten läuft… Das Ergebnis der obigen Kontrollregeln gilt bereits; die Anmerkungen des KI-Assistenten erscheinen hier.",
+    "aConfirmer": "Zu bestätigen:",
+    "rienDeNouveau": "Der KI-Assistent fügt den Kontrollregeln keine Anmerkung hinzu. Das ersetzt nicht die Durchsicht durch die Pflegekraft.",
+    "indisponible": "Zusätzliche Analyse nicht verfügbar: Die obigen Kontrollregeln bleiben gültig.",
+    "annuler": "Zusätzliche Analyse abbrechen",
+    "annulee": "Zusätzliche Analyse abgebrochen: Die obigen Kontrollregeln bleiben gültig.",
+    "interrompue": "Zusätzliche Analyse unterbrochen (Server angehalten): Die obigen Kontrollregeln bleiben gültig.",
+    "desactivee": "Zusätzliche Analyse des KI-Assistenten deaktiviert (Einstellung): Es wurden nur die Kontrollregeln angewendet."
+  },
+  "retirees": {
+    "titre": "Entfernt, da nicht belegt ({n})",
+    "intro": "Diese vom KI-Assistenten vorgeschlagenen Sätze wurden aus dem Text entfernt: Keine Tatsache aus den Quellen stützt sie genau. Sie werden weder gespeichert noch weitergegeben."
+  },
+  "apresValidation": {
+    "rag": "{n} Bericht(e) zu den Wissensquellen hinzugefügt.",
+    "lettreAjoutee": "Das Schreiben ist bestätigt: Es wird zu den Wissensquellen hinzugefügt.",
+    "lettreNonAjoutee": "Das Schreiben wird nicht zu den Wissensquellen hinzugefügt: {motif}.",
+    "transmis": "An das nächste Team weitergegeben ({destinataire}).",
+    "transmissionEchec": "Die Weitergabe an das nächste Team ist fehlgeschlagen: Der Bericht ist bestätigt, aber das nächste Team wurde nicht benachrichtigt.",
+    "erreur": "Der Bericht ist bestätigt, aber das Hinzufügen zu den Wissensquellen und die Weitergabe sind fehlgeschlagen."
+  },
+  "alertes": {
+    "titre": "Meldungen",
+    "types": {
+      "capteur": "Sensoralarm",
+      "contradiction": "Widerspruch zwischen Dokumenten"
+    },
+    "alarmes": {
+      "titre": "Sensoralarme",
+      "description": "Die Alarme der Sensoren (Sturz, Bettausstieg, Ruf) erscheinen hier, sobald sie empfangen werden. Jeder Alarm bleibt sichtbar, bis eine Pflegekraft ihn quittiert.",
+      "enAttente": "Offene Alarme ({n})",
+      "aucune": "Kein Sensoralarm offen.",
+      "historique": "Verlauf (24 Stunden)",
+      "historiqueVide": "In den letzten 24 Stunden wurde kein Alarm quittiert.",
+      "acquitteeA": "quittiert um {heure}"
+    },
+    "documents": {
+      "titre": "Eingegangene Dokumente",
+      "description": "Die über das KIM-Postfach empfangenen Arztbriefe werden gelesen, dem Bewohner anhand von Name und Geburtsdatum zugeordnet und dann von den Sicherheitsregeln geprüft. Neuigkeiten aus der ePA werden hier ebenfalls gemeldet.",
+      "enAttente": "Zu bearbeitende Dokumente ({n})",
+      "aucune": "Kein Dokument offen.",
+      "historique": "Verlauf (24 Stunden)",
+      "historiqueVide": "In den letzten 24 Stunden wurde kein Dokument bearbeitet.",
+      "acquitteeA": "bearbeitet um {heure}"
+    }
+  },
+  "avertissements": {
+    "titre": "Vor der Bestätigung prüfen",
+    "intro": "Die automatischen Kontrollen haben im Text des KI-Assistenten diese Punkte festgestellt:",
+    "voirAutres": "Weitere {n} Punkt(e) anzeigen",
+    "masquer": "Zusätzliche Punkte ausblenden",
+    "types": {
+      "source_inconnue": "Genannte Quelle in den Fakten nicht auffindbar",
+      "phrase_sans_source": "Satz ohne Quelle",
+      "valeur_non_sourcee": "Wert oder Uhrzeit fehlt in den Quellen",
+      "chiffre_hors_source_citee": "Zahl einer Quelle zugeordnet, die sie nicht enthält",
+      "source_probablement_erronee": "Quelle wahrscheinlich falsch",
+      "qualification_non_sourcee": "Vom KI-Assistenten hinzugefügte Bewertung",
+      "terme_non_source": "Begriffe fehlen in den Quellen",
+      "autre_resident": "Erwähnung eines anderen Bewohners",
+      "copie_des_faits": "Aus den Fakten abgeschriebener Text",
+      "repetitions": "Wiederholungen: Das Modell hat sich im Kreis gedreht",
+      "reponse_tronquee": "Antwort wahrscheinlich abgeschnitten",
+      "reponse_vide": "Leere Antwort",
+      "json_invalide": "Antwort des KI-Assistenten fehlerhaft aufgebaut",
+      "json_incomplet": "Antwort des KI-Assistenten unvollständig",
+      "json_incoherent": "Antwort des KI-Assistenten widersprüchlich",
+      "extraction_indisponible": "Lesen des Schreibens durch den KI-Assistenten nicht verfügbar: Es wurden nur die Kontrollregeln angewendet",
+      "comparaison_indisponible": "Vergleich durch den KI-Assistenten nicht verfügbar: Es wurden nur die Kontrollregeln angewendet",
+      "contradiction_modele_ecartee": "Ein vom KI-Assistenten gemeldeter Widerspruch wurde verworfen: Keine Tatsache der Akte stützt ihn",
+      "modele_a_rate": "Der KI-Assistent hat einen von den Kontrollregeln gefundenen Widerspruch nicht erkannt"
+    }
+  },
+  "reponse": {
+    "refusTitre": "Anweisung abgelehnt",
+    "refusAide": "Es wurde nichts an den KI-Assistenten gesendet. Formulieren Sie die Anweisung um (eine Frage zu diesem Bewohner, ohne Diagnose oder Verordnung zu verlangen).",
+    "rienAValider": "Nichts zu bestätigen: Diese Antwort hat keinen gespeicherten Entwurf.",
+    "enCours": "Der KI-Assistent bereitet die Antwort vor…",
+    "erreur": "Die Antwort konnte nicht abgerufen werden. Prüfen Sie die Verbindung und versuchen Sie es erneut.",
+    "erreurEnregistrement": "Das Speichern ist fehlgeschlagen. Ihr Text bleibt erhalten: Versuchen Sie es erneut.",
+    "titre": "Antwort des KI-Assistenten",
+    "vide": "Die Antwort erscheint hier. Sie können sie vor der Bestätigung bearbeiten.",
+    "demandePrete": "Anfrage: {action} – Zimmer {chambre} ({resident})",
+    "consignePrete": "Anweisung für Zimmer {chambre} ({resident}): „{consigne}“",
+    "texteLabel": "Antwort (bearbeitbar)",
+    "modifiee": "• geändert",
+    "sources": "Wissensquellen",
+    "relire": "Vom KI-Assistenten erstellte Antwort: Lesen Sie sie durch und korrigieren Sie sie bei Bedarf vor der Bestätigung.",
+    "valider": "Bestätigen & Speichern",
+    "confirmation": "✓ Antwort um {heure} bestätigt und gespeichert."
+  },
+  "garde": {
+    "titre": "Dienstbericht und Anweisungen",
+    "description": "Wählen Sie einen Bewohner und arbeiten Sie dann mit Schnellaktionen oder einer geführten Anweisung.",
+    "actionsTitre": "Schnellaktionen",
+    "consigneTitre": "Geführte Anweisung",
+    "modes": "Arbeitsmodus"
+  },
+  "documentsPage": {
+    "verifierTitre": "Dokument prüfen",
+    "verifierAide": "Prüft den ausstehenden Arztbrief eines Bewohners. Die Sicherheitsregeln antworten sofort; die zusätzliche Analyse des KI-Assistenten folgt."
+  },
+  "cotisations": {
+    "titre": "Zu bearbeitende Akten",
+    "aide": "Fragebögen pflegender Angehöriger, eingegangen bei der Pflegekasse (Rentenbeiträge, § 3 und § 166 SGB VI, § 44 SGB XI). Der Agent liest, prüft und bereitet vor; Sie entscheiden.",
+    "aucun": "Keine Akte zu bearbeiten.",
+    "chargement": "Akten werden geladen…",
+    "recuLe": "Eingegangen am {date}",
+    "pour": "für {personne}",
+    "lancer": "Agent starten",
+    "traiterTous": "Alle Akten bearbeiten",
+    "traiterTousEnCours": "Akten werden bearbeitet…",
+    "lectureIA": "Lesen durch die KI (hilft beim Lesen des Dokuments; Regeln und Berechnung bleiben Code)",
+    "lectureIASimulee": "Lesen durch die KI: in dieser Demonstration simuliert, die Felder werden von den Regeln gelesen.",
+    "deposer": {
+      "bouton": "Fragebogen hochladen",
+      "aide": "Datei .txt oder PDF mit Text (kein Scan), höchstens 1 MB. Daraus wird eine Akte „zu bearbeiten“.",
+      "enCours": "Upload läuft…",
+      "ok": "Fragebogen hochgeladen: Die Akte ist „zu bearbeiten“.",
+      "tropGros": "Datei zu groß: höchstens 1 MB.",
+      "erreur": "Der Upload ist fehlgeschlagen. Versuchen Sie es erneut."
+    },
+    "lecture": {
+      "ia": "Lesen durch die KI ({modele}, {duree} s): {lus} Feld(er) übernommen, {ecartes} verworfen, da im Text nicht vorhanden. Regeln, Kasse und Berechnung bleiben Code.",
+      "repli": "Die KI konnte das Dokument nicht lesen ({motif}): Stattdessen lesen die Regeln.",
+      "differences": "Anders gelesen als durch die Regeln: {champs}."
+    },
+    "pilote": {
+      "choix": "Steuerung des Agenten",
+      "modele": "KI-Modell",
+      "modeleChoix": "Modell",
+      "nonInstalle": "{nom} (nicht installiert)",
+      "aucunInstalle": "Keines der zulässigen Modelle ist in Ollama installiert: Installieren Sie eines (ollama pull); sonst fällt der Agent auf die geführte Mission zurück.",
+      "guidee": "Geführte Mission",
+      "toursTitre": "Runden des Agenten",
+      "accepte": "Aufruf vom Wächter akzeptiert",
+      "refuse": "Aufruf vom Wächter abgelehnt",
+      "refuseGarde": "Vom Wächter abgelehnt: {motif}",
+      "reflexion": "Das Modell wählt das nächste Werkzeug…",
+      "abandon": "Steuerung durch das Modell abgebrochen: {motif}. Stattdessen wurde die geführte Mission ausgeführt.",
+      "resume": "Gesteuert von {modele}: {tours} Runde(n), {refus} vom Wächter abgelehnte(r) Aufruf(e). Status und Beträge stammen aus dem Code, nie vom Modell.",
+      "completeParCode": "Vom Code ergänzte Schritte: {etapes}.",
+      "compteRendu": "Bericht des Agenten",
+      "aucunCompteRendu": "Das Modell hat keinen Bericht geliefert.",
+      "contradiction": "Der Bericht des Modells widerspricht dem Ergebnis der Regeln: {liste}. Maßgeblich ist das Ergebnis der Regeln.",
+      "revue": "Vom Agenten erstellte Prüfaufgabe: {motif}"
+    },
+    "revueCreee": "Prüfaufgabe erstellt",
+    "erreur": "Der Agent konnte diese Akte nicht bearbeiten. Versuchen Sie es erneut.",
+    "statuts": {
+      "a_traiter": "Zu bearbeiten",
+      "pret_a_valider": "Bereit zur Bestätigung",
+      "exception": "Ausnahme",
+      "valide": "Bestätigt",
+      "refuse": "Abgelehnt"
+    },
+    "resultat": {
+      "titre": "Ergebnis des Agenten",
+      "vide": "Wählen Sie eine Akte und starten Sie dann den Agenten.",
+      "contexte": "Akte {id} – {aidant}, pflegende Person von {personne}",
+      "nonTraite": "Diese Akte wurde vom Agenten noch nicht bearbeitet.",
+      "relancer": "Das Ergebnis wird nicht mehr angezeigt: Starten Sie den Agenten neu, um es erneut zu sehen."
+    },
+    "etapes": {
+      "titre": "Schritte des Agenten",
+      "lire": "Dokument lesen",
+      "extraire": "Felder extrahieren",
+      "controler": "Felder prüfen",
+      "caisse": "Akte der Kasse lesen",
+      "regles": "Regeln prüfen",
+      "calculer": "Beitrag berechnen",
+      "declaration": "Meldung vorbereiten"
+    },
+    "donnees": {
+      "titre": "Extrahierte Daten",
+      "champ": "Feld",
+      "valeur": "Wert",
+      "source": "Quelle",
+      "controleOk": "Alle Pflichtfelder sind vorhanden und gültig.",
+      "controleErreurs": "Zu korrigierende Felder:"
+    },
+    "champs": {
+      "aidant_nom": "Name der Pflegeperson",
+      "aidant_prenom": "Vorname der Pflegeperson",
+      "aidant_naissance": "Geburtsdatum der Pflegeperson",
+      "numero_assurance": "Rentenversicherungsnummer",
+      "nationalite": "Staatsangehörigkeit",
+      "adresse": "Anschrift",
+      "personne_nom": "Name der pflegebedürftigen Person",
+      "personne_prenom": "Vorname der pflegebedürftigen Person",
+      "personne_naissance": "Geburtsdatum der pflegebedürftigen Person",
+      "ref_caisse": "Aktenzeichen der Kasse",
+      "degre": "Pflegegrad (Fragebogen)",
+      "prestation": "Leistung (Fragebogen)",
+      "debut_soins": "Beginn der Pflege",
+      "fin_soins": "Ende der Pflege",
+      "domicile": "Pflege im häuslichen Umfeld",
+      "non_professionnel": "Nicht erwerbsmäßige Pflege",
+      "heures_soins": "Pflegestunden pro Woche (angegeben)",
+      "jours": "Pflegetage pro Woche (angegeben)",
+      "travail_heures": "Arbeitsstunden pro Woche",
+      "travail_variable": "Wechselnde Arbeitszeiten",
+      "nb_emplois": "Anzahl der Beschäftigungen",
+      "retraite_plein": "Vollrente",
+      "part": "Angegebener Pflegeanteil",
+      "degre_caisse": "Pflegegrad (Kasse)",
+      "prestation_caisse": "Leistung (Kasse)",
+      "expertise": "Gutachten des Medizinischen Dienstes"
+    },
+    "regles": {
+      "titre": "Regeln zur Versicherungspflicht",
+      "regle": "Regel",
+      "statut": "Stand",
+      "valeur": "Gelesener Wert",
+      "paragraphe": "Paragraf",
+      "ok": "Regel erfüllt",
+      "non": "Regel nicht erfüllt",
+      "incertain": "Von einer Person zu prüfen",
+      "ecart": "Abweichung",
+      "ecarts": {
+        "degre": "Abweichung: Pflegegrad",
+        "prestation": "Abweichung: Leistung",
+        "personne_nom": "Abweichung: Name der pflegebedürftigen Person",
+        "personne_naissance": "Abweichung: Geburtsdatum der pflegebedürftigen Person",
+        "aidant_nom": "Abweichung: Name der Pflegeperson",
+        "aidant_naissance": "Abweichung: Geburtsdatum der Pflegeperson"
+      }
+    },
+    "calcul": {
+      "titre": "Berechnungsprotokoll",
+      "pasDeCalcul": "Keine Berechnung: Eine Regel ist nicht erfüllt.",
+      "donneesAVerifier": "Betrag nicht berechnet: Daten sind zu prüfen.",
+      "resultat": "Monatlicher Beitrag: {cotisation} (Bemessungsgrundlage {base})"
+    },
+    "declaration": {
+      "titre": "Entwurf der Meldung (§ 44 Abs. 3 SGB XI)",
+      "provisoire": "Vorläufiger Entwurf: Nach der Entscheidung einer Person zu bestätigen.",
+      "aucune": "Keine Meldung: Eine Regel ist nicht erfüllt.",
+      "champs": {
+        "numero_assurance": "Rentenversicherungsnummer",
+        "nom_prenoms": "Name und Vornamen",
+        "date_naissance": "Geburtsdatum",
+        "nationalite": "Staatsangehörigkeit",
+        "adresse": "Anschrift",
+        "periode_soins": "Beginn und Ende der Pflege",
+        "degre": "Pflegegrad",
+        "base_cotisation": "Beitragsbemessungsgrundlage (monatlich)"
+      }
+    },
+    "exception": {
+      "titre": "Ausnahme",
+      "aide": "Der Agent hält hier an: Eine Person muss entscheiden."
+    },
+    "decision": {
+      "titre": "Entscheidung (einer Person vorbehalten)",
+      "valider": "Meldung bestätigen",
+      "revue": "Prüfaufgabe erstellen",
+      "refuser": "Ablehnen",
+      "motif": "Ablehnungsgrund (Pflichtfeld)",
+      "motifPlaceholder": "Z. B.: Im Gutachten nur 8 Pflegestunden pro Woche.",
+      "aideValider": "Nur möglich, wenn alle Regeln erfüllt sind.",
+      "aideRefuser": "Nur nach einer Ausnahme und mit Begründung möglich.",
+      "validee": "✓ Meldung von Ihnen bestätigt. Es wurde nichts an die Kasse übermittelt (Demonstration).",
+      "refusee": "Akte abgelehnt: {motif}",
+      "revueCreee": "Prüfaufgabe erstellt: Die Akte bleibt eine Ausnahme und wird von einer Kollegin oder einem Kollegen weiterbearbeitet.",
+      "erreur": "Die Entscheidung konnte nicht gespeichert werden."
+    },
+    "rappel": "Demonstration mit fiktiven Daten. Die Entscheidungen bleiben menschlich."
+  },
+  "connexion": {
+    "titre": "Anmeldung",
+    "aide": "Melden Sie sich an, um auf den KI-Assistenten für Pflegeteams zuzugreifen.",
+    "identifiant": "Benutzerkennung",
+    "pin": "PIN-Code",
+    "seConnecter": "Anmelden",
+    "enCours": "Prüfung…",
+    "verification": "Sitzung wird geprüft…",
+    "identifiants": "Benutzerkennung oder PIN-Code falsch.",
+    "verrouille": "Zu viele Versuche: Dieses Konto ist 5 Minuten lang gesperrt.",
+    "reseau": "Der Server ist nicht erreichbar. Prüfen Sie, ob er gestartet ist, und versuchen Sie es erneut.",
+    "expiree": "Ihre Sitzung ist abgelaufen oder wurde beendet: Melden Sie sich erneut an.",
+    "aideSimulee": "Simulierter Modus: Kennung demo, PIN-Code 123456 (kein echtes Konto).",
+    "seDeconnecter": "Abmelden",
+    "accroche": "Klare, belegte und von Ihnen geprüfte Übergaben.",
+    "points": {
+      "sources": {
+        "titre": "Jeder Satz hat seine Quelle",
+        "texte": "Was der Assistent schreibt, stammt aus den Akten, nie aus Erfindung."
+      },
+      "validation": {
+        "titre": "Nichts wird ohne Sie gespeichert",
+        "texte": "Eine Pflegekraft liest und bestätigt jeden Bericht: Ihr Name wird festgehalten."
+      },
+      "local": {
+        "titre": "Daten, die hier bleiben",
+        "texte": "Alles läuft auf diesem Rechner, mit fiktiven Demonstrationsdaten."
+      }
+    },
+    "afficherPin": "Code anzeigen",
+    "masquerPin": "Code ausblenden",
+    "sessionDuree": "Ihre Sitzung bleibt 12 Stunden offen oder bis zur Abmeldung.",
+    "connecte": "Angemeldet"
+  }
+}

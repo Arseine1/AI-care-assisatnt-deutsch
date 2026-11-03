@@ -1,0 +1,303 @@
+{
+  "id": "aicaresgb6lister01",
+  "name": "AI-Care – Cotisations : lister les dossiers",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "aicare-sgb6-lister",
+        "responseMode": "lastNode",
+        "options": {
+          "allowedOrigins": "http://localhost:5173,http://localhost:5174,http://localhost:5175,http://127.0.0.1:5173,http://127.0.0.1:5174,http://127.0.0.1:5175"
+        },
+        "authentication": "headerAuth"
+      },
+      "id": "a1c3e000-9001-4000-8000-000000009001",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "aicare-aicare-sgb6-lister",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "aicarecle000000001",
+          "name": "AI-Care clé des webhooks"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id, aidant, personne, statut, revue, to_char(recu_le, 'YYYY-MM-DD') AS recu_le, (resultat IS NOT NULL) AS traite FROM soins.sgb6_dossiers ORDER BY recu_le, id",
+        "options": {
+          "queryReplacement": "={{ [  ] }}"
+        }
+      },
+      "id": "a1c3e000-9002-4000-8000-000000009002",
+      "name": "Dossiers",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        240,
+        0
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "aicarepg00000001",
+          "name": "AI-Care Postgres"
+        }
+      },
+      "executeOnce": true,
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "http://host.docker.internal:11434/api/tags",
+        "options": {
+          "timeout": 8000
+        }
+      },
+      "id": "a1c3e000-9003-4000-8000-000000009003",
+      "name": "Modèles installés (Ollama)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        360,
+        0
+      ],
+      "executeOnce": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Cotisations retraite – liste des dossiers pour l'interface : identifiant, aidant, personne soignée, date de réception, statut.\n// Ni le texte du questionnaire ni le résultat ne partent dans la liste.\nconst lignes = $('Dossiers').all().map((i) => i.json).filter((r) => r.id);\n// modèles permis par la page, et lesquels sont installés dans Ollama (liste /api/tags ; si Ollama ne répond pas : aucun n'est marqué installé)\nconst installes = ($input.first().json?.models ?? []).map((m) => m.name);\nconst modeles = [\"qwen2.5:7b\",\"qwen3:8b\",\"llama3.1:8b\",\"llama3.2\"].map((nom) => ({ nom, installe: installes.some((n) => n === nom || n === `${nom}:latest`) }));\nreturn [\n  {\n    json: {\n      modele: \"qwen2.5:7b\",\n      modeles, // le modèle local qui pilote l'agent (variable d'environnement SGB6_MODELE à la génération)\n      dossiers: lignes.map((r) => ({ id: r.id, aidant: r.aidant, personne_soignee: r.personne, recu_le: r.recu_le, statut: r.statut, revue: r.revue === true, traite: r.traite === true })),\n    },\n  },\n];\n"
+      },
+      "id": "a1c3e000-9004-4000-8000-000000009004",
+      "name": "Liste",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Contrôle de session – le jeton « Bearer » de l'en-tête Authorization (43 caractères URL-safe) est haché (SHA-256) : seul le haché est en base.\nconst entetes = $input.first().json?.headers ?? {};\nconst m = String(entetes.authorization ?? '').match(/^Bearer ([A-Za-z0-9_-]{43})$/);\nif (!m) return [{ json: { hash: '' } }];\nreturn [{ json: { hash: require('crypto').createHash('sha256').update(m[1]).digest('hex') } }];\n"
+      },
+      "id": "a1c3e000-0449-4000-8000-000000000449",
+      "name": "Session (jeton)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        120,
+        -380
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT s.identifiant, g.nom, s.jeton_hash FROM soins.sessions s JOIN soins.soignants g ON g.identifiant = s.identifiant WHERE s.jeton_hash = $1 AND s.expire_le > now() AND g.actif",
+        "options": {
+          "queryReplacement": "={{ [ $json.hash ] }}"
+        }
+      },
+      "id": "a1c3e000-0450-4000-8000-000000000450",
+      "name": "Session (base)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        240,
+        -380
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "aicarepg00000001",
+          "name": "AI-Care Postgres"
+        }
+      },
+      "executeOnce": true,
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Contrôle de session – résultat : un soignant identifié (session ouverte, non expirée, compte actif) ou rien.\nconst r = $input.first().json ?? {};\nif (!r.identifiant) return [{ json: { ok: false } }];\nreturn [{ json: { ok: true, soignant: { identifiant: r.identifiant, nom: r.nom }, jeton_hash: r.jeton_hash } }];\n"
+      },
+      "id": "a1c3e000-0451-4000-8000-000000000451",
+      "name": "Session",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        360,
+        -380
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "Session valide ?",
+              "leftValue": "={{ $json.ok === true }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a1c3e000-0452-4000-8000-000000000452",
+      "name": "Session valide ?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        480,
+        -380
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Contrôle de session – la session est valide : on rend aux nœuds suivants la requête d'origine (en-têtes, corps) telle que reçue.\nreturn [{ json: $('Webhook').first().json }];\n"
+      },
+      "id": "a1c3e000-0453-4000-8000-000000000453",
+      "name": "Requête",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        600,
+        -460
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Contrôle de session – refus : aucune donnée, seulement le motif. L'interface rouvre alors la page de connexion.\nreturn [{ json: { erreur: 'session' } }];\n"
+      },
+      "id": "a1c3e000-0454-4000-8000-000000000454",
+      "name": "Refus (session)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        600,
+        -300
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Session (jeton)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Dossiers": {
+      "main": [
+        [
+          {
+            "node": "Modèles installés (Ollama)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Modèles installés (Ollama)": {
+      "main": [
+        [
+          {
+            "node": "Liste",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Session (jeton)": {
+      "main": [
+        [
+          {
+            "node": "Session (base)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Session (base)": {
+      "main": [
+        [
+          {
+            "node": "Session",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Session": {
+      "main": [
+        [
+          {
+            "node": "Session valide ?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Session valide ?": {
+      "main": [
+        [
+          {
+            "node": "Requête",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Refus (session)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Requête": {
+      "main": [
+        [
+          {
+            "node": "Dossiers",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Berlin"
+  },
+  "pinData": {}
+}

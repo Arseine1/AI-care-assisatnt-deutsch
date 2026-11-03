@@ -1,0 +1,2 @@
+// Alarme de capteur – sujet MQTT inconnu : aucune alarme, une ligne au journal d'audit (sujet nettoyé ; le contenu du message n'est jamais lu).
+return [{ json: { evenement: 'alarme_rejetee', mode: 'a', action: 'alarme_capteur', details: { topic: String($input.first().json.topic ?? '').slice(0, 80) } } }];

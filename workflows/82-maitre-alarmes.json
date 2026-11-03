@@ -1,0 +1,297 @@
+{
+  "id": "aicaremaitrealar1",
+  "name": "AI-Care – Alarmes affichées (liste et acquittement)",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "aicare-alarmes",
+        "responseMode": "lastNode",
+        "options": {
+          "allowedOrigins": "http://localhost:5173,http://localhost:5174,http://localhost:5175,http://127.0.0.1:5173,http://127.0.0.1:5174,http://127.0.0.1:5175"
+        },
+        "authentication": "headerAuth"
+      },
+      "id": "a1c3e000-0276-4000-8000-000000000276",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "aicare-aicare-alarmes",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "aicarecle000000001",
+          "name": "AI-Care clé des webhooks"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Alarmes affichées – contrôle de la demande de l'interface :\n//   { }                          les alarmes non acquittées\n//   { historique: true }         + les alarmes acquittées des 24 dernières heures\n//   { acquitter: \"<uuid>\" }      acquitte une alarme\nconst e = $input.first().json?.body ?? {};\nlet acquitter = '';\nif (e.acquitter !== undefined) {\n  acquitter = String(e.acquitter);\n  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(acquitter)) throw new Error('acquitter : identifiant invalide');\n}\nreturn [{ json: { acquitter, historique: e.historique === true ? 'true' : '' } }];\n"
+      },
+      "id": "a1c3e000-0277-4000-8000-000000000277",
+      "name": "Contrôler la demande",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH a AS (UPDATE soins.alarmes SET statut = 'acquittee', acquittee_le = now() WHERE $1 <> '' AND id = NULLIF($1, '')::uuid AND statut = 'nouvelle' RETURNING id) SELECT id, recue_le, chambre, type, libelle, faits, contexte, statut, acquittee_le FROM soins.alarmes WHERE ((statut = 'nouvelle' AND recue_le > now() - interval '12 hours') OR ($2 = 'true' AND recue_le > now() - interval '24 hours')) AND id NOT IN (SELECT id FROM a) UNION ALL SELECT id, recue_le, chambre, type, libelle, faits, contexte, 'acquittee', acquittee_le FROM soins.alarmes WHERE id IN (SELECT id FROM a) AND $2 = 'true' ORDER BY recue_le DESC LIMIT 40",
+        "options": {
+          "queryReplacement": "={{ [ $json.acquitter, $json.historique ] }}"
+        }
+      },
+      "id": "a1c3e000-0278-4000-8000-000000000278",
+      "name": "Lire les alarmes",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        480,
+        0
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "aicarepg00000001",
+          "name": "AI-Care Postgres"
+        }
+      },
+      "executeOnce": true,
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Alarmes affichées – réponse à l'interface (les alarmes non acquittées des 12 dernières heures, la plus récente d'abord).\nconst lignes = $input.all().map((i) => i.json).filter((r) => r.id);\nreturn [\n  {\n    json: {\n      alarmes: lignes.map((r) => ({\n        id: r.id,\n        recue_le: r.recue_le,\n        chambre: r.chambre,\n        type: r.type,\n        libelle: r.libelle,\n        faits: r.faits,\n        contexte: r.contexte ?? { statut: 'aucun' },\n        statut: r.statut ?? 'nouvelle',\n        acquittee_le: r.acquittee_le ?? null,\n      })),\n    },\n  },\n];\n"
+      },
+      "id": "a1c3e000-0279-4000-8000-000000000279",
+      "name": "Réponse",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Contrôle de session – le jeton « Bearer » de l'en-tête Authorization (43 caractères URL-safe) est haché (SHA-256) : seul le haché est en base.\nconst entetes = $input.first().json?.headers ?? {};\nconst m = String(entetes.authorization ?? '').match(/^Bearer ([A-Za-z0-9_-]{43})$/);\nif (!m) return [{ json: { hash: '' } }];\nreturn [{ json: { hash: require('crypto').createHash('sha256').update(m[1]).digest('hex') } }];\n"
+      },
+      "id": "a1c3e000-0437-4000-8000-000000000437",
+      "name": "Session (jeton)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        120,
+        -380
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT s.identifiant, g.nom, s.jeton_hash FROM soins.sessions s JOIN soins.soignants g ON g.identifiant = s.identifiant WHERE s.jeton_hash = $1 AND s.expire_le > now() AND g.actif",
+        "options": {
+          "queryReplacement": "={{ [ $json.hash ] }}"
+        }
+      },
+      "id": "a1c3e000-0438-4000-8000-000000000438",
+      "name": "Session (base)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        240,
+        -380
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "aicarepg00000001",
+          "name": "AI-Care Postgres"
+        }
+      },
+      "executeOnce": true,
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Contrôle de session – résultat : un soignant identifié (session ouverte, non expirée, compte actif) ou rien.\nconst r = $input.first().json ?? {};\nif (!r.identifiant) return [{ json: { ok: false } }];\nreturn [{ json: { ok: true, soignant: { identifiant: r.identifiant, nom: r.nom }, jeton_hash: r.jeton_hash } }];\n"
+      },
+      "id": "a1c3e000-0439-4000-8000-000000000439",
+      "name": "Session",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        360,
+        -380
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "Session valide ?",
+              "leftValue": "={{ $json.ok === true }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a1c3e000-0440-4000-8000-000000000440",
+      "name": "Session valide ?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        480,
+        -380
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Contrôle de session – la session est valide : on rend aux nœuds suivants la requête d'origine (en-têtes, corps) telle que reçue.\nreturn [{ json: $('Webhook').first().json }];\n"
+      },
+      "id": "a1c3e000-0441-4000-8000-000000000441",
+      "name": "Requête",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        600,
+        -460
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Contrôle de session – refus : aucune donnée, seulement le motif. L'interface rouvre alors la page de connexion.\nreturn [{ json: { erreur: 'session' } }];\n"
+      },
+      "id": "a1c3e000-0442-4000-8000-000000000442",
+      "name": "Refus (session)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        600,
+        -300
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Session (jeton)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Contrôler la demande": {
+      "main": [
+        [
+          {
+            "node": "Lire les alarmes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lire les alarmes": {
+      "main": [
+        [
+          {
+            "node": "Réponse",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Session (jeton)": {
+      "main": [
+        [
+          {
+            "node": "Session (base)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Session (base)": {
+      "main": [
+        [
+          {
+            "node": "Session",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Session": {
+      "main": [
+        [
+          {
+            "node": "Session valide ?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Session valide ?": {
+      "main": [
+        [
+          {
+            "node": "Requête",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Refus (session)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Requête": {
+      "main": [
+        [
+          {
+            "node": "Contrôler la demande",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Berlin"
+  },
+  "pinData": {}
+}

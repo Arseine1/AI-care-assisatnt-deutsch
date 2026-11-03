@@ -1,0 +1,25 @@
+Eingangsstempel Pflegekasse: 14.10.2026
+Fragebogen Rentenversicherung Pflegeperson (Beispieldaten, frei erfunden)
+
+Aktenzeichen der Pflegekasse: PK-2026-0108
+Name, Vorname der Pflegeperson: Fischer, Lena
+Geburtsdatum der Pflegeperson: 17.03.1985
+Rentenversicherungsnummer: 36170385F719
+Staatsangehörigkeit: deutsch
+Anschrift: Birkenstraße 15, 28195 Bremen
+
+Name, Vorname der pflegebedürftigen Person: Fischer, Otto
+Geburtsdatum der pflegebedürftigen Person: 13.02.1947
+Pflegegrad: 1
+Art der Leistung: Pflegegeld
+
+Beginn der Pflegetätigkeit: 01.05.2026
+Pflege zu Hause (häuslich): Ja
+Pflege unentgeltlich (nicht erwerbsmäßig): Ja
+Pflegezeit pro Woche (Stunden): 11
+Pflegetage pro Woche: 4
+Weitere Pflegepersonen: keine
+
+Erwerbstätigkeit, Stunden pro Woche: 10
+Arbeitszeit variabel: Nein
+Bezug einer Vollrente wegen Alters: Nein

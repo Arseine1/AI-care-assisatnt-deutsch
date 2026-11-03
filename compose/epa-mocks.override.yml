@@ -1,0 +1,29 @@
+# Ajustements pour faire tourner les mocks ePA de gematik (epa-deployment) sur un poste de 8 Go :
+# la mémoire de chaque JVM est plafonnée. À utiliser avec le fichier d'origine :
+#   docker compose -f epa-deployment/dc-mocks.yml -f epa-mocks.override.yml up -d <services>
+services:
+  medication-service:
+    environment:
+      - JAVA_TOOL_OPTIONS=-Xmx640m
+      # Le service de rendu de l'eML lit UNE seule page de MedicationRequest puis filtre par patient :
+      # avec 20 résultats par page (défaut), les ordonnances des autres patients masquent celles du patient demandé.
+      - HAPI_FHIR_DEFAULT_PAGE_SIZE=500
+      - HAPI_FHIR_MAX_PAGE_SIZE=500
+  medication-render-service:
+    environment:
+      - JAVA_TOOL_OPTIONS=-Xmx384m
+  information-service:
+    environment:
+      - JAVA_TOOL_OPTIONS=-Xmx384m
+  entitlement-service:
+    environment:
+      - JAVA_TOOL_OPTIONS=-Xmx256m
+  authorization-service:
+    environment:
+      - JAVA_TOOL_OPTIONS=-Xmx384m
+  vau-proxy-server:
+    environment:
+      - JAVA_TOOL_OPTIONS=-Xmx384m
+  tiger-proxy:
+    environment:
+      - JAVA_TOOL_OPTIONS=-Xmx384m

@@ -1,0 +1,338 @@
+{
+  "id": "aicaremoi0000001",
+  "name": "AI-Care – Session (qui suis-je, déconnexion)",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "aicare-moi",
+        "responseMode": "lastNode",
+        "options": {
+          "allowedOrigins": "http://localhost:5173,http://localhost:5174,http://localhost:5175,http://127.0.0.1:5173,http://127.0.0.1:5174,http://127.0.0.1:5175"
+        },
+        "authentication": "headerAuth"
+      },
+      "id": "a1c3e000-0328-4000-8000-000000000328",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "aicare-aicare-moi",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "aicarecle000000001",
+          "name": "AI-Care clé des webhooks"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "Déconnexion ?",
+              "leftValue": "={{ $json.body?.deconnexion === true }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a1c3e000-0329-4000-8000-000000000329",
+      "name": "Déconnexion ?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "DELETE FROM soins.sessions WHERE jeton_hash = $1 RETURNING identifiant",
+        "options": {
+          "queryReplacement": "={{ [ $('Session').first().json.jeton_hash ] }}"
+        }
+      },
+      "id": "a1c3e000-0330-4000-8000-000000000330",
+      "name": "Fermer la session",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        480,
+        -120
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "aicarepg00000001",
+          "name": "AI-Care Postgres"
+        }
+      },
+      "executeOnce": true,
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { ok: true } }];\n"
+      },
+      "id": "a1c3e000-0331-4000-8000-000000000331",
+      "name": "Réponse déconnexion",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        -120
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Session – « qui suis-je » : le soignant de la session en cours (l'interface s'en sert au rechargement de la page).\nreturn [{ json: { soignant: $('Session').first().json.soignant } }];\n"
+      },
+      "id": "a1c3e000-0332-4000-8000-000000000332",
+      "name": "Réponse moi",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Contrôle de session – le jeton « Bearer » de l'en-tête Authorization (43 caractères URL-safe) est haché (SHA-256) : seul le haché est en base.\nconst entetes = $input.first().json?.headers ?? {};\nconst m = String(entetes.authorization ?? '').match(/^Bearer ([A-Za-z0-9_-]{43})$/);\nif (!m) return [{ json: { hash: '' } }];\nreturn [{ json: { hash: require('crypto').createHash('sha256').update(m[1]).digest('hex') } }];\n"
+      },
+      "id": "a1c3e000-0443-4000-8000-000000000443",
+      "name": "Session (jeton)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        120,
+        -380
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT s.identifiant, g.nom, s.jeton_hash FROM soins.sessions s JOIN soins.soignants g ON g.identifiant = s.identifiant WHERE s.jeton_hash = $1 AND s.expire_le > now() AND g.actif",
+        "options": {
+          "queryReplacement": "={{ [ $json.hash ] }}"
+        }
+      },
+      "id": "a1c3e000-0444-4000-8000-000000000444",
+      "name": "Session (base)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        240,
+        -380
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "aicarepg00000001",
+          "name": "AI-Care Postgres"
+        }
+      },
+      "executeOnce": true,
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Contrôle de session – résultat : un soignant identifié (session ouverte, non expirée, compte actif) ou rien.\nconst r = $input.first().json ?? {};\nif (!r.identifiant) return [{ json: { ok: false } }];\nreturn [{ json: { ok: true, soignant: { identifiant: r.identifiant, nom: r.nom }, jeton_hash: r.jeton_hash } }];\n"
+      },
+      "id": "a1c3e000-0445-4000-8000-000000000445",
+      "name": "Session",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        360,
+        -380
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "Session valide ?",
+              "leftValue": "={{ $json.ok === true }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a1c3e000-0446-4000-8000-000000000446",
+      "name": "Session valide ?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        480,
+        -380
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Contrôle de session – la session est valide : on rend aux nœuds suivants la requête d'origine (en-têtes, corps) telle que reçue.\nreturn [{ json: $('Webhook').first().json }];\n"
+      },
+      "id": "a1c3e000-0447-4000-8000-000000000447",
+      "name": "Requête",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        600,
+        -460
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Contrôle de session – refus : aucune donnée, seulement le motif. L'interface rouvre alors la page de connexion.\nreturn [{ json: { erreur: 'session' } }];\n"
+      },
+      "id": "a1c3e000-0448-4000-8000-000000000448",
+      "name": "Refus (session)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        600,
+        -300
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Session (jeton)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Déconnexion ?": {
+      "main": [
+        [
+          {
+            "node": "Fermer la session",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Réponse moi",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fermer la session": {
+      "main": [
+        [
+          {
+            "node": "Réponse déconnexion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Session (jeton)": {
+      "main": [
+        [
+          {
+            "node": "Session (base)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Session (base)": {
+      "main": [
+        [
+          {
+            "node": "Session",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Session": {
+      "main": [
+        [
+          {
+            "node": "Session valide ?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Session valide ?": {
+      "main": [
+        [
+          {
+            "node": "Requête",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Refus (session)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Requête": {
+      "main": [
+        [
+          {
+            "node": "Déconnexion ?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Berlin"
+  },
+  "pinData": {}
+}

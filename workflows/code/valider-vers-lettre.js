@@ -1,0 +1,2 @@
+// Valider un rapport de vérification – seule la validation d'un rapport « Vérifier le document » peut faire entrer la lettre dans le RAG.
+return [{ json: { validation_id: $input.first().json.validation_id } }];

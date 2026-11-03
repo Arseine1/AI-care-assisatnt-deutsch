@@ -1,0 +1,247 @@
+{
+  "id": "aicarebrqredig01",
+  "name": "AI-Care – Brique rédiger",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "id": "a1c3e000-0077-4000-8000-000000000077",
+      "name": "Entrée",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Brique « rédiger » – préparation de l'appel au modèle de langue (Ollama), température 0,1.\n// L'entrée est la sortie du template (champ « prompt ») : aucun autre texte n'est envoyé à l'IA.\nconst e = $input.first().json;\nif (typeof e.prompt !== 'string' || !e.prompt.includes('[RÔLE ET RÈGLES]') || !e.prompt.includes('[FORMAT DE SORTIE]')) {\n  throw new Error('Prompt non verrouillé : seul le template peut fournir le texte envoyé à l\\'IA.');\n}\n// Modèle intégré à la génération (workflows/generer.mjs, variable d'environnement AICARE_MODELE).\nconst MODELE = \"llama3.2\";\n// Nombre de threads de calcul laissés à Ollama (AICARE_THREADS, 3 par défaut) : sur un poste de 4 coeurs, en garder au moins un libre pour n8n et PostgreSQL\n// évite qu'une alarme de capteur attende la fin d'une génération (voir docs/vitesse.md).\nconst THREADS = 3;\n\n// Sortie « phrases » : Ollama IMPOSE ce schéma JSON à la génération (sortie structurée), pas seulement le prompt.\n// source_id est limité aux identifiants des faits réellement fournis ; minItems oblige à écrire plusieurs phrases\n// (sans cela, un petit modèle s'arrête après la première). Le filtre retire ensuite tout ce qui n'est pas appuyé.\nconst idsFaits = (e.faits ?? []).map((f) => f.id);\nconst schemaPhrases = {\n  type: 'object',\n  properties: {\n    phrases: {\n      type: 'array',\n      minItems: Math.min(4, idsFaits.length || 1, e.max_phrases ?? 8),\n      maxItems: e.max_phrases ?? 8,\n      items: {\n        type: 'object',\n        // clés d'une lettre : chaque clé est réécrite à chaque phrase, et le modèle écrit ~3 mots par seconde sur ce poste\n        // r = rubrique, t = texte de la phrase, f = identifiant du fait\n        properties: {\n          r: { type: 'string', enum: (e.sections ?? []).length ? e.sections.map((s) => s.cle) : ['-'] },\n          t: { type: 'string', maxLength: e.longueur_phrase ?? 220 }, // 140 coupait des phrases en plein mot\n          f: idsFaits.length ? { type: 'string', enum: idsFaits } : { type: 'string' },\n        },\n        required: ['r', 't', 'f'],\n      },\n    },\n  },\n  required: ['phrases'],\n};\nconst format = e.sortie === 'phrases' ? schemaPhrases : e.sortie === 'json' ? 'json' : undefined;\n\nconst body = {\n  model: MODELE,\n  prompt: e.prompt,\n  stream: false,\n  keep_alive: '30m', // le modèle reste chargé 30 minutes : pas de rechargement entre deux rapports d'un même étage\n  // repeat_penalty : sans lui, un petit modèle à température basse peut boucler en répétant les mêmes lignes.\n  // num_predict : une réponse en phrases JSON est plus longue qu'un texte brut (clés répétées).\n  options: { temperature: e.temperature ?? 0.1, num_thread: THREADS, num_ctx: 4096, num_predict: e.sortie === 'phrases' ? 450 : 500, seed: 42, repeat_penalty: 1.2, repeat_last_n: 128 },\n  ...(format ? { format } : {}),\n};\nreturn [{ json: { ...e, modele: MODELE, body } }];\n"
+      },
+      "id": "a1c3e000-0078-4000-8000-000000000078",
+      "name": "Préparer appel",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "sendBody": true,
+        "specifyBody": "json",
+        "method": "POST",
+        "url": "http://host.docker.internal:11434/api/generate",
+        "jsonBody": "={{ JSON.stringify($json.body) }}",
+        "options": {
+          "timeout": 1800000
+        }
+      },
+      "id": "a1c3e000-0079-4000-8000-000000000079",
+      "name": "Modèle de langue (Ollama)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Brique « rédiger » – contrôle automatique de la réponse de l'IA, AVANT affichage au soignant.\n// Aucun contrôle ne remplace la relecture humaine ; ils signalent ce qui n'est pas dans les sources :\n//   source_inconnue      une source entre crochets qui n'existe pas dans les faits\n//   phrase_sans_source   une ligne (une phrase) sans source\n//   valeur_non_sourcee   un nombre ou une heure absent des faits\n//   chiffre_hors_source_citee   un chiffre qui existe dans les faits, mais pas dans la source citée sur sa ligne\n//   source_probablement_erronee  la ligne ressemble surtout à un fait d'une AUTRE source que celle citée\n//   autre_resident       le nom ou la chambre d'un autre résident\n//   json_invalide        sortie JSON stricte non respectée\nconst rep = $input.first().json;\nconst ctx = $('Préparer appel').first().json;\nconst faits = ctx.faits ?? [];\nlet texte = String(rep.response ?? '').trim();\nconst avertissements = [];\n// Un même avertissement n'est noté qu'une fois (une réponse qui boucle en produirait des dizaines).\nconst signale = (type, detail) => {\n  if (!avertissements.some((a) => a.type === type && a.detail === detail)) avertissements.push({ type, detail });\n};\nconst normaliser = (s) => String(s).normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').toLowerCase();\n\nif (!texte) signale('reponse_vide', 'L\\'IA n\\'a rien répondu.');\n\n// ======================================================================================================\n// SORTIE « PHRASES » – filtre anti-invention (code, sans IA)\n// Le modèle renvoie des phrases JSON {section, phrase, source_id}. Une phrase n'entre dans le texte que si :\n//   - son source_id désigne un fait réellement fourni ;\n//   - chaque chiffre, dose, heure et date qu'elle contient figure dans CE fait ;\n//   - chaque médicament qu'elle nomme figure dans CE fait ;\n//   - elle ne contient aucun jugement (« élevé », « important »…) que ce fait ne formule pas ;\n//   - ses mots de contenu sont, pour l'essentiel, ceux de CE fait ;\n//   - elle ne parle pas d'un autre résident.\n// Les phrases refusées sont RETIRÉES du texte et renvoyées à part (« retirees ») avec leur motif.\n// ======================================================================================================\nconst retirees = [];\nconst corrections = []; // phrases rattachées au bon fait par le code (le modèle s'était trompé d'identifiant)\nif (ctx.sortie === 'phrases') {\n  const MOTS_NEUTRES = new Set(['resident', 'residente', 'information', 'disponible', 'aucune', 'aucun', 'pendant', 'depuis', 'durant', 'ensuite', 'egalement', 'notamment', 'present', 'presente', 'signale', 'signalee', 'constate', 'constatee', 'observe', 'observee', 'indique', 'indiquee', 'releve', 'mentionne', 'mentionnee', 'enregistre', 'enregistree', 'prevu', 'prevue', 'realise', 'realisee', 'effectue', 'effectuee', 'apres', 'avant', 'toutes', 'toutes', 'heures', 'minutes', 'surveillance']);\n  const SUFFIXES_MEDICAMENTS = /(cilline|cillin|cycline|mycine|floxacine|azole|prazole|pril|sartan|olol|dipine|statine|statin|formine|gliptine|parine|xaban|gatran|coumarol|profene|fenac|codone|morphine|tramadol|paracetamol|metamizol|novalgin|insuline|insulin|semide|spironolacton|thyroxine|azepam|peridol|peridone|mirtazapin|citalopram|sertralin|donepezil|memantin|levodopa|clopidogrel|digoxin|amiodaron|methotrexat|prednisolon|prednison|cortison|warfarin|marcumar|aspirin|macrogol|lactulos|salbutamol|ibuprofen|diclofenac|naproxen|metoprolol|torasemid|furosemid|pantoprazol|omeprazol)/;\n  const QUALIFICATIFS = ['anormal', 'anormale', 'anormaux', 'eleve', 'elevee', 'elevees', 'bas', 'basse', 'normal', 'normale', 'normaux', 'preoccupant', 'preoccupante', 'inquietant', 'inquietante', 'alarmant', 'alarmante', 'grave', 'severe', 'critique', 'dangereux', 'dangereuse', 'important', 'importante', 'importants', 'importantes', 'significatif', 'significative', 'majeur', 'majeure', 'excessif', 'excessive', 'insuffisant', 'insuffisante', 'satisfaisant', 'satisfaisante', 'bon', 'bonne', 'mauvais', 'mauvaise', 'stable', 'amelioration', 'aggravation', 'deterioration', 'legere', 'leger', 'moderee', 'modere'];\n\n  const echapper = (s) => s.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&');\n  const mots = (s) => normaliser(s).split(/[^a-z0-9]+/).filter(Boolean);\n  const racine6 = (w) => w.slice(0, 6);\n  // « 7h17 », « 07:17 », « 07h17 » : une seule écriture ; « 36,8 » et « 36.8 » aussi.\n  const uniformise = (s) => normaliser(s).replace(/(\\d{1,2})\\s*[:h]\\s*(\\d{2})(?!\\d)/g, (_, h, m) => `${h.padStart(2, '0')}h${m}`).replace(/(\\d),(\\d)/g, '$1.$2');\n  const nombresDe = (s) => uniformise(s).match(/\\d+(?:[./]\\d+)*(?:h\\d{2})?/g) ?? [];\n\n  const infoFait = (f) => {\n    const brut = `${f.texte} ${f.date_affichee ?? ''}`;\n    const u = uniformise(brut);\n    return { fait: f, u, nombres: new Set(nombresDe(brut)), liste: mots(brut), mots: new Set(mots(brut)), racines: new Set(mots(brut).filter((w) => w.length >= 6).map(racine6)) };\n  };\n  const infos = new Map(faits.map((f) => [f.id, infoFait(f)]));\n\n  // médicaments connus : noms suivis d'une dose dans N'IMPORTE QUEL fait (plan de médication, ePA, hôpital)\n  const medicamentsConnus = new Set();\n  for (const f of faits) {\n    for (const m of String(f.texte).matchAll(/([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ-]{3,})\\s+\\d+(?:[.,]\\d+)?\\s*(?:mg|g|µg|mcg|ml|ie|ui)\\b/gi)) medicamentsConnus.add(racine6(normaliser(m[1])));\n  }\n  const estMedicament = (w) => w.length >= 6 && (SUFFIXES_MEDICAMENTS.test(w) || medicamentsConnus.has(racine6(w)));\n\n  const motifs = { source_inconnue: 'Identifiant de fait inexistant', valeur_absente: 'Valeur, heure ou date absente du fait cité', medicament_absent: 'Médicament absent du fait cité', jugement_non_source: 'Jugement que le fait cité ne formule pas', termes_absents: 'Termes absents du fait cité', negation_alteree: 'Négation ajoutée ou perdue par rapport au fait cité', autre_resident: 'Mention d\\'un autre résident', doublon: 'Phrase en double', rubrique_inconnue: 'Rubrique inconnue', phrase_vide: 'Phrase vide ou trop longue' };\n\n  // 1. lecture du JSON ; s'il a été coupé (limite de longueur), on récupère les phrases complètes une à une\n  let liste = null;\n  try {\n    const o = JSON.parse(texte);\n    liste = Array.isArray(o) ? o : o?.phrases;\n  } catch { /* récupération ci-dessous */ }\n  if (!Array.isArray(liste)) {\n    liste = [...texte.matchAll(/\\{[^{}]*\\}/g)].map((m) => { try { return JSON.parse(m[0]); } catch { return null; } }).filter((x) => x && typeof x === 'object' && ('t' in x || 'phrase' in x));\n    signale('json_invalide', liste.length ? `JSON coupé ou mal formé : ${liste.length} phrase(s) récupérée(s).` : 'La réponse n\\'est pas un JSON valide.');\n  }\n\n  const sections = ctx.sections ?? [];\n  const cles = new Set(sections.map((s) => s.cle));\n  const gardees = [];\n  const vues = new Set();\n  const nomsAutres = (ctx.autres?.noms ?? []).map(normaliser);\n  const chambresAutres = ctx.autres?.chambres ?? [];\n\n  for (const el of liste) {\n    const phrase = String(el?.t ?? el?.phrase ?? '').replace(/\\[[^\\]]*\\]/g, '').replace(/\\s+/g, ' ').trim();\n    const source_id = String(el?.f ?? el?.source_id ?? '').trim().toUpperCase();\n    const section = String(el?.r ?? el?.section ?? '-').trim();\n    if (/^information non disponible\\.?$/i.test(phrase)) continue; // le code affiche lui-même « information non disponible »\n    const refuse = (...codes) => retirees.push({ phrase: phrase.slice(0, 400), source_id: source_id || null, section, motifs: codes.map((c) => ({ code: c, libelle: motifs[c] })), detail: codes.map((c) => detailsParCode[c]).filter(Boolean).join(' ; ') });\n    const detailsParCode = {};\n\n    if (!phrase || phrase.length > 400) { refuse('phrase_vide'); continue; }\n    if (sections.length ? !cles.has(section) : false) { refuse('rubrique_inconnue'); continue; }\n    const info = infos.get(source_id);\n    if (!info) { detailsParCode.source_inconnue = `« ${source_id || 'vide'} » n'est pas un fait fourni`; refuse('source_inconnue'); continue; }\n    const cle = normaliser(phrase).replace(/[^a-z0-9]+/g, ' ').trim();\n    if (vues.has(cle)) { refuse('doublon'); continue; }\n\n    // Évalue la phrase par rapport à UN fait : liste des codes de refus (vide = la phrase est appuyée par ce fait).\n    const evaluer = (info) => {\n    const codes = [];\n    const detailsParCode = {};\n    // valeurs : chaque nombre, dose, heure ou date doit figurer dans le fait cité\n    const absentsValeurs = [];\n    for (const n of new Set(nombresDe(phrase))) {\n      const jj = /^(\\d{1,2})\\/(\\d{1,2})$/.test(n) ? n.replace('/', '.') : null; // « 24/10 » ~ « 24.10 »\n      const ok = info.nombres.has(n) || (jj && info.u.includes(jj)) || new RegExp(`(?<![\\\\d])${echapper(n)}(?![\\\\d])`).test(info.u);\n      if (!ok) absentsValeurs.push(n);\n    }\n    if (absentsValeurs.length) { codes.push('valeur_absente'); detailsParCode.valeur_absente = `${absentsValeurs.join(', ')} absent(s) de ${info.fait.id}`; }\n    // médicaments\n    const motsPhrase = mots(phrase);\n    const medicamentsAbsents = [...new Set(motsPhrase.filter((w) => estMedicament(w) && !info.racines.has(racine6(w))))];\n    if (medicamentsAbsents.length) { codes.push('medicament_absent'); detailsParCode.medicament_absent = `${medicamentsAbsents.join(', ')} absent(s) de ${info.fait.id}`; }\n    // jugements\n    const jugements = [...new Set(motsPhrase.filter((w) => QUALIFICATIFS.includes(w) && !info.mots.has(w)))];\n    if (jugements.length) { codes.push('jugement_non_source'); detailsParCode.jugement_non_source = `« ${jugements.join(', ')} » n'est pas dans ${info.fait.id}`; }\n    // négations : une phrase ne peut ni ajouter une négation que le fait n'a pas, ni perdre celle du fait\n    // (« pas de perte de connaissance » ne doit jamais devenir « perte de connaissance »)\n    {\n      const NEG = new Set(['sans', 'pas', 'aucun', 'aucune', 'jamais', 'absence', 'ni']);\n      const dansFait = info.liste;\n      // « pas de » et « sans » sont équivalents. Une négation de la phrase est « ajoutée » si les mots qu'elle porte\n      // existent dans le fait mais n'y sont jamais précédés d'une négation.\n      const ajoutees = [];\n      motsPhrase.forEach((w, j) => {\n        if (!NEG.has(w)) return;\n        for (const suivant of motsPhrase.slice(j + 1, j + 4).filter((x) => x.length >= 4 && !NEG.has(x))) {\n          const positions = dansFait.map((x, i) => (racine6(x) === racine6(suivant) ? i : -1)).filter((i) => i >= 0);\n          if (positions.length && !positions.some((i) => dansFait.slice(Math.max(0, i - 4), i + 5).some((x) => NEG.has(x)))) ajoutees.push(suivant);\n        }\n      });\n      const perdues = [];\n      dansFait.forEach((w, i) => {\n        if (!NEG.has(w)) return;\n        for (const suivant of dansFait.slice(i + 1, i + 4).filter((x) => x.length >= 4 && !NEG.has(x))) {\n          motsPhrase.forEach((mp, j) => {\n            if (racine6(mp) === racine6(suivant) && !motsPhrase.slice(Math.max(0, j - 4), j).some((x) => NEG.has(x))) perdues.push(suivant);\n          });\n        }\n      });\n      if (ajoutees.length || perdues.length) {\n        codes.push('negation_alteree');\n        detailsParCode.negation_alteree = ajoutees.length ? `négation « ${ajoutees.join(', ')} » absente de ${info.fait.id}` : `la négation de ${info.fait.id} est perdue (« ${[...new Set(perdues)].join(', ')} »)`;\n      }\n    }\n    // couverture des mots de contenu : l'essentiel de la phrase doit venir du fait cité\n    const contenu = [...new Set(motsPhrase.filter((w) => w.length >= 6 && !MOTS_NEUTRES.has(w) && !/\\d/.test(w)))];\n    const absentsContenu = contenu.filter((w) => !info.racines.has(racine6(w)) && !info.mots.has(w));\n    if (absentsContenu.length >= 1 && absentsContenu.length / Math.max(contenu.length, 1) >= 0.3) { codes.push('termes_absents'); detailsParCode.termes_absents = `${absentsContenu.join(', ')} absent(s) de ${info.fait.id}`; }\n    // un autre résident\n    const autre = nomsAutres.find((n) => new RegExp(`\\\\b${n}\\\\b`).test(normaliser(phrase))) ?? ([...phrase.matchAll(/chambre\\s*(?:n°\\s*)?(\\d+)/gi)].map((m) => m[1]).find((c) => chambresAutres.includes(c)) && 'une autre chambre');\n    if (autre) { codes.push('autre_resident'); detailsParCode.autre_resident = String(autre); }\n\n    return { codes, detailsParCode, motsPhrase, contenu, absentsContenu };\n    };\n\n    let evalue = evaluer(info);\n    let attribuee = info;\n    if (evalue.codes.length) {\n      // Mauvais identifiant de fait (fréquent avec un petit modèle) : si UN AUTRE fait appuie entièrement la phrase\n      // (mêmes contrôles, zéro refus et au moins un mot de contenu ou un nombre en commun), elle lui est rattachée.\n      const candidats = [...infos.values()].filter((x) => x !== info).map((x) => ({ x, e: evaluer(x) })).filter(({ x, e }) => {\n        if (e.codes.length || e.absentsContenu.length) return false; // le fait doit couvrir TOUS les mots de contenu de la phrase\n        const communs = e.contenu.filter((w) => x.racines.has(racine6(w)) || x.mots.has(w)).length;\n        return communs >= 3; // rattachement seulement si la phrase est nettement le texte de ce fait (3 mots de contenu au moins)\n      });\n      const score = ({ x, e }) => e.contenu.filter((w) => x.racines.has(racine6(w)) || x.mots.has(w)).length;\n      candidats.sort((a, b) => score(b) - score(a));\n      if (candidats.length) { attribuee = candidats[0].x; evalue = candidats[0].e; corrections.push({ phrase: phrase.slice(0, 200), de: source_id, vers: attribuee.fait.id }); }\n    }\n    Object.assign(detailsParCode, evalue.detailsParCode);\n    if (evalue.codes.length) { refuse(...evalue.codes); continue; }\n    vues.add(cle);\n    gardees.push({ section: sections.length ? section : '-', phrase, fait: attribuee.fait });\n  }\n\n  // 2. le texte est assemblé par le CODE : phrase + source du fait cité, entre crochets\n  const ligne = ({ phrase, fait }) => `${phrase.replace(/[\\s.]+$/, '')}. [${fait.label}]`;\n  texte = sections.length\n    ? sections.map((s) => { const l = gardees.filter((g) => g.section === s.cle).map(ligne); return `${s.titre}\\n${l.length ? l.join('\\n') : 'information non disponible.'}`; }).join('\\n')\n    : gardees.length ? gardees.map(ligne).join('\\n') : 'information non disponible.';\n}\n\n// Réponse arrêtée par la limite de longueur : la dernière phrase est probablement coupée.\nif (rep.done_reason === 'length') signale('reponse_tronquee', 'La réponse a atteint la limite de longueur et est probablement incomplète.');\n// Une réponse qui se répète (même ligne plusieurs fois) est le signe d'une boucle du modèle.\n{\n  const lignes = texte.split(/\\n+/).map((l) => l.trim()).filter((l) => l.length > 20 && !/^information non disponible/i.test(l));\n  const doublons = lignes.length - new Set(lignes).size;\n  if (doublons >= 2) signale('repetitions', `${doublons} lignes répétées : le modèle a probablement bouclé.`);\n}\n// Recopie des lignes de faits (« [source] 23.10. 06h08 – … ») : ce n'est pas un texte rédigé.\nif (/\\[[^\\]\\n]{2,80}\\]\\s*\\d{2}\\.\\d{2}\\.\\s*\\d{1,2}h\\d{2}\\s*[–-]/.test(texte)) {\n  signale('copie_des_faits', 'La réponse recopie les lignes de faits au lieu de les reformuler.');\n}\n\nconst corpus = normaliser(faits.map((f) => `${f.texte} ${f.date_affichee ?? ''} ${ctx.patient?.chambre ?? ''} ${ctx.patient?.naissance ?? ''}`).join(' \\n '));\nconst sourcesAutorisees = new Set(faits.map((f) => f.label));\nconst NON_DISPO = /information non disponible/i;\n\nif (ctx.sortie === 'json') {\n  let objet = null;\n  try {\n    objet = JSON.parse(texte);\n  } catch {\n    signale('json_invalide', 'La réponse n\\'est pas un JSON valide.');\n  }\n  // schéma : toutes les clés demandées par le prompt doivent être présentes (sinon la suite du traitement serait faussée)\n  if (objet !== null) {\n    if (typeof objet !== 'object' || Array.isArray(objet)) signale('json_incomplet', 'La réponse doit être un objet JSON.');\n    else {\n      for (const cle of ctx.cles_json ?? []) if (!(cle in objet)) signale('json_incomplet', `clé manquante : ${cle}`);\n      // chaque élément des listes déclarées doit porter toutes ses clés (ex. gravite, sources…)\n      for (const [liste, cles] of Object.entries(ctx.listes_json ?? {})) {\n        if (!Array.isArray(objet[liste])) continue;\n        objet[liste].forEach((el, i) => {\n          for (const cle of cles) if (!el || typeof el !== 'object' || !(cle in el)) signale('json_incomplet', `${liste}[${i}] : clé manquante « ${cle} »`);\n        });\n      }\n      // cohérence : « aucune_contradiction » doit refléter la liste, quoi qu'ait écrit le modèle\n      if (Array.isArray(objet.contradictions) && 'aucune_contradiction' in objet && objet.aucune_contradiction !== (objet.contradictions.length === 0)) {\n        signale('json_incoherent', `aucune_contradiction vaut ${objet.aucune_contradiction} mais la liste contient ${objet.contradictions.length} contradiction(s)`);\n      }\n    }\n  }\n} else if (texte) {\n  // 1. sources citées\n  for (const c of new Set([...texte.matchAll(/\\[([^\\]\\n]{2,80})\\]/g)].map((m) => m[1]))) {\n    if (!sourcesAutorisees.has(c)) signale('source_inconnue', c);\n  }\n  // 2. une ligne = une phrase avec sa source (les titres et les « information non disponible » sont tolérés)\n  const nombres = (s) => s.replace(/^\\s*\\d+[.)]\\s+/, '').match(/\\d+(?:[.,:h]\\d+)*(?:\\/\\d+)?/g) ?? [];\n  // mots de 5 lettres ou plus (sans accents) : sert à retrouver de quelle source vient une ligne\n  const motsDe = (s) => new Set(normaliser(s).split(/[^a-z0-9]+/).filter((w) => w.length >= 5));\n  const motsFaits = faits.map((f) => ({ label: f.label, mots: motsDe(f.texte) }));\n  const absents = new Set();\n  for (const n of new Set(nombres(texte.replace(/^\\s*\\d+[.)]\\s+/gm, '')))) {\n    // 3. un nombre ou une heure de la réponse doit exister dans les faits\n    if (!corpus.includes(normaliser(n))) {\n      absents.add(n);\n      signale('valeur_non_sourcee', n);\n    }\n  }\n  for (const ligne of texte.split(/\\n+/).map((l) => l.trim()).filter(Boolean)) {\n    const mots = ligne.split(/\\s+/).length;\n    if (mots < 5 || /:\\s*$/.test(ligne) || NON_DISPO.test(ligne)) continue;\n    const cites = [...new Set([...ligne.matchAll(/\\[([^\\]\\n]{2,80})\\]/g)].map((m) => m[1]))];\n    if (!cites.length) {\n      signale('phrase_sans_source', ligne.slice(0, 120));\n      continue;\n    }\n    // 4. les chiffres d'une ligne doivent se trouver dans les faits des sources que cette ligne cite\n    const corpusCite = normaliser(faits.filter((f) => cites.includes(f.label)).map((f) => `${f.texte} ${f.date_affichee ?? ''}`).join(' \\n '));\n    const sansCitation = ligne.replace(/\\[[^\\]]*\\]/g, '');\n    for (const n of new Set(nombres(sansCitation))) {\n      if (!absents.has(n) && !corpusCite.includes(normaliser(n))) signale('chiffre_hors_source_citee', `${n} cité avec [${cites.join(', ')}]`);\n    }\n    // 5. attribution : le fait le plus proche de la ligne (mots communs) doit venir d'une source citée\n    const motsLigne = motsDe(sansCitation);\n    if (motsLigne.size >= 3) {\n      const score = (f) => [...motsLigne].filter((w) => f.mots.has(w)).length / motsLigne.size;\n      // part des mots de la ligne expliquée par l'ENSEMBLE des faits des sources citées\n      const motsCites = new Set(motsFaits.filter((f) => cites.includes(f.label)).flatMap((f) => [...f.mots]));\n      const couvertureCitee = [...motsLigne].filter((w) => motsCites.has(w)).length / motsLigne.size;\n      const meilleur = motsFaits\n        .filter((f) => !cites.includes(f.label))\n        .reduce((a, f) => (score(f) > a.s ? { label: f.label, s: score(f) } : a), { label: null, s: 0 });\n      // signalé seulement si les sources citées expliquent mal la ligne ET qu'un fait d'une autre source l'explique au moins aussi bien\n      if (couvertureCitee < 0.8 && meilleur.s >= 0.5 && meilleur.s >= couvertureCitee) {\n        signale('source_probablement_erronee', `« ${ligne.slice(0, 70)}… » semble venir de [${meilleur.label}], citée : [${cites.join(', ')}]`);\n      }\n    }\n  }\n  // 5. un seul résident\n  const t = normaliser(texte);\n  for (const nom of ctx.autres?.noms ?? []) {\n    if (new RegExp(`\\\\b${normaliser(nom)}\\\\b`).test(t)) signale('autre_resident', nom);\n  }\n  for (const m of texte.matchAll(/chambre\\s*(?:n°\\s*)?(\\d+)/gi)) {\n    if ((ctx.autres?.chambres ?? []).includes(m[1])) signale('autre_resident', `chambre ${m[1]}`);\n  }\n  // 7. termes de contenu (5 lettres et plus) qui n'existent dans AUCUN fait : paraphrase ou invention\n  //    (« contrôle prévu », « évaluation »). On ne signale une ligne que si plusieurs termes lui manquent.\n  const MOTS_DE_STRUCTURE = new Set(['resident', 'residente', 'information', 'disponible']);\n  const motsTousFaits = new Set(motsFaits.flatMap((f) => [...f.mots]));\n  for (const ligne of texte.split(/\\n+/).map((l) => l.trim()).filter(Boolean)) {\n    const sansCitation = ligne.replace(/\\[[^\\]]*\\]/g, '');\n    if (NON_DISPO.test(sansCitation) || /:\\s*$/.test(ligne) || ligne.split(/\\s+/).length < 5) continue; // titres de rubrique exclus\n    const mots6 = [...motsDe(sansCitation)].filter((w) => w.length >= 5 && !MOTS_DE_STRUCTURE.has(w));\n    const absentsFaits = mots6.filter((w) => !motsTousFaits.has(w) && !/^\\d/.test(w));\n    if (absentsFaits.length >= 2 && absentsFaits.length / Math.max(mots6.length, 1) >= 0.3) {\n      signale('terme_non_source', `« ${absentsFaits.join(', ')} » n'apparaît dans aucun fait (ligne : ${ligne.slice(0, 60)}…)`);\n    }\n  }\n  // 6. qualifications que l'IA ajoute de son propre chef (« pouls anormal », « tension élevée ») : un jugement\n  //    clinique n'est acceptable que si un fait le formule.\n  const QUALIFICATIFS = ['anormal', 'anormale', 'anormaux', 'eleve', 'elevee', 'elevees', 'bas', 'basse', 'normal', 'normale', 'normaux', 'preoccupant', 'preoccupante', 'inquietant', 'inquietante', 'alarmant', 'alarmante', 'grave', 'severe', 'critique', 'dangereux', 'dangereuse'];\n  for (const q of QUALIFICATIFS) {\n    const motEntier = new RegExp(`\\\\b${q}\\\\b`);\n    if (motEntier.test(t) && !motEntier.test(corpus)) signale('qualification_non_sourcee', q);\n  }\n}\n\nreturn [\n  {\n    json: {\n      texte,\n      avertissements,\n      retirees,\n      corrections,\n      modele: ctx.modele,\n      duree_ms: Math.round((rep.total_duration ?? 0) / 1e6),\n      tokens: rep.eval_count ?? null,\n    },\n  },\n];\n"
+      },
+      "id": "a1c3e000-0080-4000-8000-000000000080",
+      "name": "Contrôler la réponse",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO soins.brouillons (patient_id, mode, action, consigne, prompt_id, prompt_version, modele, texte_ia, faits, avertissements, retirees) VALUES ($1, $2, NULLIF($3, ''), NULLIF($4, ''), $5, $6, $7, $8, $9::jsonb, $10::jsonb, $11::jsonb) RETURNING id",
+        "options": {
+          "queryReplacement": "={{ [ $('Préparer appel').first().json.patient.patient_id, $('Préparer appel').first().json.mode ?? 'a', $('Préparer appel').first().json.action ?? $('Préparer appel').first().json.prompt_id, $('Préparer appel').first().json.consigne ?? '', $('Préparer appel').first().json.prompt_id, $('Préparer appel').first().json.prompt_version, $json.modele, $json.texte, JSON.stringify($('Préparer appel').first().json.faits.map(f => ({ id: f.id, label: f.label, texte: f.texte, date: f.date, ref: f.ref }))), JSON.stringify($json.avertissements), JSON.stringify($json.retirees ?? []) ] }}"
+        }
+      },
+      "id": "a1c3e000-0081-4000-8000-000000000081",
+      "name": "Créer le brouillon",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        960,
+        0
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "aicarepg00000001",
+          "name": "AI-Care Postgres"
+        }
+      },
+      "executeOnce": true,
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "jsCode": "// Brique « rédiger » – résultat renvoyé à l'appelant : le brouillon (jamais une validation).\nconst ctx = $('Préparer appel').first().json;\nconst c = $('Contrôler la réponse').first().json;\nconst b = $('Créer le brouillon').first().json;\nreturn [\n  {\n    json: {\n      brouillon_id: b.id,\n      texte: c.texte,\n      avertissements: c.avertissements,\n      retirees: c.retirees ?? [],\n      patient: ctx.patient,\n      mode: ctx.mode ?? 'a',\n      action: ctx.action ?? ctx.prompt_id,\n      prompt_id: ctx.prompt_id,\n      prompt_version: ctx.prompt_version,\n      modele: c.modele,\n      duree_ms: c.duree_ms,\n      tokens: c.tokens,\n      sources: [...new Set(ctx.faits.map((f) => f.label))],\n      faits: ctx.faits.map((f) => ({ id: f.id, label: f.label, texte: f.texte, date: f.date, ref: f.ref })),\n    },\n  },\n];\n"
+      },
+      "id": "a1c3e000-0082-4000-8000-000000000082",
+      "name": "Résultat du brouillon",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Brique « rédiger » – événement d'audit « generation » (sans le texte : il est dans le brouillon).\nconst s = $input.first().json;\nreturn [\n  {\n    json: {\n      evenement: 'generation',\n      patient_id: s.patient.patient_id,\n      mode: s.mode,\n      action: s.action,\n      prompt_id: s.prompt_id,\n      prompt_version: s.prompt_version,\n      modele: s.modele,\n      duree_ms: s.duree_ms,\n      details: {\n        brouillon_id: s.brouillon_id,\n        nb_faits: s.faits.length,\n        avertissements: s.avertissements.map((a) => a.type),\n        nb_phrases_retirees: (s.retirees ?? []).length,\n        tokens: s.tokens,\n      },\n    },\n  },\n];\n"
+      },
+      "id": "a1c3e000-0083-4000-8000-000000000083",
+      "name": "Événement",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1440,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "value": "aicarebrqjourn01",
+          "mode": "id"
+        },
+        "mode": "once",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "a1c3e000-0084-4000-8000-000000000084",
+      "name": "Journal",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1680,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: $('Résultat du brouillon').first().json }];\n"
+      },
+      "id": "a1c3e000-0085-4000-8000-000000000085",
+      "name": "Réponse",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1920,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Entrée": {
+      "main": [
+        [
+          {
+            "node": "Préparer appel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Préparer appel": {
+      "main": [
+        [
+          {
+            "node": "Modèle de langue (Ollama)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Modèle de langue (Ollama)": {
+      "main": [
+        [
+          {
+            "node": "Contrôler la réponse",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Contrôler la réponse": {
+      "main": [
+        [
+          {
+            "node": "Créer le brouillon",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Créer le brouillon": {
+      "main": [
+        [
+          {
+            "node": "Résultat du brouillon",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Résultat du brouillon": {
+      "main": [
+        [
+          {
+            "node": "Événement",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Événement": {
+      "main": [
+        [
+          {
+            "node": "Journal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Journal": {
+      "main": [
+        [
+          {
+            "node": "Réponse",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Berlin"
+  },
+  "pinData": {}
+}

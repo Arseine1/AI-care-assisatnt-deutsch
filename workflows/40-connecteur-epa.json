@@ -1,0 +1,453 @@
+{
+  "id": "aicareimpepa00001",
+  "name": "AI-Care – Connecteur ePA",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 30 0,6,12,18 * * *"
+            }
+          ]
+        }
+      },
+      "id": "a1c3e000-0039-4000-8000-000000000039",
+      "name": "Planification",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        -200
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "a1c3e000-0040-4000-8000-000000000040",
+      "name": "Démarrage manuel",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "import-epa",
+        "responseMode": "lastNode",
+        "options": {
+          "allowedOrigins": "http://localhost:5173,http://localhost:5174,http://localhost:5175,http://127.0.0.1:5173,http://127.0.0.1:5174,http://127.0.0.1:5175"
+        },
+        "authentication": "headerAuth"
+      },
+      "id": "a1c3e000-0041-4000-8000-000000000041",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        200
+      ],
+      "webhookId": "aicare-import-epa",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "aicarecle000000001",
+          "name": "AI-Care clé des webhooks"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT patient_id, civilite, prenom, nom, chambre, fhir_id, kvnr FROM soins.v_correspondance",
+        "options": {}
+      },
+      "id": "a1c3e000-0042-4000-8000-000000000042",
+      "name": "Correspondance",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        260,
+        100
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "aicarepg00000001",
+          "name": "AI-Care Postgres"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Connecteur « ePA » (mocks gematik, accès direct sans VAU) : diagnostics et liste de médication (eML) en FHIR JSON.\n// On lit le FHIR plutôt que le rendu XHTML : l'encodage des accents y est correct.\n// Le mock ne sait pas chercher par patient : on lit tout puis on filtre sur le KVNR (voir epa-docs.js).\nconst BASE = 'http://host.docker.internal:8084/fhir';\nreturn [\n  { json: { type: 'Condition', url: `${BASE}/Condition?_count=500` } },\n  { json: { type: 'MedicationRequest', url: `${BASE}/MedicationRequest?_count=500&_include=MedicationRequest:medication` } },\n];\n"
+      },
+      "id": "a1c3e000-0043-4000-8000-000000000043",
+      "name": "Requêtes ePA",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        500,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/fhir+json"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 120000,
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "a1c3e000-0044-4000-8000-000000000044",
+      "name": "Lire l'ePA",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        740,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Connecteur « ePA » : diagnostics et eML -> texte, un document par résident et par type, source « ePA ».\n// Les patients des exemples de gematik (KVNR inconnu de la maison) sont ignorés.\nconst parKvnr = {};\nfor (const { json: r } of $('Correspondance').all()) parKvnr[r.kvnr] = r;\n\nconst etiquette = (r) => `${r.civilite} ${r.prenom} ${r.nom} (chambre ${r.chambre})`;\nconst jour = (d) => new Date(d).toLocaleDateString('fr-FR', { timeZone: 'Europe/Berlin' });\nconst kvnrDe = (r) => r.subject?.identifier?.value;\n\nconst conditions = [];\nconst ordonnances = [];\nconst medicaments = {};\nfor (const { json: bundle } of $input.all()) {\n  for (const e of bundle.entry ?? []) {\n    const r = e.resource;\n    if (r.resourceType === 'Condition') conditions.push(r);\n    else if (r.resourceType === 'MedicationRequest') ordonnances.push(r);\n    else if (r.resourceType === 'Medication') medicaments[`Medication/${r.id}`] = r;\n  }\n}\n\nconst parPatient = {};\nconst range = (kvnr) => (parPatient[kvnr] ??= { diag: [], med: [] });\nfor (const c of conditions) if (parKvnr[kvnrDe(c)]) range(kvnrDe(c)).diag.push(c);\nfor (const o of ordonnances) if (parKvnr[kvnrDe(o)]) range(kvnrDe(o)).med.push(o);\n\nconst docs = [];\nfor (const [kvnr, { diag, med }] of Object.entries(parPatient)) {\n  const p = parKvnr[kvnr];\n  const commun = {\n    collection: 'patients',\n    source: 'epa',\n    source_label: 'ePA',\n    patient_id: p.patient_id,\n    chambre: p.chambre,\n    patient_label: etiquette(p),\n  };\n\n  if (diag.length) {\n    const maj = diag.map((c) => c.meta?.lastUpdated).filter(Boolean).sort().pop();\n    docs.push({\n      ...commun,\n      type: 'diagnostic',\n      titre: 'Diagnostics (ePA)',\n      texte: `Diagnostics du dossier ePA de ${etiquette(p)} :\\n${diag\n        .map((c) => `- ${c.code?.text ?? 'diagnostic'}${c.code?.coding?.[0]?.code ? ` (CIM-10 ${c.code.coding[0].code})` : ''}`)\n        .sort()\n        .join('\\n')}`,\n      source_ref: `epa/${kvnr}/diagnostics`,\n      date: new Date(maj ?? Date.now()).toISOString(),\n    });\n  }\n\n  if (med.length) {\n    const lignes = med.map((o) => {\n      const m = medicaments[o.medicationReference?.reference];\n      const nom = m?.code?.text ?? m?.code?.coding?.[0]?.display ?? 'médicament';\n      const dose = o.dosageInstruction?.[0]?.text ?? 'posologie non précisée';\n      const note = o.note?.[0]?.text ? ` Remarque : ${o.note[0].text}` : '';\n      return `- ${nom} : ${dose} (prescrit le ${jour(o.authoredOn)}).${note}`;\n    });\n    const maj = med.map((o) => o.authoredOn).filter(Boolean).sort().pop();\n    docs.push({\n      ...commun,\n      type: 'medication',\n      titre: 'Liste de médication eML (ePA)',\n      texte: `Liste de médication (eML) du dossier ePA de ${etiquette(p)} :\\n${lignes.sort().join('\\n')}`,\n      source_ref: `epa/${kvnr}/eml`,\n      date: new Date(maj ?? Date.now()).toISOString(),\n    });\n  }\n}\nreturn docs.map((json) => ({ json }));\n"
+      },
+      "id": "a1c3e000-0045-4000-8000-000000000045",
+      "name": "Documents ePA",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        980,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "value": "aicareindexeur01",
+          "mode": "id"
+        },
+        "mode": "once",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "a1c3e000-0046-4000-8000-000000000046",
+      "name": "Indexer",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1220,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO soins.alarmes (topic, chambre, type, libelle, patient_id, faits, contexte) SELECT 'epa/' || n.patient_id || '/' || to_char(now(), 'YYYYMMDDHH24MI'), r.chambre, 'document', 'Nouveauté dans l''ePA', n.patient_id, jsonb_build_object('gravite', 'info', 'resident', r.civilite || ' ' || r.prenom || ' ' || r.nom, 'chambre', r.chambre, 'etage', r.etage, 'source', 'ePA', 'courrier', jsonb_build_object('titre', 'Contenu nouveau ou modifié dans l''ePA', 'expediteur', 'ePA', 'date', now())), '{\"statut\":\"aucun\"}'::jsonb FROM (SELECT DISTINCT patient_id FROM soins.journal_imports WHERE source = 'epa' AND importe_le > now() - interval '15 minutes') n JOIN soins.residents r ON r.patient_id = n.patient_id WHERE EXISTS (SELECT 1 FROM soins.journal_imports j WHERE j.source = 'epa' AND j.patient_id = n.patient_id AND j.importe_le <= now() - interval '15 minutes') ON CONFLICT (topic) WHERE type = 'document' DO NOTHING RETURNING id",
+        "options": {}
+      },
+      "id": "a1c3e000-0047-4000-8000-000000000047",
+      "name": "Nouveautés ePA",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1460,
+        100
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "aicarepg00000001",
+          "name": "AI-Care Postgres"
+        }
+      },
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Contrôle de session – le jeton « Bearer » de l'en-tête Authorization (43 caractères URL-safe) est haché (SHA-256) : seul le haché est en base.\nconst entetes = $input.first().json?.headers ?? {};\nconst m = String(entetes.authorization ?? '').match(/^Bearer ([A-Za-z0-9_-]{43})$/);\nif (!m) return [{ json: { hash: '' } }];\nreturn [{ json: { hash: require('crypto').createHash('sha256').update(m[1]).digest('hex') } }];\n"
+      },
+      "id": "a1c3e000-0351-4000-8000-000000000351",
+      "name": "Session (jeton)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        120,
+        -180
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT s.identifiant, g.nom, s.jeton_hash FROM soins.sessions s JOIN soins.soignants g ON g.identifiant = s.identifiant WHERE s.jeton_hash = $1 AND s.expire_le > now() AND g.actif",
+        "options": {
+          "queryReplacement": "={{ [ $json.hash ] }}"
+        }
+      },
+      "id": "a1c3e000-0352-4000-8000-000000000352",
+      "name": "Session (base)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        240,
+        -180
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "aicarepg00000001",
+          "name": "AI-Care Postgres"
+        }
+      },
+      "executeOnce": true,
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Contrôle de session – résultat : un soignant identifié (session ouverte, non expirée, compte actif) ou rien.\nconst r = $input.first().json ?? {};\nif (!r.identifiant) return [{ json: { ok: false } }];\nreturn [{ json: { ok: true, soignant: { identifiant: r.identifiant, nom: r.nom }, jeton_hash: r.jeton_hash } }];\n"
+      },
+      "id": "a1c3e000-0353-4000-8000-000000000353",
+      "name": "Session",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        360,
+        -180
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "Session valide ?",
+              "leftValue": "={{ $json.ok === true }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a1c3e000-0354-4000-8000-000000000354",
+      "name": "Session valide ?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        480,
+        -180
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Contrôle de session – la session est valide : on rend aux nœuds suivants la requête d'origine (en-têtes, corps) telle que reçue.\nreturn [{ json: $('Webhook').first().json }];\n"
+      },
+      "id": "a1c3e000-0355-4000-8000-000000000355",
+      "name": "Requête",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        600,
+        -260
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Contrôle de session – refus : aucune donnée, seulement le motif. L'interface rouvre alors la page de connexion.\nreturn [{ json: { erreur: 'session' } }];\n"
+      },
+      "id": "a1c3e000-0356-4000-8000-000000000356",
+      "name": "Refus (session)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        600,
+        -100
+      ]
+    }
+  ],
+  "connections": {
+    "Planification": {
+      "main": [
+        [
+          {
+            "node": "Correspondance",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Démarrage manuel": {
+      "main": [
+        [
+          {
+            "node": "Correspondance",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Session (jeton)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Correspondance": {
+      "main": [
+        [
+          {
+            "node": "Requêtes ePA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Requêtes ePA": {
+      "main": [
+        [
+          {
+            "node": "Lire l'ePA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lire l'ePA": {
+      "main": [
+        [
+          {
+            "node": "Documents ePA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Documents ePA": {
+      "main": [
+        [
+          {
+            "node": "Indexer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Indexer": {
+      "main": [
+        [
+          {
+            "node": "Nouveautés ePA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Session (jeton)": {
+      "main": [
+        [
+          {
+            "node": "Session (base)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Session (base)": {
+      "main": [
+        [
+          {
+            "node": "Session",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Session": {
+      "main": [
+        [
+          {
+            "node": "Session valide ?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Session valide ?": {
+      "main": [
+        [
+          {
+            "node": "Requête",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Refus (session)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Requête": {
+      "main": [
+        [
+          {
+            "node": "Correspondance",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Berlin"
+  },
+  "pinData": {}
+}

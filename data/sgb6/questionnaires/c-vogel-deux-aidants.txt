@@ -1,0 +1,30 @@
+Pflegekasse Sonnenhof (Beispiel)            Eingangsstempel: 07.10.2026
+Fragebogen Rentenversicherung von Pflegepersonen – (Beispieldaten, frei erfunden)
+
+Aktenzeichen der Pflegekasse: PK-2026-0103
+
+Name, Vorname der Pflegeperson: Vogel, Katrin
+Geburtsdatum der Pflegeperson: 08.10.1968
+Rentenversicherungsnummer: 13081068V617
+Staatsangehörigkeit: deutsch
+Anschrift: Gartenstraße 3, 70173 Stuttgart
+
+Name, Vorname der pflegebedürftigen Person: Vogel, Helga
+Geburtsdatum der pflegebedürftigen Person: 04.12.1940
+Pflegegrad: 4
+Leistung: Pflegegeld
+
+Beginn der Pflegetätigkeit: 01.01.2025
+Pflege zu Hause (häuslich): Ja
+Pflege unentgeltlich (nicht erwerbsmäßig): Ja
+Pflegezeit pro Woche (Stunden): 14
+Pflegetage pro Woche: 5
+
+Wir teilen die Pflege unter Geschwistern auf.
+Anteil der Pflegeperson an der Pflege: 60 %
+Weitere Pflegepersonen:
+- Vogel, Jan (Bruder) – 40 %
+
+Erwerbstätigkeit, Stunden pro Woche: 25
+Arbeitszeit variabel: Nein
+Bezug einer Vollrente wegen Alters: Nein

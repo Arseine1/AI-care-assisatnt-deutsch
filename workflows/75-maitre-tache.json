@@ -1,0 +1,297 @@
+{
+  "id": "aicaremaitretac01",
+  "name": "AI-Care – Avancement d'une tâche",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "aicare-tache",
+        "responseMode": "lastNode",
+        "options": {
+          "allowedOrigins": "http://localhost:5173,http://localhost:5174,http://localhost:5175,http://127.0.0.1:5173,http://127.0.0.1:5174,http://127.0.0.1:5175"
+        },
+        "authentication": "headerAuth"
+      },
+      "id": "a1c3e000-0187-4000-8000-000000000187",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "aicare-aicare-tache",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "aicarecle000000001",
+          "name": "AI-Care clé des webhooks"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Avancement d'une tâche – contrôle de la demande de l'interface :\n//   { tache_id }                  une tâche précise (identifiant UUID)\n//   { etage, recent: true }       le dernier rapport d'étage des 16 dernières heures (par exemple celui de 5h30)\nconst e = $input.first().json?.body ?? {};\nif (e.recent === true) {\n  const etage = Number(e.etage);\n  if (!Number.isInteger(etage) || etage < 0 || etage > 20) throw new Error('étage invalide');\n  return [{ json: { tache_id: '', etage: String(etage) } }];\n}\nconst id = String(e.tache_id ?? '');\nif (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) throw new Error('tache_id invalide');\nreturn [{ json: { tache_id: id, etage: '' } }];\n"
+      },
+      "id": "a1c3e000-0188-4000-8000-000000000188",
+      "name": "Contrôler la tâche",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id, type, statut, total, fait, parametres, cree_le, resultat FROM soins.taches WHERE ($1 <> '' AND id = NULLIF($1, '')::uuid) OR ($1 = '' AND type = 'rapport_garde_etage' AND parametres->>'etage' = $2 AND cree_le > now() - interval '16 hours') ORDER BY cree_le DESC LIMIT 1",
+        "options": {
+          "queryReplacement": "={{ [ $json.tache_id, $json.etage ] }}"
+        }
+      },
+      "id": "a1c3e000-0189-4000-8000-000000000189",
+      "name": "Lire la tâche",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        480,
+        0
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "aicarepg00000001",
+          "name": "AI-Care Postgres"
+        }
+      },
+      "executeOnce": true,
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Avancement d'une tâche – réponse à l'interface.\nconst demande = $('Contrôler la tâche').first().json;\nconst t = $input.first().json ?? {};\nif (!t.id) {\n  if (demande.etage) return [{ json: { tache_id: null } }]; // « le dernier rapport de l'étage » : il n'y en a pas\n  throw new Error('Tâche introuvable');\n}\nreturn [\n  {\n    json: {\n      tache_id: t.id,\n      type: t.type,\n      statut: t.statut,\n      total: t.total,\n      fait: t.fait,\n      automatique: t.parametres?.automatique === true,\n      cree_le: t.cree_le,\n      resultat: t.resultat ?? [],\n    },\n  },\n];\n"
+      },
+      "id": "a1c3e000-0190-4000-8000-000000000190",
+      "name": "Réponse",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Contrôle de session – le jeton « Bearer » de l'en-tête Authorization (43 caractères URL-safe) est haché (SHA-256) : seul le haché est en base.\nconst entetes = $input.first().json?.headers ?? {};\nconst m = String(entetes.authorization ?? '').match(/^Bearer ([A-Za-z0-9_-]{43})$/);\nif (!m) return [{ json: { hash: '' } }];\nreturn [{ json: { hash: require('crypto').createHash('sha256').update(m[1]).digest('hex') } }];\n"
+      },
+      "id": "a1c3e000-0406-4000-8000-000000000406",
+      "name": "Session (jeton)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        120,
+        -380
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT s.identifiant, g.nom, s.jeton_hash FROM soins.sessions s JOIN soins.soignants g ON g.identifiant = s.identifiant WHERE s.jeton_hash = $1 AND s.expire_le > now() AND g.actif",
+        "options": {
+          "queryReplacement": "={{ [ $json.hash ] }}"
+        }
+      },
+      "id": "a1c3e000-0407-4000-8000-000000000407",
+      "name": "Session (base)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        240,
+        -380
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "aicarepg00000001",
+          "name": "AI-Care Postgres"
+        }
+      },
+      "executeOnce": true,
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Contrôle de session – résultat : un soignant identifié (session ouverte, non expirée, compte actif) ou rien.\nconst r = $input.first().json ?? {};\nif (!r.identifiant) return [{ json: { ok: false } }];\nreturn [{ json: { ok: true, soignant: { identifiant: r.identifiant, nom: r.nom }, jeton_hash: r.jeton_hash } }];\n"
+      },
+      "id": "a1c3e000-0408-4000-8000-000000000408",
+      "name": "Session",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        360,
+        -380
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "Session valide ?",
+              "leftValue": "={{ $json.ok === true }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a1c3e000-0409-4000-8000-000000000409",
+      "name": "Session valide ?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        480,
+        -380
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Contrôle de session – la session est valide : on rend aux nœuds suivants la requête d'origine (en-têtes, corps) telle que reçue.\nreturn [{ json: $('Webhook').first().json }];\n"
+      },
+      "id": "a1c3e000-0410-4000-8000-000000000410",
+      "name": "Requête",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        600,
+        -460
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Contrôle de session – refus : aucune donnée, seulement le motif. L'interface rouvre alors la page de connexion.\nreturn [{ json: { erreur: 'session' } }];\n"
+      },
+      "id": "a1c3e000-0411-4000-8000-000000000411",
+      "name": "Refus (session)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        600,
+        -300
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Session (jeton)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Contrôler la tâche": {
+      "main": [
+        [
+          {
+            "node": "Lire la tâche",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lire la tâche": {
+      "main": [
+        [
+          {
+            "node": "Réponse",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Session (jeton)": {
+      "main": [
+        [
+          {
+            "node": "Session (base)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Session (base)": {
+      "main": [
+        [
+          {
+            "node": "Session",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Session": {
+      "main": [
+        [
+          {
+            "node": "Session valide ?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Session valide ?": {
+      "main": [
+        [
+          {
+            "node": "Requête",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Refus (session)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Requête": {
+      "main": [
+        [
+          {
+            "node": "Contrôler la tâche",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Berlin"
+  },
+  "pinData": {}
+}

@@ -1,0 +1,694 @@
+{
+  "id": "aicarealarmecap01",
+  "name": "AI-Care – Alarme de capteur (MQTT)",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "topics": "capteurs/+/+",
+        "options": {}
+      },
+      "id": "a1c3e000-0253-4000-8000-000000000253",
+      "name": "Alarme MQTT",
+      "type": "n8n-nodes-base.mqttTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "credentials": {
+        "mqtt": {
+          "id": "aicaremqtt0000001",
+          "name": "AI-Care MQTT"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "topics": "v3/TTN_APPLICATION/devices/+/up",
+        "options": {
+          "jsonParseBody": true
+        }
+      },
+      "id": "a1c3e000-0254-4000-8000-000000000254",
+      "name": "Alarme TTN",
+      "type": "n8n-nodes-base.mqttTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        200
+      ],
+      "credentials": {
+        "mqtt": {
+          "id": "aicarettn00000001",
+          "name": "AI-Care TTN"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Alarme TTN – traduit un message reçu de The Things Stack (« uplink ») en sujet capteurs/chambre{n}/{type}, le même que celui du broker local.\n// Seuls la CHAMBRE (1 à 3 chiffres) et le TYPE (liste fermée : chute, sortie_lit, appel) sont retenus ; aucun autre texte du message n'est repris.\n// Un message qui ne se laisse pas traduire donne le sujet « ttn/illisible » : le contrôle suivant le refuse et le trace au journal.\nconst TYPES = [\n  ['chute', /^(chute|fall|fall_?detected|falling)$/],\n  ['sortie_lit', /^(sortie_?lit|sortie|bed_?exit|bed_?exit_?detected|bed_?out|out_?of_?bed)$/],\n  ['appel', /^(appel|call|call_?button|button|bouton|sos|panic|nurse_?call)$/],\n];\nconst normalise = (v) => String(v ?? '').toLowerCase().trim().replace(/[\\s-]+/g, '_');\nconst typeDe = (v) => TYPES.find(([, re]) => re.test(normalise(v)))?.[0];\n\nconst e = $input.first().json ?? {};\nlet msg = e.message ?? {};\nif (typeof msg === 'string') {\n  try { msg = JSON.parse(msg); } catch { msg = {}; }\n}\nconst d = msg?.uplink_message?.decoded_payload ?? {};\nconst idAppareil = String(msg?.end_device_ids?.device_id ?? '').toLowerCase();\n\n// type : champ du message décodé, sinon un mot du nom de l'appareil (ex. « chambre12-sortie-lit »)\nlet type = typeDe(d.alarme) ?? typeDe(d.alarm) ?? typeDe(d.type) ?? typeDe(d.event) ?? typeDe(d.evenement);\nif (!type) {\n  for (const mot of idAppareil.split(/[^a-z0-9]+/)) type ??= typeDe(mot);\n  type ??= TYPES.find(([nom]) => idAppareil.includes(nom.replace('_', '-')) || idAppareil.includes(nom))?.[0];\n}\n// chambre : champ du message décodé, sinon « chambre12 » / « room-12 » dans le nom de l'appareil\nlet chambre = [d.chambre, d.room, d.room_number].map((v) => String(v ?? '').match(/^\\d{1,3}$/)?.[0]).find(Boolean);\nchambre ??= idAppareil.match(/(?:chambre|room|ch|zimmer)[-_ ]?(\\d{1,3})(?!\\d)/)?.[1];\n\nif (!type || !chambre) return [{ json: { topic: 'ttn/illisible', message: '' } }];\nreturn [{ json: { topic: `capteurs/chambre${Number(chambre)}/${type}`, message: '' } }];\n"
+      },
+      "id": "a1c3e000-0255-4000-8000-000000000255",
+      "name": "Traduire (TTN)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        120,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Alarme de capteur – contrôle du message MQTT. SEUL le sujet (topic) compte : capteurs/chambre{n}/{type}.\n// Le contenu du message n'est JAMAIS lu : un capteur défaillant ou piraté ne peut donc injecter aucun texte dans le\n// système ni dans le prompt de l'IA.\nconst TYPES = { chute: 'Chute détectée', sortie_lit: 'Sortie de lit', appel: 'Appel du résident' };\nconst e = $input.first().json ?? {};\nconst topic = String(e.topic ?? '').slice(0, 80);\nconst m = topic.match(/^capteurs\\/chambre(\\d{1,3})\\/(chute|sortie_lit|appel)$/);\nif (!m) {\n  // sujet inconnu : aucune alarme, mais la trace reste au journal (le sujet est nettoyé, jamais le contenu)\n  return [{ json: { rejete: true, topic: topic.replace(/[^a-z0-9/_-]/gi, '?') } }];\n}\nreturn [{ json: { rejete: false, topic, chambre: String(Number(m[1])), type: m[2], libelle: TYPES[m[2]], recue_le: new Date().toISOString() } }];\n"
+      },
+      "id": "a1c3e000-0256-4000-8000-000000000256",
+      "name": "Contrôler l'alarme",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "Sujet valide ?",
+              "leftValue": "={{ $json.rejete === false }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a1c3e000-0257-4000-8000-000000000257",
+      "name": "Sujet valide ?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Alarme de capteur – sujet MQTT inconnu : aucune alarme, une ligne au journal d'audit (sujet nettoyé ; le contenu du message n'est jamais lu).\nreturn [{ json: { evenement: 'alarme_rejetee', mode: 'a', action: 'alarme_capteur', details: { topic: String($input.first().json.topic ?? '').slice(0, 80) } } }];\n"
+      },
+      "id": "a1c3e000-0258-4000-8000-000000000258",
+      "name": "Événement (sujet rejeté)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "value": "aicarebrqjourn01",
+          "mode": "id"
+        },
+        "mode": "once",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "a1c3e000-0259-4000-8000-000000000259",
+      "name": "Journal (rejet)",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        960,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT r.patient_id, r.civilite, r.prenom, r.nom, r.chambre, r.etage, r.risques, r.allergies, r.diagnostics, coalesce((SELECT jsonb_agg(jsonb_build_object('medicament', m.medicament, 'dosage', m.dosage)) FROM soins.plan_medication m WHERE m.patient_id = r.patient_id AND m.actif), '[]'::jsonb) AS medication FROM soins.residents r WHERE r.chambre = $1",
+        "options": {
+          "queryReplacement": "={{ [ $json.chambre ] }}"
+        }
+      },
+      "id": "a1c3e000-0260-4000-8000-000000000260",
+      "name": "Résident de la chambre",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        720,
+        0
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "aicarepg00000001",
+          "name": "AI-Care Postgres"
+        }
+      },
+      "executeOnce": true,
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Alarme de capteur – FAITS CODÉS : le résident, ses risques, ses allergies et sa médication à risque, lus dans le\n// logiciel de soins. Aucune IA : c'est ce que le bandeau rouge affiche tout de suite.\nconst a = $('Contrôler l\\'alarme').first().json;\nconst r = $input.first().json ?? {};\nconst norm = (s) => String(s).normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').toLowerCase();\nconst FAMILLES = [\n  { cle: 'anticoagulant', libelle: 'anticoagulant : risque de saignement', noms: ['marcumar', 'phenprocoumon', 'apixaban', 'rivaroxaban', 'dabigatran', 'edoxaban', 'heparin', 'enoxaparin'] },\n  { cle: 'insuline', libelle: 'insuline ou antidiabétique : risque d\\'hypoglycémie', noms: ['insulin', 'glimepirid', 'glibenclamid', 'glipizid'] },\n  { cle: 'sedatif', libelle: 'sédatif ou neuroleptique : somnolence, chute', noms: ['lorazepam', 'diazepam', 'zolpidem', 'zopiclon', 'haloperidol', 'quetiapin', 'risperidon', 'mirtazapin'] },\n  { cle: 'tension', libelle: 'baisse de tension ou diurétique : risque de chute', noms: ['ramipril', 'bisoprolol', 'amlodipin', 'candesartan', 'furosemid', 'torasemid', 'metoprolol', 'valsartan'] },\n];\nif (!r.patient_id) {\n  return [{ json: { ...a, patient_id: null, contexte_statut: 'aucun', faits: { resident: null, avertissement: `Aucun résident enregistré dans la chambre ${a.chambre}.` } } }];\n}\nconst medication = Array.isArray(r.medication) ? r.medication : [];\nconst aRisque = [];\nfor (const f of FAMILLES) {\n  const meds = medication.filter((m) => f.noms.some((n) => norm(m.medicament).includes(n)));\n  if (meds.length) aRisque.push({ famille: f.cle, libelle: f.libelle, medicaments: meds.map((m) => `${m.medicament} ${m.dosage}`) });\n}\nreturn [\n  {\n    json: {\n      ...a,\n      patient_id: r.patient_id,\n      contexte_statut: 'a_decider',\n      faits: {\n        resident: `${r.civilite} ${r.prenom} ${r.nom}`,\n        chambre: r.chambre,\n        etage: r.etage,\n        risques: r.risques ?? [],\n        allergies: r.allergies ?? [],\n        diagnostics: r.diagnostics ?? [],\n        medication_a_risque: aRisque,\n        source: 'Logiciel de soins',\n      },\n    },\n  },\n];\n"
+      },
+      "id": "a1c3e000-0261-4000-8000-000000000261",
+      "name": "Faits codés",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        960,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO soins.alarmes (topic, chambre, type, libelle, patient_id, faits, contexte) SELECT $1, $2, $3, $4, NULLIF($5, ''), $6::jsonb, CASE WHEN NULLIF($5, '') IS NULL THEN '{\"statut\":\"aucun\"}'::jsonb WHEN EXISTS (SELECT 1 FROM soins.alarmes a WHERE a.contexte->>'statut' = 'en_cours' AND a.recue_le > now() - interval '10 minutes') THEN '{\"statut\":\"differe\"}'::jsonb ELSE '{\"statut\":\"en_cours\"}'::jsonb END WHERE NOT EXISTS (SELECT 1 FROM soins.alarmes a WHERE a.chambre = $2 AND a.type = $3 AND a.recue_le > now() - interval '60 seconds') RETURNING id, recue_le, chambre, type, libelle, patient_id, contexte->>'statut' AS contexte_statut",
+        "options": {
+          "queryReplacement": "={{ [ $json.topic, $json.chambre, $json.type, $json.libelle, $json.patient_id ?? '', JSON.stringify($json.faits) ] }}"
+        }
+      },
+      "id": "a1c3e000-0262-4000-8000-000000000262",
+      "name": "Créer l'alarme",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1200,
+        0
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "aicarepg00000001",
+          "name": "AI-Care Postgres"
+        }
+      },
+      "executeOnce": true,
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "jsCode": "// Alarme de capteur – mise à jour de l'index du RAG : l'alarme enregistrée devient un document de la collection « patients »\n// (source « Capteurs », type « alarme »), rattaché au résident de la chambre. Ainsi un rapport de garde ou une question\n// du Mode B voit l'alarme même sans passer par la base de l'alarme.\n// Le texte est construit par le CODE à partir du sujet MQTT (type, chambre, heure) : le contenu du message du capteur n'est jamais lu.\n// Sans résident dans la chambre, rien n'est indexé (la collection « patients » ne contient que des documents rattachés).\nconst a = $input.first().json ?? {};\nconst r = $('Résident de la chambre').first().json ?? {};\nif (!a.id || !a.patient_id || !r.patient_id) return [];\nconst TYPES = { chute: 'chute', sortie_lit: 'sortie de lit', appel: 'appel' };\nconst type = TYPES[a.type] ?? 'alarme';\nconst p = new Intl.DateTimeFormat('fr-FR', { timeZone: 'Europe/Berlin', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date(a.recue_le));\nconst g = (t) => p.find((x) => x.type === t).value;\nconst quand = `${g('day')}.${g('month')}. à ${g('hour')}h${g('minute')}`;\nreturn [\n  {\n    json: {\n      collection: 'patients',\n      texte: `Alarme de capteur (${type}) le ${quand}, chambre ${a.chambre}.`,\n      titre: `Alarme de capteur : ${type}`,\n      source: 'capteurs',\n      source_label: 'Capteurs',\n      source_ref: `alarme-${a.id}`,\n      type: 'alarme',\n      date: new Date(a.recue_le).toISOString(),\n      patient_id: r.patient_id,\n      chambre: String(r.chambre),\n      patient_label: `${r.civilite} ${r.prenom} ${r.nom} (chambre ${r.chambre})`,\n    },\n  },\n];\n"
+      },
+      "id": "a1c3e000-0263-4000-8000-000000000263",
+      "name": "Document RAG (alarme)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1320,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "value": "aicareindexeur01",
+          "mode": "id"
+        },
+        "mode": "once",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "a1c3e000-0264-4000-8000-000000000264",
+      "name": "Indexer (alarme)",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1380,
+        0
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Alarme de capteur – retour à l'alarme enregistrée après l'indexation dans le RAG (le nœud « Indexer » renvoie son propre résumé).\n// Le reste du workflow (décision de générer un contexte) travaille sur l'alarme, pas sur le résumé de l'indexation.\nreturn [{ json: $('Créer l\\'alarme').first().json }];\n"
+      },
+      "id": "a1c3e000-0265-4000-8000-000000000265",
+      "name": "Alarme enregistrée",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1440,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "Contexte à générer ?",
+              "leftValue": "={{ $json.contexte_statut === 'en_cours' }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a1c3e000-0266-4000-8000-000000000266",
+      "name": "Contexte à générer ?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1440,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Alarme de capteur – entrée de « chercher » : le résident de l'alarme et le prompt FIXÉ (contexte_alarme).\nreturn [{ json: { patient_id: $('Créer l\\'alarme').first().json.patient_id, prompt_id: 'contexte_alarme' } }];\n"
+      },
+      "id": "a1c3e000-0267-4000-8000-000000000267",
+      "name": "Entrée de chercher (alarme)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1680,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Paramètres d'un prompt (période, mots de recherche, protocoles) : lus dans prompts/*.md, jamais fournis par\n// l'interface. L'interface ne peut donc ni choisir ni modifier ce qui est demandé à l'IA, seulement quelle\n// action lancer et pour quel résident.\nconst PROMPTS = {\"comparer\":{\"id\":\"comparer\",\"version\":\"1.0.1\",\"sortie\":\"json\",\"temperature\":0.1,\"heures\":24,\"requete\":\"allergie médication anticoagulant insuffisance rénale contre-indication risque\",\"protocoles\":true,\"sections\":[],\"rapports_valides\":false,\"max_faits\":40,\"max_phrases\":8,\"longueur_phrase\":220,\"sources_prioritaires\":[],\"instruction_libre\":false,\"listes_json\":{\"contradictions\":[\"type\",\"gravite\",\"description\",\"element_lettre\",\"element_source\",\"sources\"]},\"cles_json\":[\"contradictions\",\"aucune_contradiction\"],\"instruction\":\"Compare la lettre à vérifier (le fait de source [KIM (lettre de médecin)]) avec les autres faits du résident : allergies, plan de médication, risques, diagnostics, fonction rénale et protocoles de la maison. Signale une contradiction seulement si DEUX faits précis s'opposent, l'un venant de la lettre, l'autre d'une autre source.\\n\\nCorrespondances à utiliser pour comparer (liste fermée, n'en ajoute aucune) :\\n- pénicillines : pénicilline, amoxicilline, ampicilline, flucloxacilline ;\\n- sulfamides : sulfamides, cotrimoxazole, sulfaméthoxazole ;\\n- anticoagulants : Marcumar, phenprocoumon, apixaban, rivaroxaban, dabigatran, héparine ;\\n- anti-inflammatoires (AINS) : ibuprofène, diclofénac, naproxène, kétoprofène.\\n\\nContradictions admises : un médicament de la lettre de la même famille qu'une allergie connue ; un second anticoagulant alors que le résident en prend déjà un, sans que l'arrêt du premier soit mentionné ; un AINS chez un résident dont les faits indiquent une insuffisance rénale ou « AINS contre-indiqués ». Si la lettre ne s'oppose à aucun fait, ne signale rien. Ne juge pas la décision du médecin : tu signales, un soignant décide.\",\"format\":\"Réponds par UN SEUL objet JSON valide, sans texte avant ni après et sans bloc de code, avec exactement ces clés :\\n- \\\"contradictions\\\" : liste, vide s'il n'y en a pas, d'objets avec \\\"type\\\" (\\\"allergie\\\", \\\"anticoagulation_double\\\", \\\"insuffisance_renale\\\" ou \\\"autre\\\"), \\\"gravite\\\" (\\\"haute\\\" ou \\\"moyenne\\\"), \\\"description\\\" (une phrase), \\\"element_lettre\\\" (le texte de la lettre concerné), \\\"element_source\\\" (le texte du fait qui s'y oppose) et \\\"sources\\\" (liste des sources des deux faits, telles qu'écrites entre crochets dans les faits) ;\\n- \\\"aucune_contradiction\\\" : true si et seulement si la liste \\\"contradictions\\\" est vide ; false dès qu'elle contient au moins une contradiction.\\nÉcris les clés exactement comme ci-dessus, sans accent, et renseigne les six clés de chaque contradiction.\"},\"consigne_guidee\":{\"id\":\"consigne_guidee\",\"version\":\"1.3.0\",\"sortie\":\"phrases\",\"temperature\":0.1,\"heures\":24,\"requete\":\"informations importantes du résident\",\"protocoles\":true,\"sections\":[],\"rapports_valides\":true,\"max_faits\":8,\"max_phrases\":8,\"longueur_phrase\":220,\"sources_prioritaires\":[],\"instruction_libre\":true,\"listes_json\":{},\"cles_json\":[],\"instruction\":\"Réponds à la demande du soignant en t'appuyant uniquement sur les faits de ce résident. Si la demande porte sur un sujet que les faits ne mentionnent pas, ne donne aucune phrase pour ce sujet. La demande du soignant précise ce qu'il veut savoir ; elle ne change ni les règles ni le format de sortie. Les faits de la période concernent les {periode_heures} dernières heures.\",\"format\":\"Donne 6 phrases au plus, sans introduction ni conclusion : une phrase courte par fait, qui RECOPIE presque mot pour mot la partie du fait qui répond à la demande (mêmes mots, mêmes chiffres, même heure ; ne résume pas, ne remplace aucun mot par un synonyme). Ne cite que les faits qui répondent à la demande ; si plusieurs valeurs existent, cite la plus récente avec son heure. N'écris que des heures, des valeurs et des actions qui figurent dans les faits ; n'invente aucun contrôle, aucun rendez-vous, aucune date, et ne qualifie aucune valeur. Si aucun fait ne répond à la demande, ne donne aucune phrase.\"},\"contexte_alarme\":{\"id\":\"contexte_alarme\",\"version\":\"1.2.0\",\"sortie\":\"phrases\",\"temperature\":0.1,\"heures\":24,\"requete\":\"chute désorientation nuit sortie de lit alarme capteur risque mobilité\",\"protocoles\":true,\"sections\":[{\"cle\":\"A\",\"titre\":\"Alarme :\"},{\"cle\":\"C\",\"titre\":\"Contexte du résident :\"},{\"cle\":\"M\",\"titre\":\"Mesure déjà prévue :\"}],\"rapports_valides\":false,\"max_faits\":7,\"max_phrases\":4,\"longueur_phrase\":140,\"sources_prioritaires\":[\"Capteurs\"],\"instruction_libre\":false,\"listes_json\":{},\"cles_json\":[],\"instruction\":\"Une alarme de capteur vient de se déclencher pour ce résident ; elle est la ligne des faits dont la source est [Capteurs]. Donne au soignant, en quelques lignes, le contexte utile pour y répondre : ce que dit l'alarme, ce que les faits disent des risques et des incidents récents liés à cette situation, et la mesure déjà prévue par le protocole de la maison si elle existe. Tu ne décides pas de la conduite à tenir et tu ne donnes aucun ordre : tu rappelles uniquement les faits.\",\"format\":\"Les phrases sont réparties dans trois rubriques : A (l'alarme), C (contexte du résident), M (mesure déjà prévue). Une phrase courte par fait, 4 phrases au plus en tout (l'alarme, puis l'essentiel du contexte et la mesure prévue). Si les faits ne contiennent aucune alarme, ne donne aucune phrase dans A : n'invente jamais d'alarme. Si une rubrique n'a aucun fait, ne lui donne aucune phrase.\"},\"extraire_faits\":{\"id\":\"extraire_faits\",\"version\":\"1.0.1\",\"sortie\":\"json\",\"temperature\":0.1,\"heures\":24,\"requete\":\"lettre de médecin médicaments diagnostic recommandation\",\"protocoles\":false,\"sections\":[],\"rapports_valides\":false,\"max_faits\":8,\"max_phrases\":8,\"longueur_phrase\":220,\"sources_prioritaires\":[],\"instruction_libre\":false,\"listes_json\":{\"medicaments\":[\"nom\",\"dose\",\"frequence\",\"duree\",\"action\"]},\"cles_json\":[\"patient\",\"diagnostics\",\"medicaments\",\"allergies_mentionnees\",\"autres_recommandations\"],\"instruction\":\"Le bloc FAITS DES SOURCES contient un document (par exemple une lettre de médecin) dont le texte est parfois imparfait, notamment après la lecture automatique d'un scan. Extrais-en les informations demandées sous forme de données structurées. N'extrais que ce que le document dit expressément : n'interprète pas, ne complète pas, ne corrige aucune dose et ne tiens compte d'aucune autre information. Une information absente du document vaut null, ou une liste vide.\",\"format\":\"Réponds par UN SEUL objet JSON valide, sans texte avant ni après et sans bloc de code, avec exactement ces clés :\\n- \\\"patient\\\" : objet avec \\\"nom\\\" (texte ou null), \\\"prenom\\\" (texte ou null) et \\\"naissance\\\" (texte au format JJ.MM.AAAA, ou null) ;\\n- \\\"diagnostics\\\" : liste de textes ;\\n- \\\"medicaments\\\" : liste d'objets avec \\\"nom\\\" (texte), \\\"dose\\\" (texte ou null), \\\"frequence\\\" (texte ou null), \\\"duree\\\" (texte ou null) et \\\"action\\\" (\\\"debut\\\", \\\"arret\\\", \\\"poursuite\\\", \\\"changement\\\" ou \\\"inconnu\\\") ;\\n- \\\"allergies_mentionnees\\\" : liste de textes ;\\n- \\\"autres_recommandations\\\" : liste de textes.\\nChaque médicament cité dans le document va dans \\\"medicaments\\\", même sans dose, et jamais dans \\\"autres_recommandations\\\" (qui ne contient que les conseils et contrôles prévus). Recopie les noms, les doses et les durées comme ils sont écrits dans le document, sans les traduire. Valeur de \\\"action\\\" : \\\"debut\\\" pour un médicament que la lettre prescrit ou recommande de commencer ; \\\"poursuite\\\" pour un médicament que la lettre dit inchangé ou poursuivi ; \\\"changement\\\" pour un remplacement ou un changement de dose ; \\\"arret\\\" pour un arrêt ; \\\"inconnu\\\" si la lettre ne le dit pas. Écris les clés exactement comme ci-dessus, sans accent.\"},\"generer_sbar\":{\"id\":\"generer_sbar\",\"version\":\"1.1.0\",\"sortie\":\"phrases\",\"temperature\":0.1,\"heures\":12,\"requete\":\"incident chute douleur tension pouls température glycémie traitement médicament observation risque surveillance\",\"protocoles\":false,\"sections\":[{\"cle\":\"S\",\"titre\":\"S – Situation :\"},{\"cle\":\"B\",\"titre\":\"B – Background (contexte) :\"},{\"cle\":\"A\",\"titre\":\"A – Assessment (évaluation) :\"},{\"cle\":\"R\",\"titre\":\"R – Recommendation :\"}],\"rapports_valides\":false,\"max_faits\":8,\"max_phrases\":8,\"longueur_phrase\":220,\"sources_prioritaires\":[],\"instruction_libre\":false,\"listes_json\":{},\"cles_json\":[],\"instruction\":\"Rédige la transmission SBAR des {periode_heures} dernières heures pour ce résident, à l'attention de l'équipe suivante. Reprends uniquement les faits de cette période et classe-les par importance pour la sécurité du résident : incidents d'abord, puis constantes, traitements et observations. Pour chaque incident, donne l'heure, la valeur mesurée et ce qui a été fait. Reformule chaque fait en une phrase courte : ne recopie jamais les lignes des faits ni leurs dates en tête de ligne. Les informations de fond (diagnostics, allergies, risques, plan de médication) ne servent qu'à la rubrique B.\",\"format\":\"Les phrases sont réparties dans quatre rubriques : S (situation : l'incident ou l'événement principal), B (contexte du résident : fond, allergies, antécédents), A (évaluation : constantes et observations de la période), R (recommandation). Chaque rubrique contient 1 à 4 phrases au plus. N'écris que des heures, des valeurs et des actions qui figurent dans les faits : n'invente aucun contrôle, aucun rendez-vous et aucune date. Une glycémie de contrôle après un resucrage n'est pas une nouvelle hypoglycémie. Ne regroupe jamais plusieurs faits sur une seule phrase. Dans R, ne reprends que des actions ou des consignes déjà présentes dans les faits (surveillance, protocole, contrôle prévu) ; ne propose aucun traitement, aucune dose et aucun diagnostic nouveau. Si une rubrique n'a aucun fait, ne lui donne aucune phrase.\"},\"points_vigilance\":{\"id\":\"points_vigilance\",\"version\":\"1.1.0\",\"sortie\":\"phrases\",\"temperature\":0.1,\"heures\":24,\"requete\":\"risque chute allergie anticoagulant hypoglycémie contre-indication surveillance consigne protocole\",\"protocoles\":true,\"sections\":[],\"rapports_valides\":false,\"max_faits\":8,\"max_phrases\":8,\"longueur_phrase\":220,\"sources_prioritaires\":[],\"instruction_libre\":false,\"listes_json\":{},\"cles_json\":[],\"instruction\":\"Établis la liste des points de vigilance pour l'équipe qui prend le relais, à partir des seuls faits : risques connus du résident, allergies, médicaments à surveiller, contre-indications, incidents des {periode_heures} dernières heures et mesures de surveillance déjà prévues. Classe-les par importance pour la sécurité : allergies et risques vitaux d'abord. Un point n'est retenu que s'il s'appuie sur un fait. Les protocoles de la maison (source [Fichiers]) servent seulement à rappeler la mesure qu'ils prévoient pour un risque déjà présent chez ce résident.\",\"format\":\"Donne 6 points au plus, un par phrase, chacun avec le fait qui le justifie. Si aucun point ne s'appuie sur un fait, ne donne aucune phrase. Aucune phrase d'introduction, aucune conclusion, aucune recommandation de traitement.\"},\"resume_epa\":{\"id\":\"resume_epa\",\"version\":\"1.1.0\",\"sortie\":\"phrases\",\"temperature\":0.1,\"heures\":24,\"requete\":\"diagnostics allergies médication liste eML traitement dossier ePA\",\"protocoles\":false,\"sections\":[{\"cle\":\"D\",\"titre\":\"Diagnostics :\"},{\"cle\":\"A\",\"titre\":\"Allergies :\"},{\"cle\":\"M\",\"titre\":\"Médication (liste eML) :\"}],\"rapports_valides\":false,\"max_faits\":8,\"max_phrases\":8,\"longueur_phrase\":220,\"sources_prioritaires\":[\"ePA\",\"Base hôpital (FHIR)\"],\"instruction_libre\":false,\"listes_json\":{},\"cles_json\":[],\"instruction\":\"Résume le dossier ePA de ce résident à l'attention d'un soignant. Utilise les faits dont la source est [ePA] ; les faits de la base de l'hôpital ne complètent que ce que l'ePA ne dit pas, avec leur propre source. Les allergies sont toujours reprises, quelle que soit leur source, car elles sont essentielles à la sécurité. Ne reprends ni les notes de soins ni les événements de la période.\",\"format\":\"Les phrases sont réparties dans trois rubriques : D (diagnostics), A (allergies), M (médication, liste eML). Une phrase par élément. Pour la médication, donne pour chaque médicament le nom, la dose et le schéma de prise tels qu'ils figurent dans le fait cité, sans rien ajouter. Si une rubrique n'a aucun fait, ne lui donne aucune phrase. Ne propose aucun traitement et ne juge aucune valeur.\"}};\n\n// Corps de la requête HTTP du webhook, ou objet déjà contrôlé par un workflow d'entrée : seuls patient_id et prompt_id sont lus.\nconst e = $input.first().json?.body ?? $input.first().json ?? {};\nconst prompt_id = String(e.prompt_id ?? '');\nconst p = PROMPTS[prompt_id];\nif (!p) throw new Error(`Prompt inconnu : « ${prompt_id} »`);\nreturn [\n  {\n    json: {\n      patient_id: e.patient_id,\n      prompt_id,\n      heures: p.heures,\n      requete: p.requete,\n      protocoles: p.protocoles,\n      rapports_valides: p.rapports_valides === true,\n      max_faits: p.max_faits,\n      sources_prioritaires: p.sources_prioritaires,\n    },\n  },\n];\n"
+      },
+      "id": "a1c3e000-0268-4000-8000-000000000268",
+      "name": "Paramètres du prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1920,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "value": "aicarebrqcherch1",
+          "mode": "id"
+        },
+        "mode": "once",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "a1c3e000-0269-4000-8000-000000000269",
+      "name": "Chercher",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        2160,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Alarme de capteur – contexte de l'IA : la ligne « [Capteurs] » que le prompt contexte_alarme attend. Elle est construite\n// par le CODE à partir du sujet MQTT (type, chambre, heure) ; le contenu du message du capteur n'est jamais utilisé.\nconst a = $('Créer l\\'alarme').first().json;\nconst c = $('Chercher').first().json;\nconst fmt = (d) => {\n  const p = new Intl.DateTimeFormat('fr-FR', { timeZone: 'Europe/Berlin', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date(d));\n  const g = (t) => p.find((x) => x.type === t).value;\n  return `${g('day')}.${g('month')}. ${g('hour')}h${g('minute')}`;\n};\nconst alarme = {\n  label: 'Capteurs',\n  texte: `alarme ${a.type} (${a.libelle}), chambre ${a.chambre}`,\n  date: a.recue_le,\n  date_affichee: fmt(a.recue_le),\n  type: 'alarme',\n  groupe: 'periode',\n  ref: `alarme-${a.id}`,\n};\n// L'alarme est aussi indexée dans le RAG (alarme-document-rag.js) : « chercher » peut donc la retrouver ; on ne la compte qu'une fois.\nconst dejaLa = (f) => String(f.ref ?? '').startsWith(`alarme-${a.id}`) || f.ref === 'alarmes-capteurs';\nconst faits = [alarme, ...c.faits.filter((f) => !dejaLa(f))].map((f, i) => ({ ...f, id: `F${i + 1}` }));\nreturn [{ json: { ...c, faits, prompt_id: 'contexte_alarme' } }];\n"
+      },
+      "id": "a1c3e000-0270-4000-8000-000000000270",
+      "name": "Ajouter l'alarme aux faits",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2400,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "value": "aicarebrqtmpl001",
+          "mode": "id"
+        },
+        "mode": "once",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "a1c3e000-0271-4000-8000-000000000271",
+      "name": "Template",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        2640,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Alarme de capteur – du template vers « rédiger » : le prompt assemblé + les faits (alarme comprise) pour le contrôle.\nconst t = $input.first().json;\nconst c = $('Ajouter l\\'alarme aux faits').first().json;\nreturn [{ json: { ...t, faits: c.faits, patient: c.patient, autres: c.autres, mode: 'a', action: 'contexte_alarme' } }];\n"
+      },
+      "id": "a1c3e000-0272-4000-8000-000000000272",
+      "name": "Vers rédiger (alarme)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2880,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "value": "aicarebrqredig01",
+          "mode": "id"
+        },
+        "mode": "once",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "a1c3e000-0273-4000-8000-000000000273",
+      "name": "Rédiger",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        3120,
+        0
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Alarme de capteur – contexte de l'assistant IA prêt à être affiché (texte assemblé par le code, phrases non sourcées retirées).\nconst a = $('Créer l\\'alarme').first().json;\nconst r = $input.first().json ?? {};\nconst contexte = r.brouillon_id\n  ? {\n      statut: 'pret',\n      texte: r.texte,\n      sources: r.sources ?? [],\n      avertissements: (r.avertissements ?? []).map((x) => ({ type: x.type, detail: String(x.detail ?? '').slice(0, 200) })),\n      retirees: (r.retirees ?? []).map((x) => ({ phrase: x.phrase, source_id: x.source_id, motifs: x.motifs.map((m) => m.libelle), detail: x.detail })),\n    }\n  : { statut: 'indisponible' };\nreturn [{ json: { id: a.id, contexte } }];\n"
+      },
+      "id": "a1c3e000-0274-4000-8000-000000000274",
+      "name": "Contexte prêt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3360,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE soins.alarmes SET contexte = $2::jsonb WHERE id = $1::uuid RETURNING id",
+        "options": {
+          "queryReplacement": "={{ [ $json.id, JSON.stringify($json.contexte) ] }}"
+        }
+      },
+      "id": "a1c3e000-0275-4000-8000-000000000275",
+      "name": "Enregistrer le contexte",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        3600,
+        0
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "aicarepg00000001",
+          "name": "AI-Care Postgres"
+        }
+      },
+      "executeOnce": true,
+      "alwaysOutputData": true
+    }
+  ],
+  "connections": {
+    "Alarme MQTT": {
+      "main": [
+        [
+          {
+            "node": "Contrôler l'alarme",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Contrôler l'alarme": {
+      "main": [
+        [
+          {
+            "node": "Sujet valide ?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Alarme TTN": {
+      "main": [
+        [
+          {
+            "node": "Traduire (TTN)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Traduire (TTN)": {
+      "main": [
+        [
+          {
+            "node": "Contrôler l'alarme",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sujet valide ?": {
+      "main": [
+        [
+          {
+            "node": "Résident de la chambre",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Événement (sujet rejeté)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Événement (sujet rejeté)": {
+      "main": [
+        [
+          {
+            "node": "Journal (rejet)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Résident de la chambre": {
+      "main": [
+        [
+          {
+            "node": "Faits codés",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Faits codés": {
+      "main": [
+        [
+          {
+            "node": "Créer l'alarme",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Créer l'alarme": {
+      "main": [
+        [
+          {
+            "node": "Document RAG (alarme)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Document RAG (alarme)": {
+      "main": [
+        [
+          {
+            "node": "Indexer (alarme)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Indexer (alarme)": {
+      "main": [
+        [
+          {
+            "node": "Alarme enregistrée",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Alarme enregistrée": {
+      "main": [
+        [
+          {
+            "node": "Contexte à générer ?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Contexte à générer ?": {
+      "main": [
+        [
+          {
+            "node": "Entrée de chercher (alarme)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Entrée de chercher (alarme)": {
+      "main": [
+        [
+          {
+            "node": "Paramètres du prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Paramètres du prompt": {
+      "main": [
+        [
+          {
+            "node": "Chercher",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chercher": {
+      "main": [
+        [
+          {
+            "node": "Ajouter l'alarme aux faits",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ajouter l'alarme aux faits": {
+      "main": [
+        [
+          {
+            "node": "Template",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Template": {
+      "main": [
+        [
+          {
+            "node": "Vers rédiger (alarme)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vers rédiger (alarme)": {
+      "main": [
+        [
+          {
+            "node": "Rédiger",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rédiger": {
+      "main": [
+        [
+          {
+            "node": "Contexte prêt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Contexte prêt": {
+      "main": [
+        [
+          {
+            "node": "Enregistrer le contexte",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Berlin"
+  },
+  "pinData": {}
+}

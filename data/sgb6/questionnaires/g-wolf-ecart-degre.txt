@@ -1,0 +1,26 @@
+Pflegekasse Sonnenhof (Beispiel)  Eingangsstempel: 13.10.2026
+Fragebogen Rentenversicherung für Pflegepersonen – (Beispieldaten, frei erfunden)
+
+Aktenzeichen der Pflegekasse: PK-2026-0107
+Name, Vorname der Pflegeperson: Wolf, Frank
+Geburtsdatum der Pflegeperson: 26.01.1959
+Rentenversicherungsnummer: 23260159W240
+Staatsangehörigkeit: deutsch
+Anschrift: Hauptstraße 58, 99084 Erfurt
+
+Pflegebedürftig ist meine Mutter, sie wurde im Sommer höher eingestuft.
+Name, Vorname der pflegebedürftigen Person: Wolf, Margarete
+Geburtsdatum der pflegebedürftigen Person: 21.08.1936
+Pflegegrad: 3
+Art der Leistung: Pflegegeld
+
+Beginn der Pflegetätigkeit: 01.09.2025
+Pflege zu Hause (häuslich): Ja
+Pflege unentgeltlich (nicht erwerbsmäßig): Ja
+Pflegezeit pro Woche (Stunden): 13
+Pflegetage pro Woche: 5
+Weitere Pflegepersonen: keine
+
+Erwerbstätigkeit, Stunden pro Woche: 15
+Arbeitszeit variabel: Nein
+Bezug einer Vollrente wegen Alters: Nein

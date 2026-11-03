@@ -1,0 +1,89 @@
+{
+  "id": "aicarecourrier001",
+  "name": "AI-Care – Courrier reçu (notification de Mailpit)",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "courrier-recu",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "a1c3e000-0297-4000-8000-000000000297",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "aicare-courrier-recu"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Courrier reçu – contrôle de la notification de Mailpit. Seul l'identifiant du message est lu ; le contenu de la notification est\n// ignoré : le message est relu par l'API de Mailpit (même source que le connecteur KIM).\nconst b = $input.first().json?.body ?? {};\nconst id = String(b.ID ?? '');\nif (!/^[A-Za-z0-9]{6,40}$/.test(id)) throw new Error('identifiant de message invalide');\nreturn [{ json: { id } }];\n"
+      },
+      "id": "a1c3e000-0298-4000-8000-000000000298",
+      "name": "Contrôler le courrier",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "value": "aicarebrqcourrier1",
+          "mode": "id"
+        },
+        "mode": "once",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "a1c3e000-0299-4000-8000-000000000299",
+      "name": "Traiter le courrier",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        480,
+        0
+      ],
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Contrôler le courrier",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Contrôler le courrier": {
+      "main": [
+        [
+          {
+            "node": "Traiter le courrier",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Berlin"
+  },
+  "pinData": {}
+}

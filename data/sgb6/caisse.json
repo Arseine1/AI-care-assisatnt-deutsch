@@ -1,0 +1,86 @@
+{
+  "_note": "Caisse de dépendance SIMULÉE (Pflegekasse fictive). Données entièrement fictives. Chaque dossier : personne soignée, degré, prestation, expertise du Medizinischer Dienst (heures de soins par aidant) et aidants connus.",
+  "dossiers": [
+    {
+      "id": "PK-2026-0101",
+      "personne_soignee": { "nom": "Hartmann", "prenom": "Ingrid", "date_naissance": "1942-09-02" },
+      "degre": 3,
+      "prestation": "pflegegeld",
+      "expertise": { "date": "2026-02-10", "aidants": [{ "nom": "Becker", "prenom": "Anna", "heures_semaine": 15, "jours_semaine": 7 }] },
+      "aidants_connus": [{ "nom": "Becker", "prenom": "Anna", "date_naissance": "1971-03-14" }]
+    },
+    {
+      "id": "PK-2026-0102",
+      "personne_soignee": { "nom": "Krüger", "prenom": "Walter", "date_naissance": "1938-01-30" },
+      "degre": 5,
+      "prestation": "kombination",
+      "expertise": { "date": "2026-01-22", "aidants": [{ "nom": "Krüger", "prenom": "Thomas", "heures_semaine": 28, "jours_semaine": 7 }] },
+      "aidants_connus": [{ "nom": "Krüger", "prenom": "Thomas", "date_naissance": "1964-05-23" }]
+    },
+    {
+      "id": "PK-2026-0103",
+      "personne_soignee": { "nom": "Vogel", "prenom": "Helga", "date_naissance": "1940-12-04" },
+      "degre": 4,
+      "prestation": "pflegegeld",
+      "expertise": {
+        "date": "2026-03-05",
+        "aidants": [
+          { "nom": "Vogel", "prenom": "Katrin", "heures_semaine": 14, "jours_semaine": 5 },
+          { "nom": "Vogel", "prenom": "Jan", "heures_semaine": 10, "jours_semaine": 4 }
+        ]
+      },
+      "aidants_connus": [
+        { "nom": "Vogel", "prenom": "Katrin", "date_naissance": "1968-10-08" },
+        { "nom": "Vogel", "prenom": "Jan", "date_naissance": "1971-02-17" }
+      ]
+    },
+    {
+      "id": "PK-2026-0104",
+      "personne_soignee": { "nom": "Lehmann", "prenom": "Gerda", "date_naissance": "1945-06-11" },
+      "degre": 2,
+      "prestation": "pflegegeld",
+      "expertise": { "date": "2026-04-14", "aidants": [{ "nom": "Lehmann", "prenom": "Sabine", "heures_semaine": 8, "jours_semaine": 4 }] },
+      "aidants_connus": [{ "nom": "Lehmann", "prenom": "Sabine", "date_naissance": "1980-09-19" }]
+    },
+    {
+      "id": "PK-2026-0105",
+      "personne_soignee": { "nom": "Neumann", "prenom": "Rosa", "date_naissance": "1948-11-25" },
+      "degre": 3,
+      "prestation": "pflegegeld",
+      "expertise": { "date": "2026-05-06", "aidants": [{ "nom": "Neumann", "prenom": "Markus", "heures_semaine": 12, "jours_semaine": 5 }] },
+      "aidants_connus": [{ "nom": "Neumann", "prenom": "Markus", "date_naissance": "1975-02-02" }]
+    },
+    {
+      "id": "PK-2026-0106",
+      "personne_soignee": { "nom": "Schäfer", "prenom": "Heinz", "date_naissance": "1941-04-08" },
+      "degre": 3,
+      "prestation": "pflegegeld",
+      "expertise": { "date": "2026-05-19", "aidants": [{ "nom": "Schäfer", "prenom": "Petra", "heures_semaine": 16, "jours_semaine": 6 }] },
+      "aidants_connus": [{ "nom": "Schäfer", "prenom": "Petra", "date_naissance": "1973-06-11" }]
+    },
+    {
+      "id": "PK-2026-0107",
+      "personne_soignee": { "nom": "Wolf", "prenom": "Margarete", "date_naissance": "1936-08-21" },
+      "degre": 2,
+      "prestation": "pflegegeld",
+      "expertise": { "date": "2026-06-02", "aidants": [{ "nom": "Wolf", "prenom": "Frank", "heures_semaine": 13, "jours_semaine": 5 }] },
+      "aidants_connus": [{ "nom": "Wolf", "prenom": "Frank", "date_naissance": "1959-01-26" }]
+    },
+    {
+      "id": "PK-2026-0108",
+      "personne_soignee": { "nom": "Fischer", "prenom": "Otto", "date_naissance": "1947-02-13" },
+      "degre": 1,
+      "prestation": "pflegegeld",
+      "expertise": { "date": "2026-06-23", "aidants": [{ "nom": "Fischer", "prenom": "Lena", "heures_semaine": 11, "jours_semaine": 4 }] },
+      "aidants_connus": [{ "nom": "Fischer", "prenom": "Lena", "date_naissance": "1985-03-17" }]
+    },
+    {
+      "id": "PK-2026-0109",
+      "personne_soignee": { "nom": "Richter", "prenom": "Elfriede", "date_naissance": "1939-07-07" },
+      "degre": 3,
+      "prestation": "pflegegeld",
+      "expertise": { "date": "2026-07-08", "aidants": [{ "nom": "Richter", "prenom": "Jürgen", "heures_semaine": 14, "jours_semaine": 6 }] },
+      "aidants_connus": [{ "nom": "Richter", "prenom": "Jürgen", "date_naissance": "1966-09-30" }]
+    }
+  ]
+}

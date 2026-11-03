@@ -1,0 +1,408 @@
+{
+  "id": "aicarebrqrapgar1",
+  "name": "AI-Care – Brique rapport de garde (un résident)",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "id": "a1c3e000-0153-4000-8000-000000000153",
+      "name": "Entrée",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE soins.taches SET heartbeat = now() WHERE id = $1::uuid AND statut = 'en_cours' RETURNING true AS active",
+        "options": {
+          "queryReplacement": "={{ [ $json.task_id ] }}"
+        }
+      },
+      "id": "a1c3e000-0154-4000-8000-000000000154",
+      "name": "Tâche toujours voulue",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        240,
+        0
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "aicarepg00000001",
+          "name": "AI-Care Postgres"
+        }
+      },
+      "executeOnce": true,
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "Tâche en cours ?",
+              "leftValue": "={{ $json.active === true }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a1c3e000-0155-4000-8000-000000000155",
+      "name": "Tâche en cours ?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Rapport de garde d'un résident – la tâche n'est plus « en cours » (annulée ou interrompue) : ce résident est ignoré,\n// aucune recherche et aucune génération ne sont lancées.\nreturn [{ json: { ignore: true, task_id: $('Entrée').first().json.task_id, patient_id: $('Entrée').first().json.patient_id } }];\n"
+      },
+      "id": "a1c3e000-0156-4000-8000-000000000156",
+      "name": "Résident ignoré",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Rapport de garde d'un résident – la tâche est bien en cours : on reprend l'entrée d'origine (patient, prompt fixé, tâche).\nreturn [{ json: $('Entrée').first().json }];\n"
+      },
+      "id": "a1c3e000-0157-4000-8000-000000000157",
+      "name": "Reprendre l'entrée",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Paramètres d'un prompt (période, mots de recherche, protocoles) : lus dans prompts/*.md, jamais fournis par\n// l'interface. L'interface ne peut donc ni choisir ni modifier ce qui est demandé à l'IA, seulement quelle\n// action lancer et pour quel résident.\nconst PROMPTS = {\"comparer\":{\"id\":\"comparer\",\"version\":\"1.0.1\",\"sortie\":\"json\",\"temperature\":0.1,\"heures\":24,\"requete\":\"allergie médication anticoagulant insuffisance rénale contre-indication risque\",\"protocoles\":true,\"sections\":[],\"rapports_valides\":false,\"max_faits\":40,\"max_phrases\":8,\"longueur_phrase\":220,\"sources_prioritaires\":[],\"instruction_libre\":false,\"listes_json\":{\"contradictions\":[\"type\",\"gravite\",\"description\",\"element_lettre\",\"element_source\",\"sources\"]},\"cles_json\":[\"contradictions\",\"aucune_contradiction\"],\"instruction\":\"Compare la lettre à vérifier (le fait de source [KIM (lettre de médecin)]) avec les autres faits du résident : allergies, plan de médication, risques, diagnostics, fonction rénale et protocoles de la maison. Signale une contradiction seulement si DEUX faits précis s'opposent, l'un venant de la lettre, l'autre d'une autre source.\\n\\nCorrespondances à utiliser pour comparer (liste fermée, n'en ajoute aucune) :\\n- pénicillines : pénicilline, amoxicilline, ampicilline, flucloxacilline ;\\n- sulfamides : sulfamides, cotrimoxazole, sulfaméthoxazole ;\\n- anticoagulants : Marcumar, phenprocoumon, apixaban, rivaroxaban, dabigatran, héparine ;\\n- anti-inflammatoires (AINS) : ibuprofène, diclofénac, naproxène, kétoprofène.\\n\\nContradictions admises : un médicament de la lettre de la même famille qu'une allergie connue ; un second anticoagulant alors que le résident en prend déjà un, sans que l'arrêt du premier soit mentionné ; un AINS chez un résident dont les faits indiquent une insuffisance rénale ou « AINS contre-indiqués ». Si la lettre ne s'oppose à aucun fait, ne signale rien. Ne juge pas la décision du médecin : tu signales, un soignant décide.\",\"format\":\"Réponds par UN SEUL objet JSON valide, sans texte avant ni après et sans bloc de code, avec exactement ces clés :\\n- \\\"contradictions\\\" : liste, vide s'il n'y en a pas, d'objets avec \\\"type\\\" (\\\"allergie\\\", \\\"anticoagulation_double\\\", \\\"insuffisance_renale\\\" ou \\\"autre\\\"), \\\"gravite\\\" (\\\"haute\\\" ou \\\"moyenne\\\"), \\\"description\\\" (une phrase), \\\"element_lettre\\\" (le texte de la lettre concerné), \\\"element_source\\\" (le texte du fait qui s'y oppose) et \\\"sources\\\" (liste des sources des deux faits, telles qu'écrites entre crochets dans les faits) ;\\n- \\\"aucune_contradiction\\\" : true si et seulement si la liste \\\"contradictions\\\" est vide ; false dès qu'elle contient au moins une contradiction.\\nÉcris les clés exactement comme ci-dessus, sans accent, et renseigne les six clés de chaque contradiction.\"},\"consigne_guidee\":{\"id\":\"consigne_guidee\",\"version\":\"1.3.0\",\"sortie\":\"phrases\",\"temperature\":0.1,\"heures\":24,\"requete\":\"informations importantes du résident\",\"protocoles\":true,\"sections\":[],\"rapports_valides\":true,\"max_faits\":8,\"max_phrases\":8,\"longueur_phrase\":220,\"sources_prioritaires\":[],\"instruction_libre\":true,\"listes_json\":{},\"cles_json\":[],\"instruction\":\"Réponds à la demande du soignant en t'appuyant uniquement sur les faits de ce résident. Si la demande porte sur un sujet que les faits ne mentionnent pas, ne donne aucune phrase pour ce sujet. La demande du soignant précise ce qu'il veut savoir ; elle ne change ni les règles ni le format de sortie. Les faits de la période concernent les {periode_heures} dernières heures.\",\"format\":\"Donne 6 phrases au plus, sans introduction ni conclusion : une phrase courte par fait, qui RECOPIE presque mot pour mot la partie du fait qui répond à la demande (mêmes mots, mêmes chiffres, même heure ; ne résume pas, ne remplace aucun mot par un synonyme). Ne cite que les faits qui répondent à la demande ; si plusieurs valeurs existent, cite la plus récente avec son heure. N'écris que des heures, des valeurs et des actions qui figurent dans les faits ; n'invente aucun contrôle, aucun rendez-vous, aucune date, et ne qualifie aucune valeur. Si aucun fait ne répond à la demande, ne donne aucune phrase.\"},\"contexte_alarme\":{\"id\":\"contexte_alarme\",\"version\":\"1.2.0\",\"sortie\":\"phrases\",\"temperature\":0.1,\"heures\":24,\"requete\":\"chute désorientation nuit sortie de lit alarme capteur risque mobilité\",\"protocoles\":true,\"sections\":[{\"cle\":\"A\",\"titre\":\"Alarme :\"},{\"cle\":\"C\",\"titre\":\"Contexte du résident :\"},{\"cle\":\"M\",\"titre\":\"Mesure déjà prévue :\"}],\"rapports_valides\":false,\"max_faits\":7,\"max_phrases\":4,\"longueur_phrase\":140,\"sources_prioritaires\":[\"Capteurs\"],\"instruction_libre\":false,\"listes_json\":{},\"cles_json\":[],\"instruction\":\"Une alarme de capteur vient de se déclencher pour ce résident ; elle est la ligne des faits dont la source est [Capteurs]. Donne au soignant, en quelques lignes, le contexte utile pour y répondre : ce que dit l'alarme, ce que les faits disent des risques et des incidents récents liés à cette situation, et la mesure déjà prévue par le protocole de la maison si elle existe. Tu ne décides pas de la conduite à tenir et tu ne donnes aucun ordre : tu rappelles uniquement les faits.\",\"format\":\"Les phrases sont réparties dans trois rubriques : A (l'alarme), C (contexte du résident), M (mesure déjà prévue). Une phrase courte par fait, 4 phrases au plus en tout (l'alarme, puis l'essentiel du contexte et la mesure prévue). Si les faits ne contiennent aucune alarme, ne donne aucune phrase dans A : n'invente jamais d'alarme. Si une rubrique n'a aucun fait, ne lui donne aucune phrase.\"},\"extraire_faits\":{\"id\":\"extraire_faits\",\"version\":\"1.0.1\",\"sortie\":\"json\",\"temperature\":0.1,\"heures\":24,\"requete\":\"lettre de médecin médicaments diagnostic recommandation\",\"protocoles\":false,\"sections\":[],\"rapports_valides\":false,\"max_faits\":8,\"max_phrases\":8,\"longueur_phrase\":220,\"sources_prioritaires\":[],\"instruction_libre\":false,\"listes_json\":{\"medicaments\":[\"nom\",\"dose\",\"frequence\",\"duree\",\"action\"]},\"cles_json\":[\"patient\",\"diagnostics\",\"medicaments\",\"allergies_mentionnees\",\"autres_recommandations\"],\"instruction\":\"Le bloc FAITS DES SOURCES contient un document (par exemple une lettre de médecin) dont le texte est parfois imparfait, notamment après la lecture automatique d'un scan. Extrais-en les informations demandées sous forme de données structurées. N'extrais que ce que le document dit expressément : n'interprète pas, ne complète pas, ne corrige aucune dose et ne tiens compte d'aucune autre information. Une information absente du document vaut null, ou une liste vide.\",\"format\":\"Réponds par UN SEUL objet JSON valide, sans texte avant ni après et sans bloc de code, avec exactement ces clés :\\n- \\\"patient\\\" : objet avec \\\"nom\\\" (texte ou null), \\\"prenom\\\" (texte ou null) et \\\"naissance\\\" (texte au format JJ.MM.AAAA, ou null) ;\\n- \\\"diagnostics\\\" : liste de textes ;\\n- \\\"medicaments\\\" : liste d'objets avec \\\"nom\\\" (texte), \\\"dose\\\" (texte ou null), \\\"frequence\\\" (texte ou null), \\\"duree\\\" (texte ou null) et \\\"action\\\" (\\\"debut\\\", \\\"arret\\\", \\\"poursuite\\\", \\\"changement\\\" ou \\\"inconnu\\\") ;\\n- \\\"allergies_mentionnees\\\" : liste de textes ;\\n- \\\"autres_recommandations\\\" : liste de textes.\\nChaque médicament cité dans le document va dans \\\"medicaments\\\", même sans dose, et jamais dans \\\"autres_recommandations\\\" (qui ne contient que les conseils et contrôles prévus). Recopie les noms, les doses et les durées comme ils sont écrits dans le document, sans les traduire. Valeur de \\\"action\\\" : \\\"debut\\\" pour un médicament que la lettre prescrit ou recommande de commencer ; \\\"poursuite\\\" pour un médicament que la lettre dit inchangé ou poursuivi ; \\\"changement\\\" pour un remplacement ou un changement de dose ; \\\"arret\\\" pour un arrêt ; \\\"inconnu\\\" si la lettre ne le dit pas. Écris les clés exactement comme ci-dessus, sans accent.\"},\"generer_sbar\":{\"id\":\"generer_sbar\",\"version\":\"1.1.0\",\"sortie\":\"phrases\",\"temperature\":0.1,\"heures\":12,\"requete\":\"incident chute douleur tension pouls température glycémie traitement médicament observation risque surveillance\",\"protocoles\":false,\"sections\":[{\"cle\":\"S\",\"titre\":\"S – Situation :\"},{\"cle\":\"B\",\"titre\":\"B – Background (contexte) :\"},{\"cle\":\"A\",\"titre\":\"A – Assessment (évaluation) :\"},{\"cle\":\"R\",\"titre\":\"R – Recommendation :\"}],\"rapports_valides\":false,\"max_faits\":8,\"max_phrases\":8,\"longueur_phrase\":220,\"sources_prioritaires\":[],\"instruction_libre\":false,\"listes_json\":{},\"cles_json\":[],\"instruction\":\"Rédige la transmission SBAR des {periode_heures} dernières heures pour ce résident, à l'attention de l'équipe suivante. Reprends uniquement les faits de cette période et classe-les par importance pour la sécurité du résident : incidents d'abord, puis constantes, traitements et observations. Pour chaque incident, donne l'heure, la valeur mesurée et ce qui a été fait. Reformule chaque fait en une phrase courte : ne recopie jamais les lignes des faits ni leurs dates en tête de ligne. Les informations de fond (diagnostics, allergies, risques, plan de médication) ne servent qu'à la rubrique B.\",\"format\":\"Les phrases sont réparties dans quatre rubriques : S (situation : l'incident ou l'événement principal), B (contexte du résident : fond, allergies, antécédents), A (évaluation : constantes et observations de la période), R (recommandation). Chaque rubrique contient 1 à 4 phrases au plus. N'écris que des heures, des valeurs et des actions qui figurent dans les faits : n'invente aucun contrôle, aucun rendez-vous et aucune date. Une glycémie de contrôle après un resucrage n'est pas une nouvelle hypoglycémie. Ne regroupe jamais plusieurs faits sur une seule phrase. Dans R, ne reprends que des actions ou des consignes déjà présentes dans les faits (surveillance, protocole, contrôle prévu) ; ne propose aucun traitement, aucune dose et aucun diagnostic nouveau. Si une rubrique n'a aucun fait, ne lui donne aucune phrase.\"},\"points_vigilance\":{\"id\":\"points_vigilance\",\"version\":\"1.1.0\",\"sortie\":\"phrases\",\"temperature\":0.1,\"heures\":24,\"requete\":\"risque chute allergie anticoagulant hypoglycémie contre-indication surveillance consigne protocole\",\"protocoles\":true,\"sections\":[],\"rapports_valides\":false,\"max_faits\":8,\"max_phrases\":8,\"longueur_phrase\":220,\"sources_prioritaires\":[],\"instruction_libre\":false,\"listes_json\":{},\"cles_json\":[],\"instruction\":\"Établis la liste des points de vigilance pour l'équipe qui prend le relais, à partir des seuls faits : risques connus du résident, allergies, médicaments à surveiller, contre-indications, incidents des {periode_heures} dernières heures et mesures de surveillance déjà prévues. Classe-les par importance pour la sécurité : allergies et risques vitaux d'abord. Un point n'est retenu que s'il s'appuie sur un fait. Les protocoles de la maison (source [Fichiers]) servent seulement à rappeler la mesure qu'ils prévoient pour un risque déjà présent chez ce résident.\",\"format\":\"Donne 6 points au plus, un par phrase, chacun avec le fait qui le justifie. Si aucun point ne s'appuie sur un fait, ne donne aucune phrase. Aucune phrase d'introduction, aucune conclusion, aucune recommandation de traitement.\"},\"resume_epa\":{\"id\":\"resume_epa\",\"version\":\"1.1.0\",\"sortie\":\"phrases\",\"temperature\":0.1,\"heures\":24,\"requete\":\"diagnostics allergies médication liste eML traitement dossier ePA\",\"protocoles\":false,\"sections\":[{\"cle\":\"D\",\"titre\":\"Diagnostics :\"},{\"cle\":\"A\",\"titre\":\"Allergies :\"},{\"cle\":\"M\",\"titre\":\"Médication (liste eML) :\"}],\"rapports_valides\":false,\"max_faits\":8,\"max_phrases\":8,\"longueur_phrase\":220,\"sources_prioritaires\":[\"ePA\",\"Base hôpital (FHIR)\"],\"instruction_libre\":false,\"listes_json\":{},\"cles_json\":[],\"instruction\":\"Résume le dossier ePA de ce résident à l'attention d'un soignant. Utilise les faits dont la source est [ePA] ; les faits de la base de l'hôpital ne complètent que ce que l'ePA ne dit pas, avec leur propre source. Les allergies sont toujours reprises, quelle que soit leur source, car elles sont essentielles à la sécurité. Ne reprends ni les notes de soins ni les événements de la période.\",\"format\":\"Les phrases sont réparties dans trois rubriques : D (diagnostics), A (allergies), M (médication, liste eML). Une phrase par élément. Pour la médication, donne pour chaque médicament le nom, la dose et le schéma de prise tels qu'ils figurent dans le fait cité, sans rien ajouter. Si une rubrique n'a aucun fait, ne lui donne aucune phrase. Ne propose aucun traitement et ne juge aucune valeur.\"}};\n\n// Corps de la requête HTTP du webhook, ou objet déjà contrôlé par un workflow d'entrée : seuls patient_id et prompt_id sont lus.\nconst e = $input.first().json?.body ?? $input.first().json ?? {};\nconst prompt_id = String(e.prompt_id ?? '');\nconst p = PROMPTS[prompt_id];\nif (!p) throw new Error(`Prompt inconnu : « ${prompt_id} »`);\nreturn [\n  {\n    json: {\n      patient_id: e.patient_id,\n      prompt_id,\n      heures: p.heures,\n      requete: p.requete,\n      protocoles: p.protocoles,\n      rapports_valides: p.rapports_valides === true,\n      max_faits: p.max_faits,\n      sources_prioritaires: p.sources_prioritaires,\n    },\n  },\n];\n"
+      },
+      "id": "a1c3e000-0158-4000-8000-000000000158",
+      "name": "Paramètres du prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        960,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "value": "aicarebrqcherch1",
+          "mode": "id"
+        },
+        "mode": "once",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "a1c3e000-0159-4000-8000-000000000159",
+      "name": "Chercher",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1200,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Banc d'essai – de « chercher » vers « template » : on ajoute l'identifiant du prompt, rien d'autre.\nconst faits = $input.first().json;\nconst prm = $('Paramètres du prompt').first().json;\nreturn [{ json: { ...faits, prompt_id: prm.prompt_id } }];\n"
+      },
+      "id": "a1c3e000-0160-4000-8000-000000000160",
+      "name": "Vers template",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1440,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "value": "aicarebrqtmpl001",
+          "mode": "id"
+        },
+        "mode": "once",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "a1c3e000-0161-4000-8000-000000000161",
+      "name": "Template",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1680,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Banc d'essai – du template vers « rédiger » : le prompt assemblé + le contexte nécessaire au contrôle.\nconst t = $input.first().json;\nconst c = $('Chercher').first().json;\nreturn [{ json: { ...t, faits: c.faits, patient: c.patient, autres: c.autres, mode: 'a', action: t.prompt_id } }];\n"
+      },
+      "id": "a1c3e000-0162-4000-8000-000000000162",
+      "name": "Vers rédiger",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1920,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "value": "aicarebrqredig01",
+          "mode": "id"
+        },
+        "mode": "once",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "a1c3e000-0163-4000-8000-000000000163",
+      "name": "Rédiger",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        2160,
+        0
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Rapport de garde d'un résident (tâche d'étage) – ce qui est gardé dans la tâche : le BROUILLON, jamais une validation.\n// Si la génération échoue pour ce résident, l'erreur est notée et les autres résidents continuent.\nconst e = $('Entrée').first().json;\nconst p = $('Chercher').first().json.patient;\nconst r = $input.first().json ?? {};\nconst base = { patient_id: p.patient_id, chambre: p.chambre, resident: p.label };\nconst entree = r.brouillon_id\n  ? {\n      ...base,\n      brouillon_id: r.brouillon_id,\n      texte: r.texte,\n      sources: r.sources ?? [],\n      retirees: (r.retirees ?? []).map((x) => ({ phrase: x.phrase, source_id: x.source_id, motifs: x.motifs.map((m) => m.libelle), detail: x.detail })),\n      avertissements: (r.avertissements ?? []).map((a) => ({ type: a.type, detail: String(a.detail ?? '').slice(0, 200) })),\n    }\n  : { ...base, erreur: String(r.error?.message ?? r.error ?? 'Génération impossible').slice(0, 200) };\nreturn [{ json: { task_id: e.task_id, entree } }];\n"
+      },
+      "id": "a1c3e000-0164-4000-8000-000000000164",
+      "name": "Résultat du rapport",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2400,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE soins.taches SET fait = fait + 1, heartbeat = now(), resultat = resultat || $2::jsonb WHERE id = $1::uuid AND statut = 'en_cours' RETURNING id",
+        "options": {
+          "queryReplacement": "={{ [ $json.task_id, JSON.stringify([$json.entree]) ] }}"
+        }
+      },
+      "id": "a1c3e000-0165-4000-8000-000000000165",
+      "name": "Avancer la tâche",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        2640,
+        0
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "aicarepg00000001",
+          "name": "AI-Care Postgres"
+        }
+      },
+      "executeOnce": true,
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Rapport de garde d'un résident – sortie du sous-workflow.\nreturn [{ json: $('Résultat du rapport').first().json.entree }];\n"
+      },
+      "id": "a1c3e000-0166-4000-8000-000000000166",
+      "name": "Sortie",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2880,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Entrée": {
+      "main": [
+        [
+          {
+            "node": "Tâche toujours voulue",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tâche toujours voulue": {
+      "main": [
+        [
+          {
+            "node": "Tâche en cours ?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tâche en cours ?": {
+      "main": [
+        [
+          {
+            "node": "Reprendre l'entrée",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Résident ignoré",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reprendre l'entrée": {
+      "main": [
+        [
+          {
+            "node": "Paramètres du prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Paramètres du prompt": {
+      "main": [
+        [
+          {
+            "node": "Chercher",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chercher": {
+      "main": [
+        [
+          {
+            "node": "Vers template",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vers template": {
+      "main": [
+        [
+          {
+            "node": "Template",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Template": {
+      "main": [
+        [
+          {
+            "node": "Vers rédiger",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vers rédiger": {
+      "main": [
+        [
+          {
+            "node": "Rédiger",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rédiger": {
+      "main": [
+        [
+          {
+            "node": "Résultat du rapport",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Résultat du rapport": {
+      "main": [
+        [
+          {
+            "node": "Avancer la tâche",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Avancer la tâche": {
+      "main": [
+        [
+          {
+            "node": "Sortie",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Berlin"
+  },
+  "pinData": {}
+}

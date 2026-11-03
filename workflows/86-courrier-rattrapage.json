@@ -1,0 +1,174 @@
+{
+  "id": "aicarecourrierrat1",
+  "name": "AI-Care – Rattrapage des courriers (toutes les 2 minutes)",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 */2 * * * *"
+            }
+          ]
+        }
+      },
+      "id": "a1c3e000-0300-4000-8000-000000000300",
+      "name": "Toutes les 2 minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        -100
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "a1c3e000-0301-4000-8000-000000000301",
+      "name": "Démarrage manuel",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT message_id FROM soins.courriers_traites WHERE etat = 'traite' OR debut > now() - interval '15 minutes'",
+        "options": {}
+      },
+      "id": "a1c3e000-0302-4000-8000-000000000302",
+      "name": "Courriers déjà traités",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        260,
+        0
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "aicarepg00000001",
+          "name": "AI-Care Postgres"
+        }
+      },
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "url": "http://mailpit:8025/api/v1/messages?limit=50",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "a1c3e000-0303-4000-8000-000000000303",
+      "name": "Messages récents",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        500,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Rattrapage des courriers – messages de Mailpit avec une pièce jointe, arrivés il y a plus d'une minute (le webhook s'en occupe\n// peut-être) et ni traités ni déjà pris. Le verrou (soins.courriers_traites, état « en_cours » pendant 15 minutes) évite tout double traitement.\nconst traites = new Set($('Courriers déjà traités').all().map((i) => i.json.message_id).filter(Boolean));\nconst messages = $input.first().json?.messages ?? [];\nreturn messages\n  .filter((m) => m.Attachments > 0 && !traites.has(m.ID) && Date.now() - new Date(m.Created).getTime() > 60000)\n  .map((m) => ({ json: { id: m.ID } }));\n"
+      },
+      "id": "a1c3e000-0304-4000-8000-000000000304",
+      "name": "Courriers à rattraper",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        740,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "value": "aicarebrqcourrier1",
+          "mode": "id"
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "a1c3e000-0305-4000-8000-000000000305",
+      "name": "Traiter le courrier",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        980,
+        0
+      ],
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "connections": {
+    "Toutes les 2 minutes": {
+      "main": [
+        [
+          {
+            "node": "Courriers déjà traités",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Démarrage manuel": {
+      "main": [
+        [
+          {
+            "node": "Courriers déjà traités",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Courriers déjà traités": {
+      "main": [
+        [
+          {
+            "node": "Messages récents",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Messages récents": {
+      "main": [
+        [
+          {
+            "node": "Courriers à rattraper",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Courriers à rattraper": {
+      "main": [
+        [
+          {
+            "node": "Traiter le courrier",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Berlin"
+  },
+  "pinData": {}
+}

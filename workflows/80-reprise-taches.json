@@ -1,0 +1,215 @@
+{
+  "id": "aicarerepriseta01",
+  "name": "AI-Care – Reprise des tâches (démarrage de n8n et veilleur)",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "events": [
+          "init"
+        ]
+      },
+      "id": "a1c3e000-0246-4000-8000-000000000246",
+      "name": "Démarrage de n8n",
+      "type": "n8n-nodes-base.n8nTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        -200
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH u AS (UPDATE soins.taches SET statut = 'interrompue', termine_le = now() WHERE statut = 'en_cours' RETURNING id, type, fait, total), j AS (INSERT INTO soins.journal_ia (evenement, action, details) SELECT 'tache_interrompue', type, jsonb_build_object('tache_id', id, 'cause', 'redemarrage', 'fait', fait, 'total', total) FROM u) SELECT count(*) AS interrompues FROM u",
+        "options": {
+          "queryReplacement": "={{ [  ] }}"
+        }
+      },
+      "id": "a1c3e000-0247-4000-8000-000000000247",
+      "name": "Reprise au démarrage",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        260,
+        -200
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "aicarepg00000001",
+          "name": "AI-Care Postgres"
+        }
+      },
+      "executeOnce": true,
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 */5 * * * *"
+            }
+          ]
+        }
+      },
+      "id": "a1c3e000-0248-4000-8000-000000000248",
+      "name": "Toutes les 5 minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        100
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "a1c3e000-0249-4000-8000-000000000249",
+      "name": "Démarrage manuel",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE soins.alarmes SET contexte = '{\"statut\":\"indisponible\"}'::jsonb WHERE contexte->>'statut' = 'en_cours'",
+        "options": {
+          "queryReplacement": "={{ [  ] }}"
+        }
+      },
+      "id": "a1c3e000-0250-4000-8000-000000000250",
+      "name": "Contextes d'alarme (démarrage)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        520,
+        -200
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "aicarepg00000001",
+          "name": "AI-Care Postgres"
+        }
+      },
+      "executeOnce": true,
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE soins.alarmes SET contexte = '{\"statut\":\"indisponible\"}'::jsonb WHERE contexte->>'statut' = 'en_cours' AND recue_le < now() - interval '15 minutes'",
+        "options": {
+          "queryReplacement": "={{ [  ] }}"
+        }
+      },
+      "id": "a1c3e000-0251-4000-8000-000000000251",
+      "name": "Contextes d'alarme (veilleur)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        520,
+        200
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "aicarepg00000001",
+          "name": "AI-Care Postgres"
+        }
+      },
+      "executeOnce": true,
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH u AS (UPDATE soins.taches SET statut = 'interrompue', termine_le = now() WHERE statut = 'en_cours' AND heartbeat < now() - interval '30 minutes' RETURNING id, type, fait, total), j AS (INSERT INTO soins.journal_ia (evenement, action, details) SELECT 'tache_interrompue', type, jsonb_build_object('tache_id', id, 'cause', 'sans_signe_de_vie', 'fait', fait, 'total', total) FROM u) SELECT count(*) AS interrompues FROM u",
+        "options": {
+          "queryReplacement": "={{ [  ] }}"
+        }
+      },
+      "id": "a1c3e000-0252-4000-8000-000000000252",
+      "name": "Tâches sans signe de vie",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        260,
+        200
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "aicarepg00000001",
+          "name": "AI-Care Postgres"
+        }
+      },
+      "executeOnce": true,
+      "alwaysOutputData": true
+    }
+  ],
+  "connections": {
+    "Démarrage de n8n": {
+      "main": [
+        [
+          {
+            "node": "Reprise au démarrage",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reprise au démarrage": {
+      "main": [
+        [
+          {
+            "node": "Contextes d'alarme (démarrage)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Toutes les 5 minutes": {
+      "main": [
+        [
+          {
+            "node": "Tâches sans signe de vie",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Démarrage manuel": {
+      "main": [
+        [
+          {
+            "node": "Tâches sans signe de vie",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tâches sans signe de vie": {
+      "main": [
+        [
+          {
+            "node": "Contextes d'alarme (veilleur)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Berlin"
+  },
+  "pinData": {}
+}

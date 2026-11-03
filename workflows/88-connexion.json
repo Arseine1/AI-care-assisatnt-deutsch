@@ -1,0 +1,309 @@
+{
+  "id": "aicareconnexion01",
+  "name": "AI-Care – Connexion du soignant (identifiant et PIN)",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "aicare-connexion",
+        "responseMode": "lastNode",
+        "options": {
+          "allowedOrigins": "http://localhost:5173,http://localhost:5174,http://localhost:5175,http://127.0.0.1:5173,http://127.0.0.1:5174,http://127.0.0.1:5175"
+        },
+        "authentication": "headerAuth"
+      },
+      "id": "a1c3e000-0318-4000-8000-000000000318",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "aicare-aicare-connexion",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "aicarecle000000001",
+          "name": "AI-Care clé des webhooks"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Connexion – contrôle de la forme des identifiants. L'identifiant est un nom de compte (minuscules, chiffres, . _ -), le code PIN a 4 à 8 chiffres.\nconst b = $input.first().json?.body ?? {};\nconst identifiant = String(b.identifiant ?? '').trim().toLowerCase();\nconst pin = String(b.pin ?? '');\nconst forme = /^[a-z0-9._-]{2,40}$/.test(identifiant) && /^\\d{4,8}$/.test(pin);\nreturn [{ json: { identifiant: forme ? identifiant : 'format-invalide', pin: forme ? pin : '', forme } }];\n"
+      },
+      "id": "a1c3e000-0319-4000-8000-000000000319",
+      "name": "Contrôler la connexion",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT g.identifiant, g.nom, g.pin_hash, g.actif, (SELECT count(*) FROM soins.connexions_echecs e WHERE e.identifiant = $1 AND e.le > now() - interval '5 minutes') >= 5 AS verrouille FROM soins.soignants g WHERE g.identifiant = $1",
+        "options": {
+          "queryReplacement": "={{ [ $json.identifiant ] }}"
+        }
+      },
+      "id": "a1c3e000-0320-4000-8000-000000000320",
+      "name": "Soignant",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        480,
+        0
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "aicarepg00000001",
+          "name": "AI-Care Postgres"
+        }
+      },
+      "executeOnce": true,
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Connexion – vérification du PIN : scrypt (haché avec un sel propre à chaque soignant), comparaison à temps constant.\n// Un identifiant inconnu fait le même calcul que s'il existait : la durée ne révèle pas si le compte existe.\nconst crypto = require('crypto');\nconst demande = $('Contrôler la connexion').first().json;\nconst s = $input.first().json ?? {};\nconst FAUX = 'scrypt$00000000000000000000000000000000$' + '00'.repeat(32);\nconst [, sel, attendu] = String(s.pin_hash && s.actif ? s.pin_hash : FAUX).split('$');\nconst calcule = crypto.scryptSync(demande.pin, Buffer.from(sel, 'hex'), 32);\nconst bon = crypto.timingSafeEqual(calcule, Buffer.from(attendu, 'hex'));\nconst existe = Boolean(s.identifiant && s.actif && s.pin_hash);\nlet motif = 'ok';\nif (!demande.forme) motif = 'format';\nelse if (!existe || !bon) motif = 'identifiants';\nelse if (s.verrouille) motif = 'verrouille'; // même avec le bon PIN : compte verrouillé 5 minutes après 5 échecs\nreturn [{ json: { autorise: motif === 'ok', motif, identifiant: demande.identifiant, nom: motif === 'ok' ? s.nom : null } }];\n"
+      },
+      "id": "a1c3e000-0321-4000-8000-000000000321",
+      "name": "Vérifier le PIN",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "PIN accepté ?",
+              "leftValue": "={{ $json.autorise === true }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a1c3e000-0322-4000-8000-000000000322",
+      "name": "PIN accepté ?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        960,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Connexion – jeton de session : 32 octets aléatoires (43 caractères). Il n'est renvoyé qu'une fois ; la base ne garde que son SHA-256.\nconst crypto = require('crypto');\nconst v = $('Vérifier le PIN').first().json;\nconst jeton = crypto.randomBytes(32).toString('base64url');\nreturn [{ json: { jeton, hash: crypto.createHash('sha256').update(jeton).digest('hex'), identifiant: v.identifiant, nom: v.nom } }];\n"
+      },
+      "id": "a1c3e000-0323-4000-8000-000000000323",
+      "name": "Créer le jeton",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        -120
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH menage AS (DELETE FROM soins.sessions WHERE expire_le < now()), remise AS (DELETE FROM soins.connexions_echecs WHERE identifiant = $2) INSERT INTO soins.sessions (jeton_hash, identifiant) VALUES ($1, $2) RETURNING expire_le",
+        "options": {
+          "queryReplacement": "={{ [ $json.hash, $json.identifiant ] }}"
+        }
+      },
+      "id": "a1c3e000-0324-4000-8000-000000000324",
+      "name": "Ouvrir la session",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1440,
+        -120
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "aicarepg00000001",
+          "name": "AI-Care Postgres"
+        }
+      },
+      "executeOnce": true,
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "jsCode": "// Connexion – réponse : jeton, soignant et fin de validité de la session.\nconst j = $('Créer le jeton').first().json;\nconst s = $input.first().json ?? {};\nreturn [{ json: { jeton: j.jeton, soignant: { identifiant: j.identifiant, nom: j.nom }, expire_le: s.expire_le } }];\n"
+      },
+      "id": "a1c3e000-0325-4000-8000-000000000325",
+      "name": "Réponse connexion",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1680,
+        -120
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO soins.connexions_echecs (identifiant) SELECT $1 WHERE $2 NOT IN ('verrouille', 'format') AND EXISTS (SELECT 1 FROM soins.soignants WHERE identifiant = $1) RETURNING id",
+        "options": {
+          "queryReplacement": "={{ [ $json.identifiant, $json.motif ] }}"
+        }
+      },
+      "id": "a1c3e000-0326-4000-8000-000000000326",
+      "name": "Noter l'échec",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1200,
+        160
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "aicarepg00000001",
+          "name": "AI-Care Postgres"
+        }
+      },
+      "executeOnce": true,
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Connexion – refus : un message identique pour un mauvais identifiant et un mauvais PIN ; seul le verrouillage est signalé.\nconst v = $('Vérifier le PIN').first().json;\nreturn [{ json: { erreur: v.motif === 'verrouille' ? 'verrouille' : 'identifiants' } }];\n"
+      },
+      "id": "a1c3e000-0327-4000-8000-000000000327",
+      "name": "Refus de connexion",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1440,
+        160
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Contrôler la connexion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Contrôler la connexion": {
+      "main": [
+        [
+          {
+            "node": "Soignant",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Soignant": {
+      "main": [
+        [
+          {
+            "node": "Vérifier le PIN",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vérifier le PIN": {
+      "main": [
+        [
+          {
+            "node": "PIN accepté ?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PIN accepté ?": {
+      "main": [
+        [
+          {
+            "node": "Créer le jeton",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Noter l'échec",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Créer le jeton": {
+      "main": [
+        [
+          {
+            "node": "Ouvrir la session",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ouvrir la session": {
+      "main": [
+        [
+          {
+            "node": "Réponse connexion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Noter l'échec": {
+      "main": [
+        [
+          {
+            "node": "Refus de connexion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Berlin"
+  },
+  "pinData": {}
+}

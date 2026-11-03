@@ -1,0 +1,27 @@
+Pflegekasse Sonnenhof (Beispiel) - Eingang: 09.10.2026
+Fragebogen zur Rentenversicherung der Pflegeperson (Beispieldaten, frei erfunden)
+
+Name, Vorname der Pflegeperson:  Neumann, Markus
+Aktenzeichen der Pflegekasse: PK-2026-0105
+Geburtsdatum der Pflegeperson: 02.02.1975
+Staatsangehörigkeit: deutsch
+Anschrift: Am Markt 4, 04109 Leipzig
+Rentenversicherungsnummer: 65020275N121
+
+Pflegebedürftige Person
+Name, Vorname der pflegebedürftigen Person: Neumann, Rosa
+Geburtsdatum der pflegebedürftigen Person: 25.11.1948
+Pflegegrad: 3
+Art der Leistung: Pflegegeld
+
+Beginn der Pflegetätigkeit: 12.01.2026
+Pflege zu Hause (häuslich): Ja
+Pflege unentgeltlich (nicht erwerbsmäßig): Ja
+Pflegezeit pro Woche (Stunden): 12
+Pflegetage pro Woche: 5
+Weitere Pflegepersonen: keine
+
+Erwerbstätigkeit, Stunden pro Woche: 35 (Vollzeit im Lager)
+Arbeitszeit variabel: Nein
+Anzahl Arbeitgeber: 1
+Bezug einer Vollrente wegen Alters: Nein

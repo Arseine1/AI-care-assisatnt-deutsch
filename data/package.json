@@ -1,0 +1,23 @@
+﻿{
+  "name": "aicare-data",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Données de test fictives et scripts de chargement (PostgreSQL, HAPI FHIR, Mailpit).",
+  "scripts": {
+    "generer": "node scripts/generer-sql.mjs && node scripts/generer-sgb6.mjs && node scripts/generer-front.mjs",
+    "postgres": "node scripts/charger-postgres.mjs",
+    "fhir": "node scripts/charger-fhir.mjs",
+    "lettres": "node scripts/generer-lettres.mjs",
+    "kim": "node scripts/envoyer-kim.mjs",
+    "epa": "node scripts/charger-epa.mjs",
+    "qdrant": "node scripts/creer-collections.mjs",
+    "scan": "node scripts/generer-compte-rendu.mjs",
+    "tout": "npm run generer && npm run postgres && npm run fhir && npm run kim && npm run epa"
+  },
+  "dependencies": {
+    "pdfkit": "^0.17.0",
+    "pureimage": "^0.4.18"
+  }
+}
+

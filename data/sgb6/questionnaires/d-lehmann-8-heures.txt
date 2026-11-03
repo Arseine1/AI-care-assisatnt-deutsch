@@ -1,0 +1,25 @@
+Eingangsstempel Pflegekasse: 08.10.2026
+FRAGEBOGEN – Pflegeperson Rentenversicherung (Beispieldaten, frei erfunden)
+
+Aktenzeichen der Pflegekasse: PK-2026-0104
+Name, Vorname der Pflegeperson: Lehmann, Sabine
+Geburtsdatum der Pflegeperson: 19.09.1980
+Rentenversicherungsnummer: 44190980L582
+Staatsangehörigkeit: deutsch
+Anschrift: Rosenallee 21, 20095 Hamburg
+
+Name, Vorname der pflegebedürftigen Person: Lehmann, Gerda
+Geburtsdatum der pflegebedürftigen Person: 11.06.1945
+Pflegegrad: 2
+Art der Leistung: Pflegegeld
+
+Beginn der Pflegetätigkeit: 01.03.2026
+Pflege zu Hause (häuslich): [X] Ja [ ] Nein
+Pflege unentgeltlich (nicht erwerbsmäßig): [X] Ja [ ] Nein
+Pflegezeit pro Woche (Stunden): 12 (laut meiner Schätzung)
+Pflegetage pro Woche: 4
+Weitere Pflegepersonen: keine
+
+Erwerbstätigkeit, Stunden pro Woche: 24
+Arbeitszeit variabel: Nein
+Bezug einer Vollrente wegen Alters: Nein

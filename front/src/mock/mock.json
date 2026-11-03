@@ -1,0 +1,39 @@
+{
+  "_aide": "Réponses simulées (données fictives). Variables remplacées par api.js : {resident}, {chambre}, {consigne}. Forme : { texte, sources[], alertes[{type: 'capteur'|'contradiction', message}] }.",
+  "actions": {
+    "rapport_garde": {
+      "texte": "Situation : {resident}, chambre {chambre}. Nuit globalement calme, deux réveils à 02:10 et 04:40 [Logiciel de soins].\nContexte : hypertension connue, traitement habituel administré à 20:00 [ePA].\nÉvaluation : tension 128/78 et température 36,8 °C à 06:00 [Logiciel de soins]. Sortie de lit non accompagnée détectée à 03:15 [Capteurs].\nRecommandation : surveiller l'hydratation ce matin et reprendre la tension à 14:00 [Logiciel de soins].",
+      "sources": ["Logiciel de soins", "ePA", "Capteurs"],
+      "retirees": [
+        { "phrase": "Ajuster la dose d'anti-histaminiques si nécessaire.", "source_id": "F4", "motifs": ["Termes absents du fait cité"], "detail": "ajuster, histaminiques absent(s) de F4" }
+      ],
+      "alertes": [
+        { "type": "capteur", "message": "Capteur de lit (LoRaWAN), 03:15 : sortie de lit non accompagnée, chambre {chambre}." }
+      ]
+    },
+    "resume_epa": {
+      "texte": "Diagnostics : hypertension artérielle, diabète de type 2 [ePA].\nTraitement : antihypertenseur le matin, metformine matin et soir [ePA].\nAllergies : pénicilline (réaction cutanée) [ePA].\nDernière lettre de médecin (12/10) : ajustement du traitement antihypertenseur [Lettre de médecin].\nDernier bilan hospitalier : HbA1c 7,1 % [Base hôpital (FHIR)].\nDroits et échanges à jour via la Télématique Infrastructure (système de santé allemand) [Télématique Infrastructure].",
+      "sources": ["ePA", "Lettre de médecin", "Base hôpital (FHIR)", "Télématique Infrastructure"],
+      "alertes": []
+    },
+    "points_vigilance": {
+      "texte": "1. Risque de chute : deux sorties de lit nocturnes cette semaine [Capteurs].\n2. Hydratation insuffisante : 900 ml sur 24 h pour un objectif de 1 500 ml [Logiciel de soins].\n3. Tension à contrôler : 128/78 ce matin, valeur à surveiller après l'ajustement du traitement [Logiciel de soins] [Lettre de médecin].\n4. Allergie à la pénicilline : à rappeler à tout prescripteur [ePA].",
+      "sources": ["Capteurs", "Logiciel de soins", "Lettre de médecin", "ePA"],
+      "alertes": [
+        { "type": "capteur", "message": "Capteur de lit (LoRaWAN) : deuxième sortie de lit cette nuit, chambre {chambre}." }
+      ]
+    },
+    "verifier_document": {
+      "texte": "Document analysé : lettre de médecin du 12/10 pour {resident}.\nLa lettre prescrit de l'amoxicilline 1 g pendant 7 jours [Lettre de médecin].\nOr l'ePA signale une allergie à la pénicilline [ePA]. Ce point doit être clarifié avec le médecin avant toute administration.\nLe reste du traitement est cohérent avec le dossier de soins [Logiciel de soins].",
+      "sources": ["Lettre de médecin", "ePA", "Logiciel de soins"],
+      "alertes": [
+        { "type": "contradiction", "message": "la lettre de médecin prescrit de l'amoxicilline, l'ePA signale une allergie à la pénicilline." }
+      ]
+    }
+  },
+  "consigne": {
+    "texte": "Éléments utiles pour {resident} (chambre {chambre}) en lien avec votre consigne : « {consigne} »\nNuit calme, deux réveils [Logiciel de soins].\nHydratation : 900 ml sur 24 h, objectif 1 500 ml [Logiciel de soins].\nAucune modification de traitement depuis la lettre de médecin du 12/10 [Lettre de médecin].",
+    "sources": ["Logiciel de soins", "Lettre de médecin"],
+    "alertes": []
+  }
+}

@@ -1,0 +1,9 @@
+﻿{"date":"2026-10-26T07:10:02.735Z","etiquette":"avant","essai":1,"chambre":"12","total_s":159.7,"modele_s":151.9,"n8n_hors_modele_s":7.8,"tokens":184,"faits":16,"phrases_retirees":0,"mots_texte":86}
+{"date":"2026-10-26T07:14:01.336Z","etiquette":"avant-bis","essai":1,"chambre":"12","total_s":139.1,"modele_s":126.4,"n8n_hors_modele_s":12.7,"tokens":202,"faits":11,"phrases_retirees":4,"mots_texte":30}
+{"date":"2026-10-26T07:14:02.131Z","etiquette":"avant-bis","essai":2,"chambre":"12","total_s":57,"modele_s":50.1,"n8n_hors_modele_s":6.9,"tokens":167,"faits":11,"phrases_retirees":4,"mots_texte":30}
+{"date":"2026-10-26T07:23:13.009Z","etiquette":"apres","essai":1,"chambre":"12","total_s":167,"modele_s":158.4,"n8n_hors_modele_s":8.7,"tokens":194,"faits":8,"phrases_retirees":3,"mots_texte":49}
+{"date":"2026-10-26T07:23:13.089Z","etiquette":"apres","essai":2,"chambre":"12","total_s":68,"modele_s":56.7,"n8n_hors_modele_s":11.3,"tokens":178,"faits":8,"phrases_retirees":3,"mots_texte":42}
+{"date":"2026-10-26T07:30:28.296Z","etiquette":"apres-cles-courtes","essai":1,"chambre":"12","total_s":106.7,"modele_s":98.7,"n8n_hors_modele_s":8,"tokens":248,"faits":8,"phrases_retirees":4,"mots_texte":30}
+{"date":"2026-10-26T07:30:28.332Z","etiquette":"apres-cles-courtes","essai":2,"chambre":"12","total_s":75.6,"modele_s":70.5,"n8n_hors_modele_s":5.2,"tokens":223,"faits":8,"phrases_retirees":3,"mots_texte":56}
+{"date":"2026-10-26T07:36:49.342Z","etiquette":"apres-final","essai":1,"chambre":"12","total_s":81.6,"modele_s":75.7,"n8n_hors_modele_s":5.9,"tokens":222,"faits":8,"phrases_retirees":4,"mots_texte":30}
+{"date":"2026-10-26T07:36:49.466Z","etiquette":"apres-final","essai":2,"chambre":"12","total_s":72.5,"modele_s":68.2,"n8n_hors_modele_s":4.3,"tokens":222,"faits":8,"phrases_retirees":4,"mots_texte":30}

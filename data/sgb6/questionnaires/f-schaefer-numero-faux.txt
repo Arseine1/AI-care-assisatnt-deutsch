@@ -1,0 +1,26 @@
+Eingangsstempel Pflegekasse: 12.10.2026
+Fragebogen Rentenversicherung Pflegeperson (Beispieldaten, frei erfunden)
+
+Aktenzeichen der Pflegekasse: PK-2026-0106
+
+Name, Vorname der Pflegeperson: Schäfer, Petra
+Geburtsdatum der Pflegeperson: 11.06.1973
+Rentenversicherungsnummer: 50 110673 S 638
+Staatsangehörigkeit: deutsch
+Anschrift: Eichenweg 9, 80331 München
+
+Name, Vorname der pflegebedürftigen Person: Schäfer, Heinz
+Geburtsdatum der pflegebedürftigen Person: 08.04.1941
+Pflegegrad: 3
+Art der Leistung: Pflegegeld
+
+Beginn der Pflegetätigkeit: 01.02.2026
+Pflege zu Hause (häuslich): Ja
+Pflege unentgeltlich (nicht erwerbsmäßig): Ja
+Pflegezeit pro Woche (Stunden): 16
+Pflegetage pro Woche: 6
+Weitere Pflegepersonen: keine
+
+Erwerbstätigkeit, Stunden pro Woche: 18
+Arbeitszeit variabel: Nein
+Bezug einer Vollrente wegen Alters: Nein

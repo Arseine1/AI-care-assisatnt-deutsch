@@ -1,0 +1,532 @@
+{
+  "id": "aicareimpkim0001",
+  "name": "AI-Care – Connecteur KIM (lettres de médecin)",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 40 0,6,12,18 * * *"
+            }
+          ]
+        }
+      },
+      "id": "a1c3e000-0048-4000-8000-000000000048",
+      "name": "Planification",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        -200
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "a1c3e000-0049-4000-8000-000000000049",
+      "name": "Démarrage manuel",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "import-kim",
+        "responseMode": "lastNode",
+        "options": {
+          "allowedOrigins": "http://localhost:5173,http://localhost:5174,http://localhost:5175,http://127.0.0.1:5173,http://127.0.0.1:5174,http://127.0.0.1:5175"
+        },
+        "authentication": "headerAuth"
+      },
+      "id": "a1c3e000-0050-4000-8000-000000000050",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        200
+      ],
+      "webhookId": "aicare-import-kim",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "aicarecle000000001",
+          "name": "AI-Care clé des webhooks"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT patient_id, civilite, prenom, nom, to_char(date_naissance, 'DD.MM.YYYY') AS naissance, chambre FROM soins.residents",
+        "options": {}
+      },
+      "id": "a1c3e000-0051-4000-8000-000000000051",
+      "name": "Résidents",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        260,
+        100
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "aicarepg00000001",
+          "name": "AI-Care Postgres"
+        }
+      },
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "url": "http://mailpit:8025/api/v1/messages?limit=100",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "a1c3e000-0052-4000-8000-000000000052",
+      "name": "Lister les messages",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        500,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Connecteur « KIM » (boîte simulée par Mailpit) : ne garder que les messages qui ont une pièce jointe.\nconst liste = $input.first().json.messages ?? [];\nreturn liste.filter((m) => m.Attachments > 0).map((m) => ({ json: { id: m.ID } }));\n"
+      },
+      "id": "a1c3e000-0053-4000-8000-000000000053",
+      "name": "Messages à lire",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        740,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=http://mailpit:8025/api/v1/message/{{ $json.id }}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "a1c3e000-0054-4000-8000-000000000054",
+      "name": "Détail du message",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        980,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Connecteur « KIM » : une ligne par PDF joint (lettre de médecin).\nconst sortie = [];\nfor (const { json: m } of $input.all()) {\n  for (const pj of m.Attachments ?? []) {\n    const estPdf = /pdf/i.test(pj.ContentType ?? '') || /\\.pdf$/i.test(pj.FileName ?? '');\n    if (!estPdf) continue;\n    sortie.push({\n      json: {\n        id: m.ID,\n        partId: pj.PartID,\n        fileName: pj.FileName,\n        from: m.From?.Address,\n        expediteur: m.From?.Name || m.From?.Address,\n        subject: m.Subject,\n        date: m.Date,\n      },\n    });\n  }\n}\nreturn sortie;\n"
+      },
+      "id": "a1c3e000-0055-4000-8000-000000000055",
+      "name": "Pièces jointes",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1220,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=http://mailpit:8025/api/v1/message/{{ $json.id }}/part/{{ $json.partId }}",
+        "options": {
+          "timeout": 120000,
+          "response": {
+            "response": {
+              "responseFormat": "file",
+              "outputPropertyName": "data"
+            }
+          }
+        }
+      },
+      "id": "a1c3e000-0056-4000-8000-000000000056",
+      "name": "Télécharger la pièce jointe",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1460,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://ocr:8000/texte",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/pdf"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "binaryData",
+        "inputDataFieldName": "data",
+        "options": {
+          "timeout": 300000
+        }
+      },
+      "id": "a1c3e000-0057-4000-8000-000000000057",
+      "name": "Texte du PDF (OCRmyPDF)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1700,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Connecteur « KIM » : lettre de médecin (texte du PDF ou OCR) -> document de la collection « a_verifier ».\n//\n// Une lettre est TOUJOURS déposée dans « a_verifier » : tant qu'elle n'a pas été contrôlée (contradiction avec\n// l'allergie, le traitement, la fonction rénale…), son contenu n'est pas présenté comme fiable.\n// Rattachement au résident : le nom ET la date de naissance (jj.mm.aaaa) du courrier doivent correspondre à UN\n// seul résident (les deux « Heinz Müller » ne se distinguent que par la date). Sinon on ne devine pas :\n// la lettre reste sans patient_id, avec le motif identite_inconnue ou identite_ambigue.\nconst residents = $('Résidents').all().map((i) => i.json);\nconst pieces = $('Pièces jointes').all();\nconst norm = (s) => String(s).normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').toLowerCase();\n\nconst docs = [];\n$input.all().forEach((item, i) => {\n  const p = pieces[i].json;\n  const texte = String(item.json.texte ?? '').trim();\n  if (!texte) return;\n\n  const t = norm(texte);\n  const trouves = residents.filter((r) => t.includes(norm(r.nom)) && texte.includes(r.naissance));\n  const base = {\n    collection: 'a_verifier',\n    source: 'kim',\n    source_label: 'KIM (lettre de médecin)',\n    // Référence stable (expéditeur + nom du fichier) : renvoyer le même courrier ne crée pas de doublon.\n    source_ref: `kim/${p.from}/${p.fileName}`,\n    type: 'lettre',\n    titre: p.subject,\n    expediteur: p.expediteur,\n    statut: 'a_verifier',\n    texte,\n    date: new Date(p.date).toISOString(),\n  };\n\n  if (trouves.length === 1) {\n    const r = trouves[0];\n    docs.push({\n      ...base,\n      motif: 'lettre_a_verifier',\n      patient_id: r.patient_id,\n      chambre: r.chambre,\n      patient_label: `${r.civilite} ${r.prenom} ${r.nom} (chambre ${r.chambre})`,\n    });\n  } else {\n    docs.push({ ...base, motif: trouves.length === 0 ? 'identite_inconnue' : 'identite_ambigue' });\n  }\n});\nreturn docs.map((json) => ({ json }));\n"
+      },
+      "id": "a1c3e000-0058-4000-8000-000000000058",
+      "name": "Documents KIM",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1940,
+        100
+      ],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "value": "aicareindexeur01",
+          "mode": "id"
+        },
+        "mode": "once",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "a1c3e000-0059-4000-8000-000000000059",
+      "name": "Indexer",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        2180,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Contrôle de session – le jeton « Bearer » de l'en-tête Authorization (43 caractères URL-safe) est haché (SHA-256) : seul le haché est en base.\nconst entetes = $input.first().json?.headers ?? {};\nconst m = String(entetes.authorization ?? '').match(/^Bearer ([A-Za-z0-9_-]{43})$/);\nif (!m) return [{ json: { hash: '' } }];\nreturn [{ json: { hash: require('crypto').createHash('sha256').update(m[1]).digest('hex') } }];\n"
+      },
+      "id": "a1c3e000-0357-4000-8000-000000000357",
+      "name": "Session (jeton)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        120,
+        -180
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT s.identifiant, g.nom, s.jeton_hash FROM soins.sessions s JOIN soins.soignants g ON g.identifiant = s.identifiant WHERE s.jeton_hash = $1 AND s.expire_le > now() AND g.actif",
+        "options": {
+          "queryReplacement": "={{ [ $json.hash ] }}"
+        }
+      },
+      "id": "a1c3e000-0358-4000-8000-000000000358",
+      "name": "Session (base)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        240,
+        -180
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "aicarepg00000001",
+          "name": "AI-Care Postgres"
+        }
+      },
+      "executeOnce": true,
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Contrôle de session – résultat : un soignant identifié (session ouverte, non expirée, compte actif) ou rien.\nconst r = $input.first().json ?? {};\nif (!r.identifiant) return [{ json: { ok: false } }];\nreturn [{ json: { ok: true, soignant: { identifiant: r.identifiant, nom: r.nom }, jeton_hash: r.jeton_hash } }];\n"
+      },
+      "id": "a1c3e000-0359-4000-8000-000000000359",
+      "name": "Session",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        360,
+        -180
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "Session valide ?",
+              "leftValue": "={{ $json.ok === true }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a1c3e000-0360-4000-8000-000000000360",
+      "name": "Session valide ?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        480,
+        -180
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Contrôle de session – la session est valide : on rend aux nœuds suivants la requête d'origine (en-têtes, corps) telle que reçue.\nreturn [{ json: $('Webhook').first().json }];\n"
+      },
+      "id": "a1c3e000-0361-4000-8000-000000000361",
+      "name": "Requête",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        600,
+        -260
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Contrôle de session – refus : aucune donnée, seulement le motif. L'interface rouvre alors la page de connexion.\nreturn [{ json: { erreur: 'session' } }];\n"
+      },
+      "id": "a1c3e000-0362-4000-8000-000000000362",
+      "name": "Refus (session)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        600,
+        -100
+      ]
+    }
+  ],
+  "connections": {
+    "Planification": {
+      "main": [
+        [
+          {
+            "node": "Résidents",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Démarrage manuel": {
+      "main": [
+        [
+          {
+            "node": "Résidents",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Session (jeton)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Résidents": {
+      "main": [
+        [
+          {
+            "node": "Lister les messages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lister les messages": {
+      "main": [
+        [
+          {
+            "node": "Messages à lire",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Messages à lire": {
+      "main": [
+        [
+          {
+            "node": "Détail du message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Détail du message": {
+      "main": [
+        [
+          {
+            "node": "Pièces jointes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pièces jointes": {
+      "main": [
+        [
+          {
+            "node": "Télécharger la pièce jointe",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Télécharger la pièce jointe": {
+      "main": [
+        [
+          {
+            "node": "Texte du PDF (OCRmyPDF)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Texte du PDF (OCRmyPDF)": {
+      "main": [
+        [
+          {
+            "node": "Documents KIM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Documents KIM": {
+      "main": [
+        [
+          {
+            "node": "Indexer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Session (jeton)": {
+      "main": [
+        [
+          {
+            "node": "Session (base)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Session (base)": {
+      "main": [
+        [
+          {
+            "node": "Session",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Session": {
+      "main": [
+        [
+          {
+            "node": "Session valide ?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Session valide ?": {
+      "main": [
+        [
+          {
+            "node": "Requête",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Refus (session)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Requête": {
+      "main": [
+        [
+          {
+            "node": "Résidents",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Berlin"
+  },
+  "pinData": {}
+}

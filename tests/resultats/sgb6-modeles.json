@@ -1,0 +1,258 @@
+{
+  "date": "2026-10-27T22:15:18.753Z",
+  "extraction": "llama3.2",
+  "modeles": {
+    "qwen2.5:7b": {
+      "parametres": "7.6B",
+      "quantification": "Q4_K_M",
+      "capacites": [
+        "completion",
+        "tools"
+      ],
+      "cas": {
+        "a-becker-clair": {
+          "conforme": true,
+          "statut": "pret_a_valider",
+          "cotisation": 316.32,
+          "tours": 8,
+          "refus": 0,
+          "abandon": null,
+          "secondes": 457.966,
+          "contradictions": 0,
+          "mode": "modele",
+          "outils": [
+            "lire_questionnaire",
+            "extraire_champs_par_regles",
+            "lire_dossier_caisse",
+            "controler_champs",
+            "verifier_regles",
+            "calculer_cotisation",
+            "preparer_brouillon",
+            "terminer"
+          ],
+          "memoire_modele_go": 5.5,
+          "ram_libre_min_go": 1.9
+        },
+        "d-lehmann-8-heures": {
+          "conforme": true,
+          "statut": "exception",
+          "cotisation": null,
+          "tours": 8,
+          "refus": 1,
+          "abandon": null,
+          "secondes": 260.75,
+          "contradictions": 0,
+          "mode": "modele",
+          "outils": [
+            "lire_questionnaire",
+            "extraire_champs_par_regles",
+            "lire_dossier_caisse",
+            "controler_champs",
+            "verifier_regles",
+            "calculer_cotisation (refusé)",
+            "creer_tache_revue",
+            "terminer"
+          ],
+          "memoire_modele_go": 5.5,
+          "ram_libre_min_go": 2.4
+        },
+        "i-richter-piege": {
+          "conforme": true,
+          "statut": "exception",
+          "cotisation": 316.32,
+          "tours": 8,
+          "refus": 0,
+          "abandon": null,
+          "secondes": 283.914,
+          "contradictions": 0,
+          "mode": "modele",
+          "outils": [
+            "lire_questionnaire",
+            "extraire_champs_par_regles",
+            "lire_dossier_caisse",
+            "controler_champs",
+            "verifier_regles",
+            "calculer_cotisation",
+            "preparer_brouillon",
+            "terminer"
+          ],
+          "memoire_modele_go": 5.5,
+          "ram_libre_min_go": 2.3
+        }
+      }
+    },
+    "qwen3:8b": {
+      "parametres": "8.2B",
+      "quantification": "Q4_K_M",
+      "capacites": [
+        "completion",
+        "tools",
+        "thinking"
+      ],
+      "cas": {
+        "a-becker-clair": {
+          "conforme": true,
+          "statut": "pret_a_valider",
+          "cotisation": 316.32,
+          "tours": 9,
+          "refus": 1,
+          "abandon": "durée de 15 minutes dépassée",
+          "secondes": 1027.964,
+          "contradictions": 0,
+          "mode": "mission_guidee",
+          "outils": [
+            "aucun (refusé)",
+            "lire_questionnaire",
+            "extraire_champs_par_regles",
+            "lire_dossier_caisse",
+            "verifier_regles (refusé)",
+            "controler_champs",
+            "verifier_regles",
+            "calculer_cotisation",
+            "preparer_brouillon"
+          ],
+          "memoire_modele_go": 6.7,
+          "ram_libre_min_go": 0.3
+        },
+        "d-lehmann-8-heures": {
+          "conforme": true,
+          "statut": "exception",
+          "cotisation": null,
+          "tours": 8,
+          "refus": 1,
+          "abandon": null,
+          "secondes": 813.605,
+          "contradictions": 0,
+          "mode": "modele",
+          "outils": [
+            "lire_questionnaire",
+            "extraire_champs_par_regles",
+            "lire_dossier_caisse",
+            "verifier_regles (refusé)",
+            "controler_champs",
+            "verifier_regles",
+            "creer_tache_revue",
+            "terminer"
+          ],
+          "memoire_modele_go": 6.7,
+          "ram_libre_min_go": 1.3
+        },
+        "i-richter-piege": {
+          "conforme": true,
+          "statut": "exception",
+          "cotisation": 316.32,
+          "tours": 9,
+          "refus": 1,
+          "abandon": null,
+          "secondes": 344.245,
+          "contradictions": 1,
+          "mode": "modele",
+          "outils": [
+            "lire_questionnaire",
+            "extraire_champs_par_regles",
+            "lire_dossier_caisse",
+            "verifier_regles (refusé)",
+            "controler_champs",
+            "verifier_regles",
+            "calculer_cotisation",
+            "preparer_brouillon",
+            "terminer"
+          ],
+          "memoire_modele_go": 6.7,
+          "ram_libre_min_go": 1.1
+        }
+      }
+    },
+    "llama3.1:8b": {
+      "parametres": "8.0B",
+      "quantification": "Q4_K_M",
+      "capacites": [
+        "completion",
+        "tools"
+      ],
+      "cas": {
+        "a-becker-clair": {
+          "conforme": true,
+          "statut": "pret_a_valider",
+          "cotisation": 316.32,
+          "tours": 12,
+          "refus": 8,
+          "abandon": "plus de 12 tours",
+          "secondes": 678.434,
+          "contradictions": 0,
+          "mode": "mission_guidee",
+          "outils": [
+            "lire_questionnaire",
+            "extraire_champs_par_regles",
+            "controler_champs (refusé)",
+            "aucun (refusé)",
+            "lire_questionnaire (refusé)",
+            "controler_champs (refusé)",
+            "verifier_regles (refusé)",
+            "calculer_cotisation (refusé)",
+            "preparer_brouillon (refusé)",
+            "terminer (refusé)",
+            "aucun (refusé)",
+            "lire_questionnaire (refusé)"
+          ],
+          "memoire_modele_go": 6.3,
+          "ram_libre_min_go": 1
+        },
+        "d-lehmann-8-heures": {
+          "conforme": true,
+          "statut": "exception",
+          "cotisation": null,
+          "tours": 12,
+          "refus": 9,
+          "abandon": "plus de 12 tours",
+          "secondes": 321.968,
+          "contradictions": 0,
+          "mode": "mission_guidee",
+          "outils": [
+            "lire_questionnaire",
+            "extraire_champs_par_regles",
+            "controler_champs (refusé)",
+            "aucun (refusé)",
+            "lire_questionnaire (refusé)",
+            "controler_champs (refusé)",
+            "lire_dossier_caisse (refusé)",
+            "verifier_regles (refusé)",
+            "controler_champs (refusé)",
+            "lire_dossier_caisse (refusé)",
+            "verifier_regles (refusé)",
+            "calculer_cotisation (refusé)"
+          ],
+          "memoire_modele_go": 6.3,
+          "ram_libre_min_go": 0.5
+        },
+        "i-richter-piege": {
+          "conforme": true,
+          "statut": "exception",
+          "cotisation": 316.32,
+          "tours": 12,
+          "refus": 9,
+          "abandon": "plus de 12 tours",
+          "secondes": 343.295,
+          "contradictions": 0,
+          "mode": "mission_guidee",
+          "outils": [
+            "lire_questionnaire",
+            "extraire_champs_par_regles",
+            "controler_champs (refusé)",
+            "aucun (refusé)",
+            "lire_questionnaire (refusé)",
+            "controler_champs (refusé)",
+            "lire_dossier_caisse (refusé)",
+            "verifier_regles (refusé)",
+            "controler_champs (refusé)",
+            "lire_dossier_caisse (refusé)",
+            "verifier_regles (refusé)",
+            "calculer_cotisation (refusé)"
+          ],
+          "memoire_modele_go": 6.3,
+          "ram_libre_min_go": 0.7
+        }
+      }
+    }
+  }
+}

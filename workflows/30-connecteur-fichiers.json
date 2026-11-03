@@ -1,0 +1,545 @@
+{
+  "id": "aicareimpfich0001",
+  "name": "AI-Care – Connecteur fichiers (OCR)",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 20 0,6,12,18 * * *"
+            }
+          ]
+        }
+      },
+      "id": "a1c3e000-0027-4000-8000-000000000027",
+      "name": "Planification",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        -200
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "a1c3e000-0028-4000-8000-000000000028",
+      "name": "Démarrage manuel",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "import-fichiers",
+        "responseMode": "lastNode",
+        "options": {
+          "allowedOrigins": "http://localhost:5173,http://localhost:5174,http://localhost:5175,http://127.0.0.1:5173,http://127.0.0.1:5174,http://127.0.0.1:5175"
+        },
+        "authentication": "headerAuth"
+      },
+      "id": "a1c3e000-0029-4000-8000-000000000029",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        200
+      ],
+      "webhookId": "aicare-import-fichiers",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "aicarecle000000001",
+          "name": "AI-Care clé des webhooks"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT patient_id, civilite, prenom, nom, to_char(date_naissance, 'DD.MM.YYYY') AS naissance, chambre FROM soins.residents",
+        "options": {}
+      },
+      "id": "a1c3e000-0030-4000-8000-000000000030",
+      "name": "Résidents",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        260,
+        100
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "aicarepg00000001",
+          "name": "AI-Care Postgres"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fileSelector": "/home/node/.n8n-files/fichiers/*",
+        "options": {}
+      },
+      "id": "a1c3e000-0031-4000-8000-000000000031",
+      "name": "Lire les fichiers",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [
+        500,
+        100
+      ],
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "est-pdf",
+              "leftValue": "={{ $binary.data.fileName.toLowerCase().endsWith('.pdf') }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a1c3e000-0032-4000-8000-000000000032",
+      "name": "Est un PDF",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        740,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://ocr:8000/texte",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/pdf"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "binaryData",
+        "inputDataFieldName": "data",
+        "options": {
+          "timeout": 300000
+        }
+      },
+      "id": "a1c3e000-0033-4000-8000-000000000033",
+      "name": "OCR (OCRmyPDF)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        980,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Connecteur « fichiers » – branche PDF : le service OCR renvoie {texte, methode} ; on rattache le nom du fichier.\n// (Le texte natif des PDF est lu par pdftotext, seuls les PDF « image » passent par OCRmyPDF.)\nconst fichiers = $('Est un PDF').all(0);\nreturn $input.all().map((item, i) => ({\n  json: { nom: fichiers[i].binary.data.fileName, texte: item.json.texte ?? '', methode: item.json.methode ?? 'ocr' },\n}));\n"
+      },
+      "id": "a1c3e000-0034-4000-8000-000000000034",
+      "name": "Nom du fichier PDF",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Connecteur « fichiers » – branche texte (.md, .txt) : décoder le contenu du fichier lu sur disque.\nconst sortie = [];\nconst items = $input.all();\nfor (let i = 0; i < items.length; i++) {\n  const octets = await this.helpers.getBinaryDataBuffer(i, 'data');\n  sortie.push({ json: { nom: items[i].binary.data.fileName, texte: octets.toString('utf8'), methode: 'texte' } });\n}\nreturn sortie;\n"
+      },
+      "id": "a1c3e000-0035-4000-8000-000000000035",
+      "name": "Décoder le texte",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        980,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "append"
+      },
+      "id": "a1c3e000-0036-4000-8000-000000000036",
+      "name": "Réunir",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        1460,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Connecteur « fichiers » : un fichier = un document.\n//  - protocole-*.md          -> collection « connaissances » (règles générales, sans patient)\n//  - autre document (scan)   -> rattaché à UN résident si le nom ET la date de naissance du texte correspondent\n//                               (les homonymes ne se distinguent que par la date de naissance) ;\n//                               sinon collection « a_verifier » : on ne devine jamais l'identité.\nconst residents = $('Résidents').all().map((i) => i.json);\nconst norm = (s) => String(s).normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').toLowerCase();\n\nconst docs = [];\nfor (const { json: f } of $input.all()) {\n  const nom = f.nom;\n  const texte = (f.texte ?? '').trim();\n  if (!texte) continue;\n\n  const base = {\n    source: 'fichier',\n    source_label: 'Fichiers',\n    source_ref: `fichiers/${nom}`,\n    titre: nom.replace(/\\.[a-z]+$/i, '').replace(/[-_]/g, ' '),\n  };\n\n  if (/^protocole-/i.test(nom)) {\n    docs.push({\n      ...base,\n      collection: 'connaissances',\n      type: 'protocole',\n      theme: nom.replace(/^protocole-/i, '').replace(/\\.[a-z]+$/i, ''),\n      texte,\n    });\n    continue;\n  }\n\n  // Document propre à un résident : identification par nom + date de naissance (jj.mm.aaaa).\n  const t = norm(texte);\n  const trouves = residents.filter((r) => t.includes(norm(r.nom)) && texte.includes(r.naissance));\n  const m = texte.match(/(\\d{2})[./](\\d{2})[./](20\\d{2})/); // « Date : jj/mm/aaaa » du document\n  const date = m ? new Date(Date.UTC(+m[3], +m[2] - 1, +m[1], 12)).toISOString() : new Date().toISOString();\n\n  if (trouves.length === 1) {\n    const r = trouves[0];\n    docs.push({\n      ...base,\n      collection: 'patients',\n      type: 'document',\n      texte,\n      patient_id: r.patient_id,\n      chambre: r.chambre,\n      patient_label: `${r.civilite} ${r.prenom} ${r.nom} (chambre ${r.chambre})`,\n      date,\n    });\n  } else {\n    docs.push({\n      ...base,\n      collection: 'a_verifier',\n      type: 'document',\n      statut: 'a_verifier',\n      motif: trouves.length === 0 ? 'identite_inconnue' : 'identite_ambigue',\n      texte,\n      date,\n    });\n  }\n}\nreturn docs.map((json) => ({ json }));\n"
+      },
+      "id": "a1c3e000-0037-4000-8000-000000000037",
+      "name": "Documents fichiers",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1700,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "value": "aicareindexeur01",
+          "mode": "id"
+        },
+        "mode": "once",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "a1c3e000-0038-4000-8000-000000000038",
+      "name": "Indexer",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1940,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Contrôle de session – le jeton « Bearer » de l'en-tête Authorization (43 caractères URL-safe) est haché (SHA-256) : seul le haché est en base.\nconst entetes = $input.first().json?.headers ?? {};\nconst m = String(entetes.authorization ?? '').match(/^Bearer ([A-Za-z0-9_-]{43})$/);\nif (!m) return [{ json: { hash: '' } }];\nreturn [{ json: { hash: require('crypto').createHash('sha256').update(m[1]).digest('hex') } }];\n"
+      },
+      "id": "a1c3e000-0345-4000-8000-000000000345",
+      "name": "Session (jeton)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        120,
+        -180
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT s.identifiant, g.nom, s.jeton_hash FROM soins.sessions s JOIN soins.soignants g ON g.identifiant = s.identifiant WHERE s.jeton_hash = $1 AND s.expire_le > now() AND g.actif",
+        "options": {
+          "queryReplacement": "={{ [ $json.hash ] }}"
+        }
+      },
+      "id": "a1c3e000-0346-4000-8000-000000000346",
+      "name": "Session (base)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        240,
+        -180
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "aicarepg00000001",
+          "name": "AI-Care Postgres"
+        }
+      },
+      "executeOnce": true,
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Contrôle de session – résultat : un soignant identifié (session ouverte, non expirée, compte actif) ou rien.\nconst r = $input.first().json ?? {};\nif (!r.identifiant) return [{ json: { ok: false } }];\nreturn [{ json: { ok: true, soignant: { identifiant: r.identifiant, nom: r.nom }, jeton_hash: r.jeton_hash } }];\n"
+      },
+      "id": "a1c3e000-0347-4000-8000-000000000347",
+      "name": "Session",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        360,
+        -180
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "Session valide ?",
+              "leftValue": "={{ $json.ok === true }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a1c3e000-0348-4000-8000-000000000348",
+      "name": "Session valide ?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        480,
+        -180
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Contrôle de session – la session est valide : on rend aux nœuds suivants la requête d'origine (en-têtes, corps) telle que reçue.\nreturn [{ json: $('Webhook').first().json }];\n"
+      },
+      "id": "a1c3e000-0349-4000-8000-000000000349",
+      "name": "Requête",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        600,
+        -260
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Contrôle de session – refus : aucune donnée, seulement le motif. L'interface rouvre alors la page de connexion.\nreturn [{ json: { erreur: 'session' } }];\n"
+      },
+      "id": "a1c3e000-0350-4000-8000-000000000350",
+      "name": "Refus (session)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        600,
+        -100
+      ]
+    }
+  ],
+  "connections": {
+    "Planification": {
+      "main": [
+        [
+          {
+            "node": "Résidents",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Démarrage manuel": {
+      "main": [
+        [
+          {
+            "node": "Résidents",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Session (jeton)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Résidents": {
+      "main": [
+        [
+          {
+            "node": "Lire les fichiers",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lire les fichiers": {
+      "main": [
+        [
+          {
+            "node": "Est un PDF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Est un PDF": {
+      "main": [
+        [
+          {
+            "node": "OCR (OCRmyPDF)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Décoder le texte",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OCR (OCRmyPDF)": {
+      "main": [
+        [
+          {
+            "node": "Nom du fichier PDF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Nom du fichier PDF": {
+      "main": [
+        [
+          {
+            "node": "Réunir",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Décoder le texte": {
+      "main": [
+        [
+          {
+            "node": "Réunir",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Réunir": {
+      "main": [
+        [
+          {
+            "node": "Documents fichiers",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Documents fichiers": {
+      "main": [
+        [
+          {
+            "node": "Indexer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Session (jeton)": {
+      "main": [
+        [
+          {
+            "node": "Session (base)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Session (base)": {
+      "main": [
+        [
+          {
+            "node": "Session",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Session": {
+      "main": [
+        [
+          {
+            "node": "Session valide ?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Session valide ?": {
+      "main": [
+        [
+          {
+            "node": "Requête",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Refus (session)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Requête": {
+      "main": [
+        [
+          {
+            "node": "Résidents",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Berlin"
+  },
+  "pinData": {}
+}

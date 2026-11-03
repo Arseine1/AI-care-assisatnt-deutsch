@@ -1,0 +1,24 @@
+{
+  "name": "aicare-front",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@fontsource-variable/outfit": "^5.3.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^5.0.0",
+    "vite": "^7.0.0"
+  },
+  "overrides": {
+    "esbuild": "npm:esbuild-wasm@^0.25.0",
+    "rollup": "npm:@rollup/wasm-node@^4.0.0"
+  }
+}

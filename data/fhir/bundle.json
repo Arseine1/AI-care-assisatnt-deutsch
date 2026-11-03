@@ -1,0 +1,2097 @@
+{
+  "resourceType": "Bundle",
+  "type": "collection",
+  "entry": [
+    {
+      "fullUrl": "http://localhost:8090/fhir/Patient/aicare-schulz",
+      "resource": {
+        "resourceType": "Patient",
+        "id": "aicare-schulz",
+        "identifier": [
+          {
+            "system": "http://fhir.de/sid/gkv/kvid-10",
+            "value": "Z000000010"
+          },
+          {
+            "system": "urn:aicare:logiciel-soins",
+            "value": "PAT-001"
+          }
+        ],
+        "active": true,
+        "name": [
+          {
+            "use": "official",
+            "family": "Schulz",
+            "given": [
+              "Greta"
+            ]
+          }
+        ],
+        "gender": "female",
+        "birthDate": "1938-03-14"
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Patient/aicare-schulz"
+      }
+    },
+    {
+      "fullUrl": "http://localhost:8090/fhir/Condition/aicare-schulz-cond-1",
+      "resource": {
+        "resourceType": "Condition",
+        "id": "aicare-schulz-cond-1",
+        "clinicalStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+              "code": "active"
+            }
+          ]
+        },
+        "code": {
+          "coding": [
+            {
+              "system": "http://fhir.de/CodeSystem/bfarm/icd-10-gm",
+              "code": "I48.2"
+            }
+          ],
+          "text": "Fibrillation auriculaire permanente"
+        },
+        "subject": {
+          "reference": "Patient/aicare-schulz"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Condition/aicare-schulz-cond-1"
+      }
+    },
+    {
+      "fullUrl": "http://localhost:8090/fhir/Condition/aicare-schulz-cond-2",
+      "resource": {
+        "resourceType": "Condition",
+        "id": "aicare-schulz-cond-2",
+        "clinicalStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+              "code": "active"
+            }
+          ]
+        },
+        "code": {
+          "coding": [
+            {
+              "system": "http://fhir.de/CodeSystem/bfarm/icd-10-gm",
+              "code": "Z86.7"
+            }
+          ],
+          "text": "Antécédent d'embolie pulmonaire"
+        },
+        "subject": {
+          "reference": "Patient/aicare-schulz"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Condition/aicare-schulz-cond-2"
+      }
+    },
+    {
+      "fullUrl": "http://localhost:8090/fhir/Condition/aicare-schulz-cond-3",
+      "resource": {
+        "resourceType": "Condition",
+        "id": "aicare-schulz-cond-3",
+        "clinicalStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+              "code": "active"
+            }
+          ]
+        },
+        "code": {
+          "coding": [
+            {
+              "system": "http://fhir.de/CodeSystem/bfarm/icd-10-gm",
+              "code": "I10"
+            }
+          ],
+          "text": "Hypertension artérielle"
+        },
+        "subject": {
+          "reference": "Patient/aicare-schulz"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Condition/aicare-schulz-cond-3"
+      }
+    },
+    {
+      "fullUrl": "http://localhost:8090/fhir/Condition/aicare-schulz-cond-4",
+      "resource": {
+        "resourceType": "Condition",
+        "id": "aicare-schulz-cond-4",
+        "clinicalStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+              "code": "active"
+            }
+          ]
+        },
+        "code": {
+          "coding": [
+            {
+              "system": "http://fhir.de/CodeSystem/bfarm/icd-10-gm",
+              "code": "Z79.01"
+            }
+          ],
+          "text": "Anticoagulation au long cours (Marcumar)"
+        },
+        "subject": {
+          "reference": "Patient/aicare-schulz"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Condition/aicare-schulz-cond-4"
+      }
+    },
+    {
+      "fullUrl": "http://localhost:8090/fhir/MedicationStatement/aicare-schulz-med-1",
+      "resource": {
+        "resourceType": "MedicationStatement",
+        "id": "aicare-schulz-med-1",
+        "status": "active",
+        "medicationCodeableConcept": {
+          "text": "Marcumar (phenprocoumon)"
+        },
+        "subject": {
+          "reference": "Patient/aicare-schulz"
+        },
+        "dosage": [
+          {
+            "text": "3 mg, le soir, selon INR (cible 2,0–3,0)"
+          }
+        ],
+        "reasonCode": [
+          {
+            "text": "Fibrillation auriculaire / prévention embolique"
+          }
+        ]
+      },
+      "request": {
+        "method": "PUT",
+        "url": "MedicationStatement/aicare-schulz-med-1"
+      }
+    },
+    {
+      "fullUrl": "http://localhost:8090/fhir/MedicationStatement/aicare-schulz-med-2",
+      "resource": {
+        "resourceType": "MedicationStatement",
+        "id": "aicare-schulz-med-2",
+        "status": "active",
+        "medicationCodeableConcept": {
+          "text": "Bisoprolol"
+        },
+        "subject": {
+          "reference": "Patient/aicare-schulz"
+        },
+        "dosage": [
+          {
+            "text": "2,5 mg, 1-0-0"
+          }
+        ],
+        "reasonCode": [
+          {
+            "text": "Fréquence cardiaque"
+          }
+        ]
+      },
+      "request": {
+        "method": "PUT",
+        "url": "MedicationStatement/aicare-schulz-med-2"
+      }
+    },
+    {
+      "fullUrl": "http://localhost:8090/fhir/MedicationStatement/aicare-schulz-med-3",
+      "resource": {
+        "resourceType": "MedicationStatement",
+        "id": "aicare-schulz-med-3",
+        "status": "active",
+        "medicationCodeableConcept": {
+          "text": "Ramipril"
+        },
+        "subject": {
+          "reference": "Patient/aicare-schulz"
+        },
+        "dosage": [
+          {
+            "text": "2,5 mg, 1-0-0"
+          }
+        ],
+        "reasonCode": [
+          {
+            "text": "Hypertension"
+          }
+        ]
+      },
+      "request": {
+        "method": "PUT",
+        "url": "MedicationStatement/aicare-schulz-med-3"
+      }
+    },
+    {
+      "fullUrl": "http://localhost:8090/fhir/Observation/aicare-schulz-labo-1",
+      "resource": {
+        "resourceType": "Observation",
+        "id": "aicare-schulz-labo-1",
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                "code": "laboratory"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "text": "INR"
+        },
+        "subject": {
+          "reference": "Patient/aicare-schulz"
+        },
+        "effectiveDateTime": "2026-10-22T09:59:10.146Z",
+        "valueQuantity": {
+          "value": 2.6,
+          "unit": ""
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Observation/aicare-schulz-labo-1"
+      }
+    },
+    {
+      "fullUrl": "http://localhost:8090/fhir/Patient/aicare-mueller-1",
+      "resource": {
+        "resourceType": "Patient",
+        "id": "aicare-mueller-1",
+        "identifier": [
+          {
+            "system": "http://fhir.de/sid/gkv/kvid-10",
+            "value": "Z000000011"
+          },
+          {
+            "system": "urn:aicare:logiciel-soins",
+            "value": "PAT-002"
+          }
+        ],
+        "active": true,
+        "name": [
+          {
+            "use": "official",
+            "family": "Müller",
+            "given": [
+              "Heinz"
+            ]
+          }
+        ],
+        "gender": "male",
+        "birthDate": "1934-05-09"
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Patient/aicare-mueller-1"
+      }
+    },
+    {
+      "fullUrl": "http://localhost:8090/fhir/Condition/aicare-mueller-1-cond-1",
+      "resource": {
+        "resourceType": "Condition",
+        "id": "aicare-mueller-1-cond-1",
+        "clinicalStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+              "code": "active"
+            }
+          ]
+        },
+        "code": {
+          "coding": [
+            {
+              "system": "http://fhir.de/CodeSystem/bfarm/icd-10-gm",
+              "code": "J44.1"
+            }
+          ],
+          "text": "BPCO, stade GOLD 3"
+        },
+        "subject": {
+          "reference": "Patient/aicare-mueller-1"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Condition/aicare-mueller-1-cond-1"
+      }
+    },
+    {
+      "fullUrl": "http://localhost:8090/fhir/Condition/aicare-mueller-1-cond-2",
+      "resource": {
+        "resourceType": "Condition",
+        "id": "aicare-mueller-1-cond-2",
+        "clinicalStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+              "code": "active"
+            }
+          ]
+        },
+        "code": {
+          "coding": [
+            {
+              "system": "http://fhir.de/CodeSystem/bfarm/icd-10-gm",
+              "code": "I50.9"
+            }
+          ],
+          "text": "Insuffisance cardiaque chronique, NYHA II"
+        },
+        "subject": {
+          "reference": "Patient/aicare-mueller-1"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Condition/aicare-mueller-1-cond-2"
+      }
+    },
+    {
+      "fullUrl": "http://localhost:8090/fhir/MedicationStatement/aicare-mueller-1-med-1",
+      "resource": {
+        "resourceType": "MedicationStatement",
+        "id": "aicare-mueller-1-med-1",
+        "status": "active",
+        "medicationCodeableConcept": {
+          "text": "Furosémide"
+        },
+        "subject": {
+          "reference": "Patient/aicare-mueller-1"
+        },
+        "dosage": [
+          {
+            "text": "40 mg, 1-0-0"
+          }
+        ],
+        "reasonCode": [
+          {
+            "text": "Insuffisance cardiaque"
+          }
+        ]
+      },
+      "request": {
+        "method": "PUT",
+        "url": "MedicationStatement/aicare-mueller-1-med-1"
+      }
+    },
+    {
+      "fullUrl": "http://localhost:8090/fhir/MedicationStatement/aicare-mueller-1-med-2",
+      "resource": {
+        "resourceType": "MedicationStatement",
+        "id": "aicare-mueller-1-med-2",
+        "status": "active",
+        "medicationCodeableConcept": {
+          "text": "Tiotropium"
+        },
+        "subject": {
+          "reference": "Patient/aicare-mueller-1"
+        },
+        "dosage": [
+          {
+            "text": "18 µg, 1-0-0 (inhalation)"
+          }
+        ],
+        "reasonCode": [
+          {
+            "text": "BPCO"
+          }
+        ]
+      },
+      "request": {
+        "method": "PUT",
+        "url": "MedicationStatement/aicare-mueller-1-med-2"
+      }
+    },
+    {
+      "fullUrl": "http://localhost:8090/fhir/MedicationStatement/aicare-mueller-1-med-3",
+      "resource": {
+        "resourceType": "MedicationStatement",
+        "id": "aicare-mueller-1-med-3",
+        "status": "active",
+        "medicationCodeableConcept": {
+          "text": "Salbutamol"
+        },
+        "subject": {
+          "reference": "Patient/aicare-mueller-1"
+        },
+        "dosage": [
+          {
+            "text": "100 µg, si dyspnée, 2 bouffées"
+          }
+        ],
+        "reasonCode": [
+          {
+            "text": "BPCO"
+          }
+        ]
+      },
+      "request": {
+        "method": "PUT",
+        "url": "MedicationStatement/aicare-mueller-1-med-3"
+      }
+    },
+    {
+      "fullUrl": "http://localhost:8090/fhir/MedicationStatement/aicare-mueller-1-med-4",
+      "resource": {
+        "resourceType": "MedicationStatement",
+        "id": "aicare-mueller-1-med-4",
+        "status": "active",
+        "medicationCodeableConcept": {
+          "text": "Ramipril"
+        },
+        "subject": {
+          "reference": "Patient/aicare-mueller-1"
+        },
+        "dosage": [
+          {
+            "text": "5 mg, 1-0-0"
+          }
+        ],
+        "reasonCode": [
+          {
+            "text": "Insuffisance cardiaque"
+          }
+        ]
+      },
+      "request": {
+        "method": "PUT",
+        "url": "MedicationStatement/aicare-mueller-1-med-4"
+      }
+    },
+    {
+      "fullUrl": "http://localhost:8090/fhir/Patient/aicare-weber",
+      "resource": {
+        "resourceType": "Patient",
+        "id": "aicare-weber",
+        "identifier": [
+          {
+            "system": "http://fhir.de/sid/gkv/kvid-10",
+            "value": "Z000000012"
+          },
+          {
+            "system": "urn:aicare:logiciel-soins",
+            "value": "PAT-003"
+          }
+        ],
+        "active": true,
+        "name": [
+          {
+            "use": "official",
+            "family": "Weber",
+            "given": [
+              "Hans"
+            ]
+          }
+        ],
+        "gender": "male",
+        "birthDate": "1941-11-23"
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Patient/aicare-weber"
+      }
+    },
+    {
+      "fullUrl": "http://localhost:8090/fhir/Condition/aicare-weber-cond-1",
+      "resource": {
+        "resourceType": "Condition",
+        "id": "aicare-weber-cond-1",
+        "clinicalStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+              "code": "active"
+            }
+          ]
+        },
+        "code": {
+          "coding": [
+            {
+              "system": "http://fhir.de/CodeSystem/bfarm/icd-10-gm",
+              "code": "I10"
+            }
+          ],
+          "text": "Hypertension artérielle"
+        },
+        "subject": {
+          "reference": "Patient/aicare-weber"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Condition/aicare-weber-cond-1"
+      }
+    },
+    {
+      "fullUrl": "http://localhost:8090/fhir/Condition/aicare-weber-cond-2",
+      "resource": {
+        "resourceType": "Condition",
+        "id": "aicare-weber-cond-2",
+        "clinicalStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+              "code": "active"
+            }
+          ]
+        },
+        "code": {
+          "coding": [
+            {
+              "system": "http://fhir.de/CodeSystem/bfarm/icd-10-gm",
+              "code": "M17.0"
+            }
+          ],
+          "text": "Gonarthrose bilatérale"
+        },
+        "subject": {
+          "reference": "Patient/aicare-weber"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Condition/aicare-weber-cond-2"
+      }
+    },
+    {
+      "fullUrl": "http://localhost:8090/fhir/Condition/aicare-weber-cond-3",
+      "resource": {
+        "resourceType": "Condition",
+        "id": "aicare-weber-cond-3",
+        "clinicalStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+              "code": "active"
+            }
+          ]
+        },
+        "code": {
+          "coding": [
+            {
+              "system": "http://fhir.de/CodeSystem/bfarm/icd-10-gm",
+              "code": "F06.7"
+            }
+          ],
+          "text": "Trouble cognitif léger avec désorientation nocturne"
+        },
+        "subject": {
+          "reference": "Patient/aicare-weber"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Condition/aicare-weber-cond-3"
+      }
+    },
+    {
+      "fullUrl": "http://localhost:8090/fhir/Condition/aicare-weber-cond-4",
+      "resource": {
+        "resourceType": "Condition",
+        "id": "aicare-weber-cond-4",
+        "clinicalStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+              "code": "active"
+            }
+          ]
+        },
+        "code": {
+          "coding": [
+            {
+              "system": "http://fhir.de/CodeSystem/bfarm/icd-10-gm",
+              "code": "Z91.81"
+            }
+          ],
+          "text": "Antécédent de chutes à répétition (2 chutes en 2024)"
+        },
+        "subject": {
+          "reference": "Patient/aicare-weber"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Condition/aicare-weber-cond-4"
+      }
+    },
+    {
+      "fullUrl": "http://localhost:8090/fhir/AllergyIntolerance/aicare-weber-allergie-1",
+      "resource": {
+        "resourceType": "AllergyIntolerance",
+        "id": "aicare-weber-allergie-1",
+        "clinicalStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/allergyintolerance-clinical",
+              "code": "active"
+            }
+          ]
+        },
+        "code": {
+          "text": "Pénicilline"
+        },
+        "patient": {
+          "reference": "Patient/aicare-weber"
+        },
+        "reaction": [
+          {
+            "description": "Urticaire généralisée"
+          }
+        ]
+      },
+      "request": {
+        "method": "PUT",
+        "url": "AllergyIntolerance/aicare-weber-allergie-1"
+      }
+    },
+    {
+      "fullUrl": "http://localhost:8090/fhir/MedicationStatement/aicare-weber-med-1",
+      "resource": {
+        "resourceType": "MedicationStatement",
+        "id": "aicare-weber-med-1",
+        "status": "active",
+        "medicationCodeableConcept": {
+          "text": "Ramipril"
+        },
+        "subject": {
+          "reference": "Patient/aicare-weber"
+        },
+        "dosage": [
+          {
+            "text": "5 mg, 1-0-0"
+          }
+        ],
+        "reasonCode": [
+          {
+            "text": "Hypertension"
+          }
+        ]
+      },
+      "request": {
+        "method": "PUT",
+        "url": "MedicationStatement/aicare-weber-med-1"
+      }
+    },
+    {
+      "fullUrl": "http://localhost:8090/fhir/MedicationStatement/aicare-weber-med-2",
+      "resource": {
+        "resourceType": "MedicationStatement",
+        "id": "aicare-weber-med-2",
+        "status": "active",
+        "medicationCodeableConcept": {
+          "text": "Amlodipine"
+        },
+        "subject": {
+          "reference": "Patient/aicare-weber"
+        },
+        "dosage": [
+          {
+            "text": "5 mg, 1-0-0"
+          }
+        ],
+        "reasonCode": [
+          {
+            "text": "Hypertension"
+          }
+        ]
+      },
+      "request": {
+        "method": "PUT",
+        "url": "MedicationStatement/aicare-weber-med-2"
+      }
+    },
+    {
+      "fullUrl": "http://localhost:8090/fhir/MedicationStatement/aicare-weber-med-3",
+      "resource": {
+        "resourceType": "MedicationStatement",
+        "id": "aicare-weber-med-3",
+        "status": "active",
+        "medicationCodeableConcept": {
+          "text": "Paracétamol"
+        },
+        "subject": {
+          "reference": "Patient/aicare-weber"
+        },
+        "dosage": [
+          {
+            "text": "500 mg, si douleur, max 3 g/jour"
+          }
+        ],
+        "reasonCode": [
+          {
+            "text": "Douleurs articulaires"
+          }
+        ]
+      },
+      "request": {
+        "method": "PUT",
+        "url": "MedicationStatement/aicare-weber-med-3"
+      }
+    },
+    {
+      "fullUrl": "http://localhost:8090/fhir/Observation/aicare-weber-labo-1",
+      "resource": {
+        "resourceType": "Observation",
+        "id": "aicare-weber-labo-1",
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                "code": "laboratory"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "text": "CRP"
+        },
+        "subject": {
+          "reference": "Patient/aicare-weber"
+        },
+        "effectiveDateTime": "2026-10-21T09:59:10.152Z",
+        "valueQuantity": {
+          "value": 18,
+          "unit": "mg/L"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Observation/aicare-weber-labo-1"
+      }
+    },
+    {
+      "fullUrl": "http://localhost:8090/fhir/Patient/aicare-becker",
+      "resource": {
+        "resourceType": "Patient",
+        "id": "aicare-becker",
+        "identifier": [
+          {
+            "system": "http://fhir.de/sid/gkv/kvid-10",
+            "value": "Z000000014"
+          },
+          {
+            "system": "urn:aicare:logiciel-soins",
+            "value": "PAT-004"
+          }
+        ],
+        "active": true,
+        "name": [
+          {
+            "use": "official",
+            "family": "Becker",
+            "given": [
+              "Karl"
+            ]
+          }
+        ],
+        "gender": "male",
+        "birthDate": "1939-01-27"
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Patient/aicare-becker"
+      }
+    },
+    {
+      "fullUrl": "http://localhost:8090/fhir/Condition/aicare-becker-cond-1",
+      "resource": {
+        "resourceType": "Condition",
+        "id": "aicare-becker-cond-1",
+        "clinicalStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+              "code": "active"
+            }
+          ]
+        },
+        "code": {
+          "coding": [
+            {
+              "system": "http://fhir.de/CodeSystem/bfarm/icd-10-gm",
+              "code": "E11.7"
+            }
+          ],
+          "text": "Diabète de type 2 insulino-traité"
+        },
+        "subject": {
+          "reference": "Patient/aicare-becker"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Condition/aicare-becker-cond-1"
+      }
+    },
+    {
+      "fullUrl": "http://localhost:8090/fhir/Condition/aicare-becker-cond-2",
+      "resource": {
+        "resourceType": "Condition",
+        "id": "aicare-becker-cond-2",
+        "clinicalStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+              "code": "active"
+            }
+          ]
+        },
+        "code": {
+          "coding": [
+            {
+              "system": "http://fhir.de/CodeSystem/bfarm/icd-10-gm",
+              "code": "E11.4"
+            }
+          ],
+          "text": "Neuropathie diabétique des pieds"
+        },
+        "subject": {
+          "reference": "Patient/aicare-becker"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Condition/aicare-becker-cond-2"
+      }
+    },
+    {
+      "fullUrl": "http://localhost:8090/fhir/Condition/aicare-becker-cond-3",
+      "resource": {
+        "resourceType": "Condition",
+        "id": "aicare-becker-cond-3",
+        "clinicalStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+              "code": "active"
+            }
+          ]
+        },
+        "code": {
+          "coding": [
+            {
+              "system": "http://fhir.de/CodeSystem/bfarm/icd-10-gm",
+              "code": "E16.2"
+            }
+          ],
+          "text": "Hypoglycémies nocturnes récidivantes"
+        },
+        "subject": {
+          "reference": "Patient/aicare-becker"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Condition/aicare-becker-cond-3"
+      }
+    },
+    {
+      "fullUrl": "http://localhost:8090/fhir/MedicationStatement/aicare-becker-med-1",
+      "resource": {
+        "resourceType": "MedicationStatement",
+        "id": "aicare-becker-med-1",
+        "status": "active",
+        "medicationCodeableConcept": {
+          "text": "Insuline glargine"
+        },
+        "subject": {
+          "reference": "Patient/aicare-becker"
+        },
+        "dosage": [
+          {
+            "text": "18 UI, le soir à 21h"
+          }
+        ],
+        "reasonCode": [
+          {
+            "text": "Diabète de type 2"
+          }
+        ]
+      },
+      "request": {
+        "method": "PUT",
+        "url": "MedicationStatement/aicare-becker-med-1"
+      }
+    },
+    {
+      "fullUrl": "http://localhost:8090/fhir/MedicationStatement/aicare-becker-med-2",
+      "resource": {
+        "resourceType": "MedicationStatement",
+        "id": "aicare-becker-med-2",
+        "status": "active",
+        "medicationCodeableConcept": {
+          "text": "Insuline lispro"
+        },
+        "subject": {
+          "reference": "Patient/aicare-becker"
+        },
+        "dosage": [
+          {
+            "text": "selon schéma, avant les repas"
+          }
+        ],
+        "reasonCode": [
+          {
+            "text": "Diabète de type 2"
+          }
+        ]
+      },
+      "request": {
+        "method": "PUT",
+        "url": "MedicationStatement/aicare-becker-med-2"
+      }
+    },
+    {
+      "fullUrl": "http://localhost:8090/fhir/MedicationStatement/aicare-becker-med-3",
+      "resource": {
+        "resourceType": "MedicationStatement",
+        "id": "aicare-becker-med-3",
+        "status": "active",
+        "medicationCodeableConcept": {
+          "text": "Metformine"
+        },
+        "subject": {
+          "reference": "Patient/aicare-becker"
+        },
+        "dosage": [
+          {
+            "text": "500 mg, 1-0-1"
+          }
+        ],
+        "reasonCode": [
+          {
+            "text": "Diabète de type 2"
+          }
+        ]
+      },
+      "request": {
+        "method": "PUT",
+        "url": "MedicationStatement/aicare-becker-med-3"
+      }
+    },
+    {
+      "fullUrl": "http://localhost:8090/fhir/Observation/aicare-becker-labo-1",
+      "resource": {
+        "resourceType": "Observation",
+        "id": "aicare-becker-labo-1",
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                "code": "laboratory"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "text": "HbA1c"
+        },
+        "subject": {
+          "reference": "Patient/aicare-becker"
+        },
+        "effectiveDateTime": "2026-10-03T09:59:10.152Z",
+        "valueQuantity": {
+          "value": 8.1,
+          "unit": "%"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Observation/aicare-becker-labo-1"
+      }
+    },
+    {
+      "fullUrl": "http://localhost:8090/fhir/Patient/aicare-wagner",
+      "resource": {
+        "resourceType": "Patient",
+        "id": "aicare-wagner",
+        "identifier": [
+          {
+            "system": "http://fhir.de/sid/gkv/kvid-10",
+            "value": "Z000000020"
+          },
+          {
+            "system": "urn:aicare:logiciel-soins",
+            "value": "PAT-005"
+          }
+        ],
+        "active": true,
+        "name": [
+          {
+            "use": "official",
+            "family": "Wagner",
+            "given": [
+              "Otto"
+            ]
+          }
+        ],
+        "gender": "male",
+        "birthDate": "1936-08-05"
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Patient/aicare-wagner"
+      }
+    },
+    {
+      "fullUrl": "http://localhost:8090/fhir/Condition/aicare-wagner-cond-1",
+      "resource": {
+        "resourceType": "Condition",
+        "id": "aicare-wagner-cond-1",
+        "clinicalStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+              "code": "active"
+            }
+          ]
+        },
+        "code": {
+          "coding": [
+            {
+              "system": "http://fhir.de/CodeSystem/bfarm/icd-10-gm",
+              "code": "N18.4"
+            }
+          ],
+          "text": "Insuffisance rénale chronique stade 4"
+        },
+        "subject": {
+          "reference": "Patient/aicare-wagner"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Condition/aicare-wagner-cond-1"
+      }
+    },
+    {
+      "fullUrl": "http://localhost:8090/fhir/Condition/aicare-wagner-cond-2",
+      "resource": {
+        "resourceType": "Condition",
+        "id": "aicare-wagner-cond-2",
+        "clinicalStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+              "code": "active"
+            }
+          ]
+        },
+        "code": {
+          "coding": [
+            {
+              "system": "http://fhir.de/CodeSystem/bfarm/icd-10-gm",
+              "code": "I10"
+            }
+          ],
+          "text": "Hypertension artérielle"
+        },
+        "subject": {
+          "reference": "Patient/aicare-wagner"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Condition/aicare-wagner-cond-2"
+      }
+    },
+    {
+      "fullUrl": "http://localhost:8090/fhir/Condition/aicare-wagner-cond-3",
+      "resource": {
+        "resourceType": "Condition",
+        "id": "aicare-wagner-cond-3",
+        "clinicalStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+              "code": "active"
+            }
+          ]
+        },
+        "code": {
+          "coding": [
+            {
+              "system": "http://fhir.de/CodeSystem/bfarm/icd-10-gm",
+              "code": "D63.1"
+            }
+          ],
+          "text": "Anémie rénale"
+        },
+        "subject": {
+          "reference": "Patient/aicare-wagner"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Condition/aicare-wagner-cond-3"
+      }
+    },
+    {
+      "fullUrl": "http://localhost:8090/fhir/Condition/aicare-wagner-cond-4",
+      "resource": {
+        "resourceType": "Condition",
+        "id": "aicare-wagner-cond-4",
+        "clinicalStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+              "code": "active"
+            }
+          ]
+        },
+        "code": {
+          "coding": [
+            {
+              "system": "http://fhir.de/CodeSystem/bfarm/icd-10-gm",
+              "code": "M10.9"
+            }
+          ],
+          "text": "Goutte"
+        },
+        "subject": {
+          "reference": "Patient/aicare-wagner"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Condition/aicare-wagner-cond-4"
+      }
+    },
+    {
+      "fullUrl": "http://localhost:8090/fhir/MedicationStatement/aicare-wagner-med-1",
+      "resource": {
+        "resourceType": "MedicationStatement",
+        "id": "aicare-wagner-med-1",
+        "status": "active",
+        "medicationCodeableConcept": {
+          "text": "Amlodipine"
+        },
+        "subject": {
+          "reference": "Patient/aicare-wagner"
+        },
+        "dosage": [
+          {
+            "text": "5 mg, 1-0-0"
+          }
+        ],
+        "reasonCode": [
+          {
+            "text": "Hypertension"
+          }
+        ]
+      },
+      "request": {
+        "method": "PUT",
+        "url": "MedicationStatement/aicare-wagner-med-1"
+      }
+    },
+    {
+      "fullUrl": "http://localhost:8090/fhir/MedicationStatement/aicare-wagner-med-2",
+      "resource": {
+        "resourceType": "MedicationStatement",
+        "id": "aicare-wagner-med-2",
+        "status": "active",
+        "medicationCodeableConcept": {
+          "text": "Torasémide"
+        },
+        "subject": {
+          "reference": "Patient/aicare-wagner"
+        },
+        "dosage": [
+          {
+            "text": "10 mg, 1-0-0"
+          }
+        ],
+        "reasonCode": [
+          {
+            "text": "Diurétique"
+          }
+        ]
+      },
+      "request": {
+        "method": "PUT",
+        "url": "MedicationStatement/aicare-wagner-med-2"
+      }
+    },
+    {
+      "fullUrl": "http://localhost:8090/fhir/MedicationStatement/aicare-wagner-med-3",
+      "resource": {
+        "resourceType": "MedicationStatement",
+        "id": "aicare-wagner-med-3",
+        "status": "active",
+        "medicationCodeableConcept": {
+          "text": "Allopurinol"
+        },
+        "subject": {
+          "reference": "Patient/aicare-wagner"
+        },
+        "dosage": [
+          {
+            "text": "100 mg, 1-0-0"
+          }
+        ],
+        "reasonCode": [
+          {
+            "text": "Goutte (dose adaptée à la fonction rénale)"
+          }
+        ]
+      },
+      "request": {
+        "method": "PUT",
+        "url": "MedicationStatement/aicare-wagner-med-3"
+      }
+    },
+    {
+      "fullUrl": "http://localhost:8090/fhir/MedicationStatement/aicare-wagner-med-4",
+      "resource": {
+        "resourceType": "MedicationStatement",
+        "id": "aicare-wagner-med-4",
+        "status": "active",
+        "medicationCodeableConcept": {
+          "text": "Érythropoïétine"
+        },
+        "subject": {
+          "reference": "Patient/aicare-wagner"
+        },
+        "dosage": [
+          {
+            "text": "4 000 UI, une fois par semaine"
+          }
+        ],
+        "reasonCode": [
+          {
+            "text": "Anémie rénale"
+          }
+        ]
+      },
+      "request": {
+        "method": "PUT",
+        "url": "MedicationStatement/aicare-wagner-med-4"
+      }
+    },
+    {
+      "fullUrl": "http://localhost:8090/fhir/Observation/aicare-wagner-labo-1",
+      "resource": {
+        "resourceType": "Observation",
+        "id": "aicare-wagner-labo-1",
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                "code": "laboratory"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "text": "DFG estimé"
+        },
+        "subject": {
+          "reference": "Patient/aicare-wagner"
+        },
+        "effectiveDateTime": "2026-10-22T09:59:10.152Z",
+        "valueQuantity": {
+          "value": 22,
+          "unit": "ml/min/1,73 m²"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Observation/aicare-wagner-labo-1"
+      }
+    },
+    {
+      "fullUrl": "http://localhost:8090/fhir/Observation/aicare-wagner-labo-2",
+      "resource": {
+        "resourceType": "Observation",
+        "id": "aicare-wagner-labo-2",
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                "code": "laboratory"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "text": "Créatinine"
+        },
+        "subject": {
+          "reference": "Patient/aicare-wagner"
+        },
+        "effectiveDateTime": "2026-10-22T09:59:10.152Z",
+        "valueQuantity": {
+          "value": 2.9,
+          "unit": "mg/dl"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Observation/aicare-wagner-labo-2"
+      }
+    },
+    {
+      "fullUrl": "http://localhost:8090/fhir/Observation/aicare-wagner-labo-3",
+      "resource": {
+        "resourceType": "Observation",
+        "id": "aicare-wagner-labo-3",
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                "code": "laboratory"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "text": "Potassium"
+        },
+        "subject": {
+          "reference": "Patient/aicare-wagner"
+        },
+        "effectiveDateTime": "2026-10-22T09:59:10.152Z",
+        "valueQuantity": {
+          "value": 5.1,
+          "unit": "mmol/l"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Observation/aicare-wagner-labo-3"
+      }
+    },
+    {
+      "fullUrl": "http://localhost:8090/fhir/Patient/aicare-mueller-2",
+      "resource": {
+        "resourceType": "Patient",
+        "id": "aicare-mueller-2",
+        "identifier": [
+          {
+            "system": "http://fhir.de/sid/gkv/kvid-10",
+            "value": "Z000000021"
+          },
+          {
+            "system": "urn:aicare:logiciel-soins",
+            "value": "PAT-006"
+          }
+        ],
+        "active": true,
+        "name": [
+          {
+            "use": "official",
+            "family": "Müller",
+            "given": [
+              "Heinz"
+            ]
+          }
+        ],
+        "gender": "male",
+        "birthDate": "1947-12-01"
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Patient/aicare-mueller-2"
+      }
+    },
+    {
+      "fullUrl": "http://localhost:8090/fhir/Condition/aicare-mueller-2-cond-1",
+      "resource": {
+        "resourceType": "Condition",
+        "id": "aicare-mueller-2-cond-1",
+        "clinicalStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+              "code": "active"
+            }
+          ]
+        },
+        "code": {
+          "coding": [
+            {
+              "system": "http://fhir.de/CodeSystem/bfarm/icd-10-gm",
+              "code": "E11.9"
+            }
+          ],
+          "text": "Diabète de type 2"
+        },
+        "subject": {
+          "reference": "Patient/aicare-mueller-2"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Condition/aicare-mueller-2-cond-1"
+      }
+    },
+    {
+      "fullUrl": "http://localhost:8090/fhir/Condition/aicare-mueller-2-cond-2",
+      "resource": {
+        "resourceType": "Condition",
+        "id": "aicare-mueller-2-cond-2",
+        "clinicalStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+              "code": "active"
+            }
+          ]
+        },
+        "code": {
+          "coding": [
+            {
+              "system": "http://fhir.de/CodeSystem/bfarm/icd-10-gm",
+              "code": "I10"
+            }
+          ],
+          "text": "Hypertension artérielle"
+        },
+        "subject": {
+          "reference": "Patient/aicare-mueller-2"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Condition/aicare-mueller-2-cond-2"
+      }
+    },
+    {
+      "fullUrl": "http://localhost:8090/fhir/Condition/aicare-mueller-2-cond-3",
+      "resource": {
+        "resourceType": "Condition",
+        "id": "aicare-mueller-2-cond-3",
+        "clinicalStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+              "code": "active"
+            }
+          ]
+        },
+        "code": {
+          "coding": [
+            {
+              "system": "http://fhir.de/CodeSystem/bfarm/icd-10-gm",
+              "code": "Z88.2"
+            }
+          ],
+          "text": "Allergie aux sulfamides"
+        },
+        "subject": {
+          "reference": "Patient/aicare-mueller-2"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Condition/aicare-mueller-2-cond-3"
+      }
+    },
+    {
+      "fullUrl": "http://localhost:8090/fhir/AllergyIntolerance/aicare-mueller-2-allergie-1",
+      "resource": {
+        "resourceType": "AllergyIntolerance",
+        "id": "aicare-mueller-2-allergie-1",
+        "clinicalStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/allergyintolerance-clinical",
+              "code": "active"
+            }
+          ]
+        },
+        "code": {
+          "text": "Sulfamides (sulfonamides, dont le cotrimoxazole)"
+        },
+        "patient": {
+          "reference": "Patient/aicare-mueller-2"
+        },
+        "reaction": [
+          {
+            "description": "Éruption cutanée sévère"
+          }
+        ]
+      },
+      "request": {
+        "method": "PUT",
+        "url": "AllergyIntolerance/aicare-mueller-2-allergie-1"
+      }
+    },
+    {
+      "fullUrl": "http://localhost:8090/fhir/MedicationStatement/aicare-mueller-2-med-1",
+      "resource": {
+        "resourceType": "MedicationStatement",
+        "id": "aicare-mueller-2-med-1",
+        "status": "active",
+        "medicationCodeableConcept": {
+          "text": "Metformine"
+        },
+        "subject": {
+          "reference": "Patient/aicare-mueller-2"
+        },
+        "dosage": [
+          {
+            "text": "1000 mg, 1-0-1"
+          }
+        ],
+        "reasonCode": [
+          {
+            "text": "Diabète de type 2"
+          }
+        ]
+      },
+      "request": {
+        "method": "PUT",
+        "url": "MedicationStatement/aicare-mueller-2-med-1"
+      }
+    },
+    {
+      "fullUrl": "http://localhost:8090/fhir/MedicationStatement/aicare-mueller-2-med-2",
+      "resource": {
+        "resourceType": "MedicationStatement",
+        "id": "aicare-mueller-2-med-2",
+        "status": "active",
+        "medicationCodeableConcept": {
+          "text": "Candésartan"
+        },
+        "subject": {
+          "reference": "Patient/aicare-mueller-2"
+        },
+        "dosage": [
+          {
+            "text": "8 mg, 1-0-0"
+          }
+        ],
+        "reasonCode": [
+          {
+            "text": "Hypertension"
+          }
+        ]
+      },
+      "request": {
+        "method": "PUT",
+        "url": "MedicationStatement/aicare-mueller-2-med-2"
+      }
+    },
+    {
+      "fullUrl": "http://localhost:8090/fhir/Observation/aicare-mueller-2-labo-1",
+      "resource": {
+        "resourceType": "Observation",
+        "id": "aicare-mueller-2-labo-1",
+        "status": "final",
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                "code": "laboratory"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "text": "HbA1c"
+        },
+        "subject": {
+          "reference": "Patient/aicare-mueller-2"
+        },
+        "effectiveDateTime": "2026-09-28T09:59:10.153Z",
+        "valueQuantity": {
+          "value": 7.2,
+          "unit": "%"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Observation/aicare-mueller-2-labo-1"
+      }
+    },
+    {
+      "fullUrl": "http://localhost:8090/fhir/Patient/aicare-fischer",
+      "resource": {
+        "resourceType": "Patient",
+        "id": "aicare-fischer",
+        "identifier": [
+          {
+            "system": "http://fhir.de/sid/gkv/kvid-10",
+            "value": "Z000000022"
+          },
+          {
+            "system": "urn:aicare:logiciel-soins",
+            "value": "PAT-007"
+          }
+        ],
+        "active": true,
+        "name": [
+          {
+            "use": "official",
+            "family": "Fischer",
+            "given": [
+              "Elisabeth"
+            ]
+          }
+        ],
+        "gender": "female",
+        "birthDate": "1943-04-19"
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Patient/aicare-fischer"
+      }
+    },
+    {
+      "fullUrl": "http://localhost:8090/fhir/Condition/aicare-fischer-cond-1",
+      "resource": {
+        "resourceType": "Condition",
+        "id": "aicare-fischer-cond-1",
+        "clinicalStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+              "code": "active"
+            }
+          ]
+        },
+        "code": {
+          "coding": [
+            {
+              "system": "http://fhir.de/CodeSystem/bfarm/icd-10-gm",
+              "code": "M17.1"
+            }
+          ],
+          "text": "Gonarthrose du genou droit"
+        },
+        "subject": {
+          "reference": "Patient/aicare-fischer"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Condition/aicare-fischer-cond-1"
+      }
+    },
+    {
+      "fullUrl": "http://localhost:8090/fhir/Condition/aicare-fischer-cond-2",
+      "resource": {
+        "resourceType": "Condition",
+        "id": "aicare-fischer-cond-2",
+        "clinicalStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+              "code": "active"
+            }
+          ]
+        },
+        "code": {
+          "coding": [
+            {
+              "system": "http://fhir.de/CodeSystem/bfarm/icd-10-gm",
+              "code": "M81.9"
+            }
+          ],
+          "text": "Ostéoporose"
+        },
+        "subject": {
+          "reference": "Patient/aicare-fischer"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Condition/aicare-fischer-cond-2"
+      }
+    },
+    {
+      "fullUrl": "http://localhost:8090/fhir/Condition/aicare-fischer-cond-3",
+      "resource": {
+        "resourceType": "Condition",
+        "id": "aicare-fischer-cond-3",
+        "clinicalStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+              "code": "active"
+            }
+          ]
+        },
+        "code": {
+          "coding": [
+            {
+              "system": "http://fhir.de/CodeSystem/bfarm/icd-10-gm",
+              "code": "E03.9"
+            }
+          ],
+          "text": "Hypothyroïdie"
+        },
+        "subject": {
+          "reference": "Patient/aicare-fischer"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Condition/aicare-fischer-cond-3"
+      }
+    },
+    {
+      "fullUrl": "http://localhost:8090/fhir/MedicationStatement/aicare-fischer-med-1",
+      "resource": {
+        "resourceType": "MedicationStatement",
+        "id": "aicare-fischer-med-1",
+        "status": "active",
+        "medicationCodeableConcept": {
+          "text": "Lévothyroxine"
+        },
+        "subject": {
+          "reference": "Patient/aicare-fischer"
+        },
+        "dosage": [
+          {
+            "text": "75 µg, 1-0-0, à jeun"
+          }
+        ],
+        "reasonCode": [
+          {
+            "text": "Hypothyroïdie"
+          }
+        ]
+      },
+      "request": {
+        "method": "PUT",
+        "url": "MedicationStatement/aicare-fischer-med-1"
+      }
+    },
+    {
+      "fullUrl": "http://localhost:8090/fhir/MedicationStatement/aicare-fischer-med-2",
+      "resource": {
+        "resourceType": "MedicationStatement",
+        "id": "aicare-fischer-med-2",
+        "status": "active",
+        "medicationCodeableConcept": {
+          "text": "Calcium + vitamine D3"
+        },
+        "subject": {
+          "reference": "Patient/aicare-fischer"
+        },
+        "dosage": [
+          {
+            "text": "500 mg / 1000 UI, 0-0-1"
+          }
+        ],
+        "reasonCode": [
+          {
+            "text": "Ostéoporose"
+          }
+        ]
+      },
+      "request": {
+        "method": "PUT",
+        "url": "MedicationStatement/aicare-fischer-med-2"
+      }
+    },
+    {
+      "fullUrl": "http://localhost:8090/fhir/MedicationStatement/aicare-fischer-med-3",
+      "resource": {
+        "resourceType": "MedicationStatement",
+        "id": "aicare-fischer-med-3",
+        "status": "active",
+        "medicationCodeableConcept": {
+          "text": "Paracétamol"
+        },
+        "subject": {
+          "reference": "Patient/aicare-fischer"
+        },
+        "dosage": [
+          {
+            "text": "500 mg, si douleur, max 3 g/jour"
+          }
+        ],
+        "reasonCode": [
+          {
+            "text": "Douleur du genou"
+          }
+        ]
+      },
+      "request": {
+        "method": "PUT",
+        "url": "MedicationStatement/aicare-fischer-med-3"
+      }
+    },
+    {
+      "fullUrl": "http://localhost:8090/fhir/Patient/aicare-hoffmann",
+      "resource": {
+        "resourceType": "Patient",
+        "id": "aicare-hoffmann",
+        "identifier": [
+          {
+            "system": "http://fhir.de/sid/gkv/kvid-10",
+            "value": "Z000000023"
+          },
+          {
+            "system": "urn:aicare:logiciel-soins",
+            "value": "PAT-008"
+          }
+        ],
+        "active": true,
+        "name": [
+          {
+            "use": "official",
+            "family": "Hoffmann",
+            "given": [
+              "Lotte"
+            ]
+          }
+        ],
+        "gender": "female",
+        "birthDate": "1940-10-30"
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Patient/aicare-hoffmann"
+      }
+    },
+    {
+      "fullUrl": "http://localhost:8090/fhir/Condition/aicare-hoffmann-cond-1",
+      "resource": {
+        "resourceType": "Condition",
+        "id": "aicare-hoffmann-cond-1",
+        "clinicalStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+              "code": "active"
+            }
+          ]
+        },
+        "code": {
+          "coding": [
+            {
+              "system": "http://fhir.de/CodeSystem/bfarm/icd-10-gm",
+              "code": "G30.1"
+            }
+          ],
+          "text": "Maladie d'Alzheimer, stade modéré"
+        },
+        "subject": {
+          "reference": "Patient/aicare-hoffmann"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Condition/aicare-hoffmann-cond-1"
+      }
+    },
+    {
+      "fullUrl": "http://localhost:8090/fhir/Condition/aicare-hoffmann-cond-2",
+      "resource": {
+        "resourceType": "Condition",
+        "id": "aicare-hoffmann-cond-2",
+        "clinicalStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+              "code": "active"
+            }
+          ]
+        },
+        "code": {
+          "coding": [
+            {
+              "system": "http://fhir.de/CodeSystem/bfarm/icd-10-gm",
+              "code": "L89.1"
+            }
+          ],
+          "text": "Escarre du sacrum, stade 1"
+        },
+        "subject": {
+          "reference": "Patient/aicare-hoffmann"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Condition/aicare-hoffmann-cond-2"
+      }
+    },
+    {
+      "fullUrl": "http://localhost:8090/fhir/Condition/aicare-hoffmann-cond-3",
+      "resource": {
+        "resourceType": "Condition",
+        "id": "aicare-hoffmann-cond-3",
+        "clinicalStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+              "code": "active"
+            }
+          ]
+        },
+        "code": {
+          "coding": [
+            {
+              "system": "http://fhir.de/CodeSystem/bfarm/icd-10-gm",
+              "code": "E44.0"
+            }
+          ],
+          "text": "Dénutrition modérée"
+        },
+        "subject": {
+          "reference": "Patient/aicare-hoffmann"
+        }
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Condition/aicare-hoffmann-cond-3"
+      }
+    },
+    {
+      "fullUrl": "http://localhost:8090/fhir/AllergyIntolerance/aicare-hoffmann-allergie-1",
+      "resource": {
+        "resourceType": "AllergyIntolerance",
+        "id": "aicare-hoffmann-allergie-1",
+        "clinicalStatus": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/allergyintolerance-clinical",
+              "code": "active"
+            }
+          ]
+        },
+        "code": {
+          "text": "Latex"
+        },
+        "patient": {
+          "reference": "Patient/aicare-hoffmann"
+        },
+        "reaction": [
+          {
+            "description": "Urticaire de contact"
+          }
+        ]
+      },
+      "request": {
+        "method": "PUT",
+        "url": "AllergyIntolerance/aicare-hoffmann-allergie-1"
+      }
+    },
+    {
+      "fullUrl": "http://localhost:8090/fhir/MedicationStatement/aicare-hoffmann-med-1",
+      "resource": {
+        "resourceType": "MedicationStatement",
+        "id": "aicare-hoffmann-med-1",
+        "status": "active",
+        "medicationCodeableConcept": {
+          "text": "Donépézil"
+        },
+        "subject": {
+          "reference": "Patient/aicare-hoffmann"
+        },
+        "dosage": [
+          {
+            "text": "5 mg, 0-0-1"
+          }
+        ],
+        "reasonCode": [
+          {
+            "text": "Maladie d'Alzheimer"
+          }
+        ]
+      },
+      "request": {
+        "method": "PUT",
+        "url": "MedicationStatement/aicare-hoffmann-med-1"
+      }
+    },
+    {
+      "fullUrl": "http://localhost:8090/fhir/MedicationStatement/aicare-hoffmann-med-2",
+      "resource": {
+        "resourceType": "MedicationStatement",
+        "id": "aicare-hoffmann-med-2",
+        "status": "active",
+        "medicationCodeableConcept": {
+          "text": "Vitamine D3"
+        },
+        "subject": {
+          "reference": "Patient/aicare-hoffmann"
+        },
+        "dosage": [
+          {
+            "text": "1000 UI, 1-0-0"
+          }
+        ],
+        "reasonCode": [
+          {
+            "text": "Prévention"
+          }
+        ]
+      },
+      "request": {
+        "method": "PUT",
+        "url": "MedicationStatement/aicare-hoffmann-med-2"
+      }
+    },
+    {
+      "fullUrl": "http://localhost:8090/fhir/MedicationStatement/aicare-hoffmann-med-3",
+      "resource": {
+        "resourceType": "MedicationStatement",
+        "id": "aicare-hoffmann-med-3",
+        "status": "active",
+        "medicationCodeableConcept": {
+          "text": "Complément nutritionnel hypercalorique"
+        },
+        "subject": {
+          "reference": "Patient/aicare-hoffmann"
+        },
+        "dosage": [
+          {
+            "text": "200 ml, 1-0-1"
+          }
+        ],
+        "reasonCode": [
+          {
+            "text": "Dénutrition"
+          }
+        ]
+      },
+      "request": {
+        "method": "PUT",
+        "url": "MedicationStatement/aicare-hoffmann-med-3"
+      }
+    }
+  ]
+}

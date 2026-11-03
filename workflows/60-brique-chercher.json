@@ -1,0 +1,410 @@
+{
+  "id": "aicarebrqcherch1",
+  "name": "AI-Care – Brique chercher",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "id": "a1c3e000-0062-4000-8000-000000000062",
+      "name": "Entrée",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Brique « chercher » – contrôle et normalisation des paramètres.\n// Entrée : { patient_id, depuis?, jusqua?, heures?, requete?, limite?, protocoles? }\n// Rien ici ne vient du texte libre d'un soignant : la requête de recherche est fournie par le prompt (Mode A)\n// ou par une consigne DÉJÀ contrôlée (Mode B).\nconst e = $input.first().json ?? {};\nconst patient_id = String(e.patient_id ?? '');\nif (!/^PAT-\\d{3}$/.test(patient_id)) {\n  throw new Error(`patient_id invalide : « ${patient_id} » (attendu : PAT-001, PAT-002…)`);\n}\nconst jusqua = e.jusqua ? new Date(e.jusqua) : new Date();\nconst heures = Math.min(Math.max(Number(e.heures ?? 12), 1), 168); // 1 heure à 7 jours\nconst depuis = e.depuis ? new Date(e.depuis) : new Date(jusqua.getTime() - heures * 3600 * 1000);\nif (Number.isNaN(depuis.getTime()) || Number.isNaN(jusqua.getTime()) || depuis > jusqua) {\n  throw new Error('période invalide');\n}\nreturn [\n  {\n    json: {\n      patient_id,\n      depuis: depuis.toISOString(),\n      jusqua: jusqua.toISOString(),\n      requete: String(e.requete ?? 'informations importantes du résident').slice(0, 400),\n      limite: Math.min(Math.max(Number(e.limite ?? 8), 1), 20),\n      protocoles: e.protocoles === true,\n      rapports_valides: e.rapports_valides === true,\n      filtrer_requete: e.filtrer_requete === true, // Mode B : les faits qui parlent de la demande passent en premier\n      max_faits: Math.min(Math.max(Number(e.max_faits ?? 8), 3), 40),\n      sources_prioritaires: Array.isArray(e.sources_prioritaires) ? e.sources_prioritaires.map(String) : [],\n    },\n  },\n];\n"
+      },
+      "id": "a1c3e000-0063-4000-8000-000000000063",
+      "name": "Paramètres",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT patient_id, civilite, prenom, nom, to_char(date_naissance, 'DD.MM.YYYY') AS naissance, chambre, etage, diagnostics, allergies, regime, risques FROM soins.residents WHERE patient_id = $1",
+        "options": {
+          "queryReplacement": "={{ [ $('Paramètres').first().json.patient_id ] }}"
+        }
+      },
+      "id": "a1c3e000-0064-4000-8000-000000000064",
+      "name": "Résident",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        480,
+        0
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "aicarepg00000001",
+          "name": "AI-Care Postgres"
+        }
+      },
+      "executeOnce": true,
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT patient_id, nom, chambre FROM soins.residents WHERE patient_id <> $1",
+        "options": {
+          "queryReplacement": "={{ [ $('Paramètres').first().json.patient_id ] }}"
+        }
+      },
+      "id": "a1c3e000-0065-4000-8000-000000000065",
+      "name": "Autres résidents",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        720,
+        0
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "aicarepg00000001",
+          "name": "AI-Care Postgres"
+        }
+      },
+      "executeOnce": true,
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id, horodatage, auteur, categorie, texte FROM soins.notes_soins WHERE patient_id = $1 AND horodatage >= $2::timestamptz AND horodatage <= $3::timestamptz ORDER BY horodatage",
+        "options": {
+          "queryReplacement": "={{ [ $('Paramètres').first().json.patient_id, $('Paramètres').first().json.depuis, $('Paramètres').first().json.jusqua ] }}"
+        }
+      },
+      "id": "a1c3e000-0066-4000-8000-000000000066",
+      "name": "Notes de la période",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        960,
+        0
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "aicarepg00000001",
+          "name": "AI-Care Postgres"
+        }
+      },
+      "executeOnce": true,
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT horodatage, type, valeur, unite FROM soins.signes_vitaux WHERE patient_id = $1 AND horodatage >= $2::timestamptz AND horodatage <= $3::timestamptz ORDER BY horodatage",
+        "options": {
+          "queryReplacement": "={{ [ $('Paramètres').first().json.patient_id, $('Paramètres').first().json.depuis, $('Paramètres').first().json.jusqua ] }}"
+        }
+      },
+      "id": "a1c3e000-0067-4000-8000-000000000067",
+      "name": "Constantes de la période",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1200,
+        0
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "aicarepg00000001",
+          "name": "AI-Care Postgres"
+        }
+      },
+      "executeOnce": true,
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT medicament, dosage, schema_prise, indication FROM soins.plan_medication WHERE patient_id = $1 AND actif ORDER BY id",
+        "options": {
+          "queryReplacement": "={{ [ $('Paramètres').first().json.patient_id ] }}"
+        }
+      },
+      "id": "a1c3e000-0068-4000-8000-000000000068",
+      "name": "Plan de médication",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1440,
+        0
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "aicarepg00000001",
+          "name": "AI-Care Postgres"
+        }
+      },
+      "executeOnce": true,
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "sendBody": true,
+        "specifyBody": "json",
+        "method": "POST",
+        "url": "http://host.docker.internal:11434/api/embed",
+        "jsonBody": "={{ JSON.stringify({ model: 'nomic-embed-text', input: 'search_query: ' + $('Paramètres').first().json.requete, keep_alive: '30m' }) }}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "a1c3e000-0069-4000-8000-000000000069",
+      "name": "Embedding de la requête",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1680,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "sendBody": true,
+        "specifyBody": "json",
+        "method": "POST",
+        "url": "http://qdrant:6333/collections/patients/points/search",
+        "jsonBody": "={{ JSON.stringify({ vector: $('Embedding de la requête').first().json.embeddings[0], limit: $('Paramètres').first().json.limite, with_payload: true, filter: { must: [ { key: 'patient_id', match: { value: $('Paramètres').first().json.patient_id } }, { key: 'date', range: { gte: $('Paramètres').first().json.depuis, lte: $('Paramètres').first().json.jusqua } } ] } }) }}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "a1c3e000-0070-4000-8000-000000000070",
+      "name": "Qdrant période",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1920,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "sendBody": true,
+        "specifyBody": "json",
+        "method": "POST",
+        "url": "http://qdrant:6333/collections/patients/points/search",
+        "jsonBody": "={{ JSON.stringify({ vector: $('Embedding de la requête').first().json.embeddings[0], limit: 6, with_payload: true, filter: { must: [ { key: 'patient_id', match: { value: $('Paramètres').first().json.patient_id } }, { key: 'type', match: { any: ['diagnostic', 'allergie', 'medication', 'analyse', 'document', 'lettre_validee'] } } ] } }) }}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "a1c3e000-0071-4000-8000-000000000071",
+      "name": "Qdrant fond",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2160,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "sendBody": true,
+        "specifyBody": "json",
+        "method": "POST",
+        "url": "http://qdrant:6333/collections/connaissances/points/search",
+        "jsonBody": "={{ JSON.stringify({ vector: $('Embedding de la requête').first().json.embeddings[0], limit: 2, with_payload: true }) }}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "a1c3e000-0072-4000-8000-000000000072",
+      "name": "Qdrant protocoles",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2400,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "sendBody": true,
+        "specifyBody": "json",
+        "method": "POST",
+        "url": "http://qdrant:6333/collections/a_verifier/points/scroll",
+        "jsonBody": "={{ JSON.stringify({ limit: 5, with_payload: true, with_vector: false, filter: { must: [ { key: 'patient_id', match: { value: $('Paramètres').first().json.patient_id } }, { key: 'statut', match: { value: 'a_verifier' } } ] } }) }}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "a1c3e000-0073-4000-8000-000000000073",
+      "name": "Qdrant lettres",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2640,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Brique « chercher » – assemblage de la liste de FAITS d'un seul résident.\n//\n// Deux familles de sources :\n//   1. lecture DIRECTE du logiciel de soins (notes, constantes, plan de médication, fiche) : toujours à jour, car\n//      le RAG n'est actualisé que 4 fois par jour ;\n//   2. RAG (Qdrant), TOUJOURS filtré par patient_id : ePA, base de l'hôpital, documents, et les protocoles.\n// Le contenu de la collection « a_verifier » (lettres non contrôlées) n'est JAMAIS mélangé aux faits : il sort à part.\nconst P = $('Paramètres').first().json;\nconst r = $('Résident').first().json;\nif (!r || r.patient_id !== P.patient_id) throw new Error(`Résident inconnu : ${P.patient_id}`);\n\nconst lignes = (nom, cle) => $(nom).all().map((i) => i.json).filter((x) => x[cle] !== undefined && x[cle] !== null);\nconst autres = lignes('Autres résidents', 'patient_id');\nconst notes = lignes('Notes de la période', 'id');\nconst vitaux = lignes('Constantes de la période', 'type');\nconst meds = lignes('Plan de médication', 'medicament');\nconst resultats = (nom) => $(nom).first().json?.result ?? [];\n\nconst fmt = (d) => {\n  const p = new Intl.DateTimeFormat('fr-FR', {\n    timeZone: 'Europe/Berlin', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23',\n  }).formatToParts(new Date(d));\n  const g = (t) => p.find((x) => x.type === t).value;\n  return `${g('day')}.${g('month')}. ${g('hour')}h${g('minute')}`;\n};\nconst propre = (s) => String(s).replace(/\\s+/g, ' ').trim().slice(0, 600);\n\nconst fond = []; // informations de fond (profil, ePA, hôpital, protocoles)\nconst periode = []; // événements datés de la période\nconst LS = 'Logiciel de soins';\nconst ajoute = (liste, label, texte, date, type, ref) =>\n  liste.push({ label, texte: propre(texte), date: date ? new Date(date).toISOString() : null, type, ref });\n\n// ---- 1. lecture directe du logiciel de soins ----\nconst liste = (a, vide) => (a && a.length ? a.join(' ; ') : vide);\najoute(fond, LS, `Diagnostics : ${liste(r.diagnostics, 'aucun')}`, null, 'profil', `profil-${r.patient_id}`);\najoute(fond, LS, `Allergies : ${liste(r.allergies, 'aucune connue')}`, null, 'profil', `profil-${r.patient_id}`);\najoute(fond, LS, `Régime : ${(r.regime ?? 'non précisé').replace(/\\.\\s*$/, '')}`, null, 'profil', `profil-${r.patient_id}`);\najoute(fond, LS, `Risques : ${liste(r.risques, 'aucun signalé')}`, null, 'profil', `profil-${r.patient_id}`);\nif (meds.length) {\n  ajoute(\n    fond, LS,\n    `Plan de médication : ${meds.map((m) => `${m.medicament} ${m.dosage} (${m.schema_prise})${m.indication ? ' pour ' + m.indication : ''}`).join(' ; ')}`,\n    null, 'medication', `plan-${r.patient_id}`,\n  );\n}\nfor (const n of notes) ajoute(periode, LS, `${n.categorie} (${n.auteur}) : ${n.texte}`, n.horodatage, 'note', `note-${n.id}`);\nconst parHeure = new Map();\nfor (const v of vitaux) {\n  const cle = new Date(v.horodatage).toISOString().slice(0, 16);\n  if (!parHeure.has(cle)) parHeure.set(cle, { date: v.horodatage, items: [] });\n  parHeure.get(cle).items.push(`${v.type} ${v.valeur}${v.unite ? ' ' + v.unite : ''}`);\n}\nfor (const { date, items } of parHeure.values()) ajoute(periode, LS, `Constantes : ${items.join(' ; ')}`, date, 'constantes', `vitaux-${date}`);\n\n// ---- 2. RAG : tout ce qui n'est pas lu en direct (le logiciel de soins l'est déjà) ----\nconst vus = new Set();\nconst alarmesRag = [];\nconst depuisRag =(liste, destination) => {\n  for (const x of liste) {\n    const p = x.payload ?? {};\n    if (p.source === 'logiciel_soins') continue;\n    // Un rapport déjà validé est le texte d'un soignant, pas un fait source : relire un SBAR passé pour en écrire un nouveau\n    // ferait recopier (et amplifier) ses erreurs éventuelles. Seuls les prompts qui le demandent (Mode B) le voient.\n    if (p.type === 'rapport_valide' && !P.rapports_valides) continue;\n    const cle = `${p.source}|${p.source_ref}|${p.chunk_index}`;\n    if (vus.has(cle)) continue;\n    vus.add(cle);\n    // Les alarmes de capteur indexées dans le RAG sont REGROUPÉES en un seul fait (ci-dessous) : une alarme est toujours retenue\n    // (importance maximale), et plusieurs alarmes d'une même nuit prendraient sinon la moitié des 8 places au détriment des constantes,\n    // des allergies et des notes.\n    if (p.type === 'alarme' && p.source === 'capteurs') {\n      alarmesRag.push({ date: p.date ?? null, texte: p.texte });\n      continue;\n    }\n    // un protocole s'affiche comme tel (« Protocole chutes »), pas sous le nom du connecteur (« Fichiers »)\n    ajoute(destination, p.type === 'protocole' ? `Protocole ${String(p.theme ?? '').replace(/[-_]/g, ' ')}`.trim() : p.source_label, p.texte, p.date ?? null, p.type, `${p.source_ref}#${p.chunk_index}`);\n  }\n};\ndepuisRag(resultats('Qdrant période'), periode);\ndepuisRag(resultats('Qdrant fond'), fond);\nif (P.protocoles) depuisRag(resultats('Qdrant protocoles'), fond);\nif (alarmesRag.length) {\n  const recentes = alarmesRag.sort((a, b) => String(a.date).localeCompare(String(b.date))).slice(-5);\n  // texte construit par le code à l'indexation (« Alarme de capteur (chute) le 27.10. à 13h47, chambre 12. ») : on garde type, jour et heure\n  const court = (t) => String(t).replace(/^Alarme de capteur\\s*/i, '').replace(/,?\\s*chambre\\s*\\d+\\.?$/i, '').trim();\n  ajoute(periode, 'Capteurs', `Alarmes de capteur de la période : ${recentes.map((a) => court(a.texte)).join(' ; ')}`, recentes.at(-1).date, 'alarme', 'alarmes-capteurs');\n}\n\n// ---- 3. lettres NON contrôlées : jamais dans les faits ----\nconst lettres = ($('Qdrant lettres').first().json?.result?.points ?? []).map((x) => ({\n  titre: x.payload.titre, expediteur: x.payload.expediteur, date: x.payload.date, ref: x.payload.source_ref,\n  motif: x.payload.motif, texte: x.payload.texte,\n}));\n\n// ---- tri, plafond, numérotation ----\n// Au plus MAX_FAITS faits par résident (8 par défaut) : moins de faits, c'est un prompt plus court (le modèle le lit\n// plus vite) et moins de matière à confondre. On garde les faits les plus importants pour la sécurité :\n// incidents et allergies d'abord, puis risques, médication, constantes, observations récentes, diagnostics, régime.\nconst MAX_FAITS = Math.min(Math.max(Number(P.max_faits ?? 8), 3), 40);\nconst prioritaires = new Set(P.sources_prioritaires ?? []);\nperiode.sort((a, b) => String(a.date).localeCompare(String(b.date)));\nconst importance = (f, rangRecent) => {\n  const t = String(f.texte).toLowerCase();\n  let s = 40;\n  if (f.type === 'note') s = /^incident/.test(t) ? 100 : /^(soins|medication|médication)/.test(t) ? 62 : 56;\n  else if (f.type === 'constantes') s = 50;\n  else if (f.type === 'profil') s = /^allergies/.test(t) ? 98 : /^risques/.test(t) ? 90 : /^diagnostics/.test(t) ? 58 : 30;\n  else if (f.type === 'medication') s = 70;\n  else if (['allergie'].includes(f.type)) s = 97;\n  else if (['diagnostic', 'analyse'].includes(f.type)) s = 60;\n  else if (f.type === 'protocole') s = 45;\n  else if (f.type === 'rapport_valide') s = 35;\n  if (prioritaires.has(f.label)) s += 100;\n  if (/alarme|capteur/i.test(f.label)) s += 120; // une alarme de capteur est toujours retenue\n  return s + (rangRecent ?? 0); // à importance égale, le plus récent\n};\n// ---- pertinence par rapport à la demande (Mode B : la consigne du soignant, DÉJÀ contrôlée) ----\n// Sans cela, les 8 faits retenus ne dépendent que de leur importance générale : une question sur le poids ou la fièvre\n// pouvait ne jamais voir le fait qui répond. Ici les mots de la demande (et quelques synonymes de soins) font remonter\n// les faits qui en parlent. Si AUCUN fait du résident n'en parle, le modèle ne reçoit AUCUN fait : il ne peut alors\n// rien affirmer, et la réponse est « information non disponible » (au lieu d'un fait sans rapport).\nconst sansAccent = (s) => String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();\nconst MOTS_GENERAUX = new Set([\n  'quel', 'quels', 'quelle', 'quelles', 'comment', 'passe', 'passee', 'derniers', 'dernieres', 'dernier', 'derniere', 'nuit', 'heures',\n  'resume', 'resumer', 'resumes', 'donne', 'donnez', 'indique', 'liste', 'dites', 'sont', 'etre', 'avoir', 'faire', 'fait', 'faits', 'etat',\n  'general', 'generale', 'situation', 'journee', 'soir', 'matin', 'rapport', 'transmission', 'synthese', 'points', 'important', 'importants',\n  'importante', 'importantes', 'information', 'informations', 'concernant', 'propos', 'resident', 'residente', 'avec', 'dans', 'pour', 'cette',\n  'depuis', 'tout', 'tous', 'toute', 'toutes', 'plus', 'moins', 'aujourd', 'hier', 'recemment', 'actuel', 'actuelle', 'actuellement', 'quand', 'combien',\n  'elle', 'elles', 'etait', 'etaient', 'avant', 'apres', 'pendant', 'porte', 'portent', 'contre', 'prend', 'prends', 'prennent', 'heure', 'niveau',\n  'autre', 'autres', 'encore', 'deja', 'jamais', 'souvent', 'cette', 'celui', 'celle', 'leur', 'leurs', 'ainsi', 'alors', 'aussi', 'sans', 'chez',\n]);\nconst SYNONYMES = {\n  fievre: ['temperature', 'fievre', 'febrile'], febrile: ['temperature', 'fievre', 'febrile'], temperature: ['temperature', 'fievre'],\n  saturation: ['spo2', 'saturation', 'oxygene'], oxygene: ['spo2', 'oxygene'], respiration: ['spo2', 'respir', 'dyspnee'],\n  tension: ['tension', 'pression'], pouls: ['pouls', 'frequence'], poids: ['poids', 'kg'], diurese: ['diurese', 'urine', 'urines'],\n  glycemie: ['glycemie', 'glucose', 'sucre'], sucre: ['glycemie', 'glucose'], douleur: ['douleur', 'eva'], medicaments: ['medication', 'dosage', 'mg'],\n  medicament: ['medication', 'dosage', 'mg'], traitement: ['medication', 'traitement', 'dosage', 'mg'], allergie: ['allergie', 'allergies'],\n  mobilisation: ['mobilis', 'deambul', 'marche', 'fauteuil'], agite: ['agit', 'errance', 'nerveu'], agitee: ['agit', 'errance', 'nerveu'],\n  agitation: ['agit', 'errance'], peau: ['peau', 'rougeur', 'escarre', 'sacrum', 'pansement'], chute: ['chute', 'sol'],\n};\n// Un mot de la demande « parle » d'un fait si le fait contient ce mot, à une terminaison près (s, e, es…) : « radiographie »\n// trouve « radiographies », mais « personne » ne trouve pas « personnel ». Les synonymes ci-dessus se cherchent au début des mots.\nconst TERMINAISONS = new Set(['s', 'x', 'e', 'es', 'ee', 'ees', 'ent', 'er', 'ez', 'a']);\nconst memeMot = (demande, mot) => demande === mot || (demande.length >= 5 && mot.length >= 5 && (mot.startsWith(demande) ? TERMINAISONS.has(mot.slice(demande.length)) : demande.startsWith(mot) && TERMINAISONS.has(demande.slice(mot.length))));\nconst motsDemande = P.filtrer_requete === true\n  ? [...new Set(sansAccent(P.requete).split(/[^a-z0-9]+/).filter((w) => w.length >= 4 && !MOTS_GENERAUX.has(w)))]\n  : [];\nconst debutsSynonymes = [...new Set(motsDemande.flatMap((w) => SYNONYMES[w] ?? []))];\nconst parleDeLaDemande = (f) => {\n  if (!motsDemande.length) return false;\n  const mots = sansAccent(`${f.texte} ${f.label} ${f.type ?? ''}`).split(/[^a-z0-9]+/).filter(Boolean);\n  return motsDemande.some((w) => mots.some((m) => memeMot(w, m))) || debutsSynonymes.some((d) => mots.some((m) => m.startsWith(d)));\n};\nconst bonusPertinence = (f) => (parleDeLaDemande(f) ? 150 : 0);\n\nconst candidats = [\n  ...fond.map((f) => ({ ...f, groupe: 'fond', score: importance(f) + bonusPertinence(f) })),\n  ...periode.map((f, i) => ({ ...f, groupe: 'periode', score: importance(f, (i / Math.max(periode.length, 1)) * 10) + bonusPertinence(f) })),\n];\nconst aucuneCorrespondance = motsDemande.length > 0 && !candidats.some(parleDeLaDemande);\nconst tronque = candidats.length > MAX_FAITS;\nconst retenus = new Set(aucuneCorrespondance ? [] : [...candidats].sort((a, b) => b.score - a.score).slice(0, MAX_FAITS));\n// ordre d'affichage : informations de fond d'abord, puis la période dans l'ordre chronologique\nconst faits = candidats\n  .filter((f) => retenus.has(f))\n  .map(({ score, ...f }) => f)\n  .map((f, i) => ({ id: `F${i + 1}`, ...f, date_affichee: f.date ? fmt(f.date) : null }));\n\nconst par_source = {};\nfor (const f of faits) par_source[f.label] = (par_source[f.label] ?? 0) + 1;\n\nreturn [\n  {\n    json: {\n      patient: {\n        patient_id: r.patient_id,\n        label: `${r.civilite} ${r.prenom} ${r.nom}`,\n        chambre: r.chambre,\n        etage: r.etage,\n        naissance: r.naissance,\n      },\n      periode: { depuis: P.depuis, jusqua: P.jusqua, depuis_affiche: fmt(P.depuis), jusqua_affiche: fmt(P.jusqua) },\n      faits,\n      lettres,\n      // pour le contrôle « ne jamais mélanger deux résidents » : noms et chambres des AUTRES résidents\n      autres: {\n        noms: [...new Set(autres.map((x) => x.nom))].filter((n) => n.toLowerCase() !== String(r.nom).toLowerCase()),\n        chambres: autres.map((x) => String(x.chambre)).filter((c) => c !== String(r.chambre)),\n      },\n      stats: { nb_faits: faits.length, par_source, tronque, nb_lettres_a_verifier: lettres.length, aucune_correspondance: aucuneCorrespondance },\n    },\n  },\n];\n"
+      },
+      "id": "a1c3e000-0074-4000-8000-000000000074",
+      "name": "Assembler les faits",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2880,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Entrée": {
+      "main": [
+        [
+          {
+            "node": "Paramètres",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Paramètres": {
+      "main": [
+        [
+          {
+            "node": "Résident",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Résident": {
+      "main": [
+        [
+          {
+            "node": "Autres résidents",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Autres résidents": {
+      "main": [
+        [
+          {
+            "node": "Notes de la période",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notes de la période": {
+      "main": [
+        [
+          {
+            "node": "Constantes de la période",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Constantes de la période": {
+      "main": [
+        [
+          {
+            "node": "Plan de médication",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Plan de médication": {
+      "main": [
+        [
+          {
+            "node": "Embedding de la requête",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embedding de la requête": {
+      "main": [
+        [
+          {
+            "node": "Qdrant période",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Qdrant période": {
+      "main": [
+        [
+          {
+            "node": "Qdrant fond",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Qdrant fond": {
+      "main": [
+        [
+          {
+            "node": "Qdrant protocoles",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Qdrant protocoles": {
+      "main": [
+        [
+          {
+            "node": "Qdrant lettres",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Qdrant lettres": {
+      "main": [
+        [
+          {
+            "node": "Assembler les faits",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Berlin"
+  },
+  "pinData": {}
+}

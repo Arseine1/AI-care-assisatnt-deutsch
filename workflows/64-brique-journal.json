@@ -1,0 +1,63 @@
+{
+  "id": "aicarebrqjourn01",
+  "name": "AI-Care – Brique journal",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "id": "a1c3e000-0060-4000-8000-000000000060",
+      "name": "Entrée",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO soins.journal_ia (evenement, patient_id, mode, action, prompt_id, prompt_version, modele, duree_ms, details) VALUES ($1, NULLIF($2, ''), NULLIF($3, ''), NULLIF($4, ''), NULLIF($5, ''), NULLIF($6, ''), NULLIF($7, ''), NULLIF($8, '')::int, $9::jsonb) RETURNING id",
+        "options": {
+          "queryReplacement": "={{ [ $json.evenement, $json.patient_id ?? '', $json.mode ?? '', $json.action ?? '', $json.prompt_id ?? '', $json.prompt_version ?? '', $json.modele ?? '', String($json.duree_ms ?? ''), JSON.stringify($json.details ?? {}) ] }}"
+        }
+      },
+      "id": "a1c3e000-0061-4000-8000-000000000061",
+      "name": "Écrire au journal",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        240,
+        0
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "aicarepg00000001",
+          "name": "AI-Care Postgres"
+        }
+      },
+      "executeOnce": true,
+      "alwaysOutputData": true
+    }
+  ],
+  "connections": {
+    "Entrée": {
+      "main": [
+        [
+          {
+            "node": "Écrire au journal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Berlin"
+  },
+  "pinData": {}
+}

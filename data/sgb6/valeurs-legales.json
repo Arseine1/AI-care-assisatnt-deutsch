@@ -1,0 +1,15 @@
+{
+  "_note": "Valeurs légales par année. Une année absente de ce fichier est une ERREUR (workflows/code/sgb6/regles.js n'utilise jamais de valeur par défaut). Pourcentages : § 166 Abs. 2 Satz 1 SGB VI, clés = prestation (pflegegeld = § 37, kombination = § 38, sachleistung = § 36 SGB XI). À vérifier chaque année avec la Bezugsgröße publiée.",
+  "annees": {
+    "2026": {
+      "bezugsgroesse_mensuelle": 3955.0,
+      "taux_retraite": 0.186,
+      "pourcentages": {
+        "5": { "pflegegeld": 1.0, "kombination": 0.85, "sachleistung": 0.7 },
+        "4": { "pflegegeld": 0.7, "kombination": 0.595, "sachleistung": 0.49 },
+        "3": { "pflegegeld": 0.43, "kombination": 0.3655, "sachleistung": 0.301 },
+        "2": { "pflegegeld": 0.27, "kombination": 0.2295, "sachleistung": 0.189 }
+      }
+    }
+  }
+}

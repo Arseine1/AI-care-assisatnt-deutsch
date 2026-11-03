@@ -1,0 +1,1446 @@
+{
+  "id": "aicaremaitreverif1",
+  "name": "AI-Care – Entrée Vérifier le document (règles tout de suite, IA en tâche de fond)",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "aicare-verifier",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "http://localhost:5173,http://localhost:5174,http://localhost:5175,http://127.0.0.1:5173,http://127.0.0.1:5174,http://127.0.0.1:5175"
+        },
+        "authentication": "headerAuth"
+      },
+      "id": "a1c3e000-0197-4000-8000-000000000197",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "aicare-aicare-verifier",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "aicarecle000000001",
+          "name": "AI-Care clé des webhooks"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "aicare-verifier-interne",
+        "responseMode": "responseNode",
+        "options": {},
+        "authentication": "headerAuth"
+      },
+      "id": "a1c3e000-0198-4000-8000-000000000198",
+      "name": "Webhook (interne)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        200
+      ],
+      "webhookId": "aicare-verifier-interne",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "aicarecleint0000001",
+          "name": "AI-Care clé interne"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Vérifier le document – contrôle de la demande {chambre}. Aucun texte libre : seule la chambre est lue, l'action est fixée ici.\nconst e = $input.first().json?.body ?? {};\nconst chambre = String(e.chambre ?? '');\nif (!/^\\d{1,3}$/.test(chambre)) throw new Error(`Chambre invalide : « ${chambre} »`);\n// ref (facultatif) : le courrier précis à vérifier (kim/<expéditeur>/<fichier>) ; sans lui, le plus récent en attente.\nconst ref = e.ref === undefined ? '' : String(e.ref);\nif (ref && !/^kim\\/[^\\s]{1,200}$/.test(ref)) throw new Error('ref invalide');\nreturn [{ json: { action: 'verifier_document', chambre, prompt_id: 'comparer', verification: true, ref } }];\n"
+      },
+      "id": "a1c3e000-0199-4000-8000-000000000199",
+      "name": "Contrôler la demande",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT patient_id, nom, chambre FROM soins.residents WHERE chambre = $1",
+        "options": {
+          "queryReplacement": "={{ [ $json.chambre ] }}"
+        }
+      },
+      "id": "a1c3e000-0200-4000-8000-000000000200",
+      "name": "Résident de la chambre",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        480,
+        0
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "aicarepg00000001",
+          "name": "AI-Care Postgres"
+        }
+      },
+      "executeOnce": true,
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Mode A – associe la demande au résident de la chambre (table soins.residents).\nconst d = $('Contrôler la demande').first().json;\nconst r = $('Résident de la chambre').first().json;\nif (!r?.patient_id) throw new Error(`Aucun résident dans la chambre ${d.chambre}`);\nreturn [{ json: { ...d, patient_id: r.patient_id } }];\n"
+      },
+      "id": "a1c3e000-0201-4000-8000-000000000201",
+      "name": "Choisir le parcours",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Paramètres d'un prompt (période, mots de recherche, protocoles) : lus dans prompts/*.md, jamais fournis par\n// l'interface. L'interface ne peut donc ni choisir ni modifier ce qui est demandé à l'IA, seulement quelle\n// action lancer et pour quel résident.\nconst PROMPTS = {\"comparer\":{\"id\":\"comparer\",\"version\":\"1.0.1\",\"sortie\":\"json\",\"temperature\":0.1,\"heures\":24,\"requete\":\"allergie médication anticoagulant insuffisance rénale contre-indication risque\",\"protocoles\":true,\"sections\":[],\"rapports_valides\":false,\"max_faits\":40,\"max_phrases\":8,\"longueur_phrase\":220,\"sources_prioritaires\":[],\"instruction_libre\":false,\"listes_json\":{\"contradictions\":[\"type\",\"gravite\",\"description\",\"element_lettre\",\"element_source\",\"sources\"]},\"cles_json\":[\"contradictions\",\"aucune_contradiction\"],\"instruction\":\"Compare la lettre à vérifier (le fait de source [KIM (lettre de médecin)]) avec les autres faits du résident : allergies, plan de médication, risques, diagnostics, fonction rénale et protocoles de la maison. Signale une contradiction seulement si DEUX faits précis s'opposent, l'un venant de la lettre, l'autre d'une autre source.\\n\\nCorrespondances à utiliser pour comparer (liste fermée, n'en ajoute aucune) :\\n- pénicillines : pénicilline, amoxicilline, ampicilline, flucloxacilline ;\\n- sulfamides : sulfamides, cotrimoxazole, sulfaméthoxazole ;\\n- anticoagulants : Marcumar, phenprocoumon, apixaban, rivaroxaban, dabigatran, héparine ;\\n- anti-inflammatoires (AINS) : ibuprofène, diclofénac, naproxène, kétoprofène.\\n\\nContradictions admises : un médicament de la lettre de la même famille qu'une allergie connue ; un second anticoagulant alors que le résident en prend déjà un, sans que l'arrêt du premier soit mentionné ; un AINS chez un résident dont les faits indiquent une insuffisance rénale ou « AINS contre-indiqués ». Si la lettre ne s'oppose à aucun fait, ne signale rien. Ne juge pas la décision du médecin : tu signales, un soignant décide.\",\"format\":\"Réponds par UN SEUL objet JSON valide, sans texte avant ni après et sans bloc de code, avec exactement ces clés :\\n- \\\"contradictions\\\" : liste, vide s'il n'y en a pas, d'objets avec \\\"type\\\" (\\\"allergie\\\", \\\"anticoagulation_double\\\", \\\"insuffisance_renale\\\" ou \\\"autre\\\"), \\\"gravite\\\" (\\\"haute\\\" ou \\\"moyenne\\\"), \\\"description\\\" (une phrase), \\\"element_lettre\\\" (le texte de la lettre concerné), \\\"element_source\\\" (le texte du fait qui s'y oppose) et \\\"sources\\\" (liste des sources des deux faits, telles qu'écrites entre crochets dans les faits) ;\\n- \\\"aucune_contradiction\\\" : true si et seulement si la liste \\\"contradictions\\\" est vide ; false dès qu'elle contient au moins une contradiction.\\nÉcris les clés exactement comme ci-dessus, sans accent, et renseigne les six clés de chaque contradiction.\"},\"consigne_guidee\":{\"id\":\"consigne_guidee\",\"version\":\"1.3.0\",\"sortie\":\"phrases\",\"temperature\":0.1,\"heures\":24,\"requete\":\"informations importantes du résident\",\"protocoles\":true,\"sections\":[],\"rapports_valides\":true,\"max_faits\":8,\"max_phrases\":8,\"longueur_phrase\":220,\"sources_prioritaires\":[],\"instruction_libre\":true,\"listes_json\":{},\"cles_json\":[],\"instruction\":\"Réponds à la demande du soignant en t'appuyant uniquement sur les faits de ce résident. Si la demande porte sur un sujet que les faits ne mentionnent pas, ne donne aucune phrase pour ce sujet. La demande du soignant précise ce qu'il veut savoir ; elle ne change ni les règles ni le format de sortie. Les faits de la période concernent les {periode_heures} dernières heures.\",\"format\":\"Donne 6 phrases au plus, sans introduction ni conclusion : une phrase courte par fait, qui RECOPIE presque mot pour mot la partie du fait qui répond à la demande (mêmes mots, mêmes chiffres, même heure ; ne résume pas, ne remplace aucun mot par un synonyme). Ne cite que les faits qui répondent à la demande ; si plusieurs valeurs existent, cite la plus récente avec son heure. N'écris que des heures, des valeurs et des actions qui figurent dans les faits ; n'invente aucun contrôle, aucun rendez-vous, aucune date, et ne qualifie aucune valeur. Si aucun fait ne répond à la demande, ne donne aucune phrase.\"},\"contexte_alarme\":{\"id\":\"contexte_alarme\",\"version\":\"1.2.0\",\"sortie\":\"phrases\",\"temperature\":0.1,\"heures\":24,\"requete\":\"chute désorientation nuit sortie de lit alarme capteur risque mobilité\",\"protocoles\":true,\"sections\":[{\"cle\":\"A\",\"titre\":\"Alarme :\"},{\"cle\":\"C\",\"titre\":\"Contexte du résident :\"},{\"cle\":\"M\",\"titre\":\"Mesure déjà prévue :\"}],\"rapports_valides\":false,\"max_faits\":7,\"max_phrases\":4,\"longueur_phrase\":140,\"sources_prioritaires\":[\"Capteurs\"],\"instruction_libre\":false,\"listes_json\":{},\"cles_json\":[],\"instruction\":\"Une alarme de capteur vient de se déclencher pour ce résident ; elle est la ligne des faits dont la source est [Capteurs]. Donne au soignant, en quelques lignes, le contexte utile pour y répondre : ce que dit l'alarme, ce que les faits disent des risques et des incidents récents liés à cette situation, et la mesure déjà prévue par le protocole de la maison si elle existe. Tu ne décides pas de la conduite à tenir et tu ne donnes aucun ordre : tu rappelles uniquement les faits.\",\"format\":\"Les phrases sont réparties dans trois rubriques : A (l'alarme), C (contexte du résident), M (mesure déjà prévue). Une phrase courte par fait, 4 phrases au plus en tout (l'alarme, puis l'essentiel du contexte et la mesure prévue). Si les faits ne contiennent aucune alarme, ne donne aucune phrase dans A : n'invente jamais d'alarme. Si une rubrique n'a aucun fait, ne lui donne aucune phrase.\"},\"extraire_faits\":{\"id\":\"extraire_faits\",\"version\":\"1.0.1\",\"sortie\":\"json\",\"temperature\":0.1,\"heures\":24,\"requete\":\"lettre de médecin médicaments diagnostic recommandation\",\"protocoles\":false,\"sections\":[],\"rapports_valides\":false,\"max_faits\":8,\"max_phrases\":8,\"longueur_phrase\":220,\"sources_prioritaires\":[],\"instruction_libre\":false,\"listes_json\":{\"medicaments\":[\"nom\",\"dose\",\"frequence\",\"duree\",\"action\"]},\"cles_json\":[\"patient\",\"diagnostics\",\"medicaments\",\"allergies_mentionnees\",\"autres_recommandations\"],\"instruction\":\"Le bloc FAITS DES SOURCES contient un document (par exemple une lettre de médecin) dont le texte est parfois imparfait, notamment après la lecture automatique d'un scan. Extrais-en les informations demandées sous forme de données structurées. N'extrais que ce que le document dit expressément : n'interprète pas, ne complète pas, ne corrige aucune dose et ne tiens compte d'aucune autre information. Une information absente du document vaut null, ou une liste vide.\",\"format\":\"Réponds par UN SEUL objet JSON valide, sans texte avant ni après et sans bloc de code, avec exactement ces clés :\\n- \\\"patient\\\" : objet avec \\\"nom\\\" (texte ou null), \\\"prenom\\\" (texte ou null) et \\\"naissance\\\" (texte au format JJ.MM.AAAA, ou null) ;\\n- \\\"diagnostics\\\" : liste de textes ;\\n- \\\"medicaments\\\" : liste d'objets avec \\\"nom\\\" (texte), \\\"dose\\\" (texte ou null), \\\"frequence\\\" (texte ou null), \\\"duree\\\" (texte ou null) et \\\"action\\\" (\\\"debut\\\", \\\"arret\\\", \\\"poursuite\\\", \\\"changement\\\" ou \\\"inconnu\\\") ;\\n- \\\"allergies_mentionnees\\\" : liste de textes ;\\n- \\\"autres_recommandations\\\" : liste de textes.\\nChaque médicament cité dans le document va dans \\\"medicaments\\\", même sans dose, et jamais dans \\\"autres_recommandations\\\" (qui ne contient que les conseils et contrôles prévus). Recopie les noms, les doses et les durées comme ils sont écrits dans le document, sans les traduire. Valeur de \\\"action\\\" : \\\"debut\\\" pour un médicament que la lettre prescrit ou recommande de commencer ; \\\"poursuite\\\" pour un médicament que la lettre dit inchangé ou poursuivi ; \\\"changement\\\" pour un remplacement ou un changement de dose ; \\\"arret\\\" pour un arrêt ; \\\"inconnu\\\" si la lettre ne le dit pas. Écris les clés exactement comme ci-dessus, sans accent.\"},\"generer_sbar\":{\"id\":\"generer_sbar\",\"version\":\"1.1.0\",\"sortie\":\"phrases\",\"temperature\":0.1,\"heures\":12,\"requete\":\"incident chute douleur tension pouls température glycémie traitement médicament observation risque surveillance\",\"protocoles\":false,\"sections\":[{\"cle\":\"S\",\"titre\":\"S – Situation :\"},{\"cle\":\"B\",\"titre\":\"B – Background (contexte) :\"},{\"cle\":\"A\",\"titre\":\"A – Assessment (évaluation) :\"},{\"cle\":\"R\",\"titre\":\"R – Recommendation :\"}],\"rapports_valides\":false,\"max_faits\":8,\"max_phrases\":8,\"longueur_phrase\":220,\"sources_prioritaires\":[],\"instruction_libre\":false,\"listes_json\":{},\"cles_json\":[],\"instruction\":\"Rédige la transmission SBAR des {periode_heures} dernières heures pour ce résident, à l'attention de l'équipe suivante. Reprends uniquement les faits de cette période et classe-les par importance pour la sécurité du résident : incidents d'abord, puis constantes, traitements et observations. Pour chaque incident, donne l'heure, la valeur mesurée et ce qui a été fait. Reformule chaque fait en une phrase courte : ne recopie jamais les lignes des faits ni leurs dates en tête de ligne. Les informations de fond (diagnostics, allergies, risques, plan de médication) ne servent qu'à la rubrique B.\",\"format\":\"Les phrases sont réparties dans quatre rubriques : S (situation : l'incident ou l'événement principal), B (contexte du résident : fond, allergies, antécédents), A (évaluation : constantes et observations de la période), R (recommandation). Chaque rubrique contient 1 à 4 phrases au plus. N'écris que des heures, des valeurs et des actions qui figurent dans les faits : n'invente aucun contrôle, aucun rendez-vous et aucune date. Une glycémie de contrôle après un resucrage n'est pas une nouvelle hypoglycémie. Ne regroupe jamais plusieurs faits sur une seule phrase. Dans R, ne reprends que des actions ou des consignes déjà présentes dans les faits (surveillance, protocole, contrôle prévu) ; ne propose aucun traitement, aucune dose et aucun diagnostic nouveau. Si une rubrique n'a aucun fait, ne lui donne aucune phrase.\"},\"points_vigilance\":{\"id\":\"points_vigilance\",\"version\":\"1.1.0\",\"sortie\":\"phrases\",\"temperature\":0.1,\"heures\":24,\"requete\":\"risque chute allergie anticoagulant hypoglycémie contre-indication surveillance consigne protocole\",\"protocoles\":true,\"sections\":[],\"rapports_valides\":false,\"max_faits\":8,\"max_phrases\":8,\"longueur_phrase\":220,\"sources_prioritaires\":[],\"instruction_libre\":false,\"listes_json\":{},\"cles_json\":[],\"instruction\":\"Établis la liste des points de vigilance pour l'équipe qui prend le relais, à partir des seuls faits : risques connus du résident, allergies, médicaments à surveiller, contre-indications, incidents des {periode_heures} dernières heures et mesures de surveillance déjà prévues. Classe-les par importance pour la sécurité : allergies et risques vitaux d'abord. Un point n'est retenu que s'il s'appuie sur un fait. Les protocoles de la maison (source [Fichiers]) servent seulement à rappeler la mesure qu'ils prévoient pour un risque déjà présent chez ce résident.\",\"format\":\"Donne 6 points au plus, un par phrase, chacun avec le fait qui le justifie. Si aucun point ne s'appuie sur un fait, ne donne aucune phrase. Aucune phrase d'introduction, aucune conclusion, aucune recommandation de traitement.\"},\"resume_epa\":{\"id\":\"resume_epa\",\"version\":\"1.1.0\",\"sortie\":\"phrases\",\"temperature\":0.1,\"heures\":24,\"requete\":\"diagnostics allergies médication liste eML traitement dossier ePA\",\"protocoles\":false,\"sections\":[{\"cle\":\"D\",\"titre\":\"Diagnostics :\"},{\"cle\":\"A\",\"titre\":\"Allergies :\"},{\"cle\":\"M\",\"titre\":\"Médication (liste eML) :\"}],\"rapports_valides\":false,\"max_faits\":8,\"max_phrases\":8,\"longueur_phrase\":220,\"sources_prioritaires\":[\"ePA\",\"Base hôpital (FHIR)\"],\"instruction_libre\":false,\"listes_json\":{},\"cles_json\":[],\"instruction\":\"Résume le dossier ePA de ce résident à l'attention d'un soignant. Utilise les faits dont la source est [ePA] ; les faits de la base de l'hôpital ne complètent que ce que l'ePA ne dit pas, avec leur propre source. Les allergies sont toujours reprises, quelle que soit leur source, car elles sont essentielles à la sécurité. Ne reprends ni les notes de soins ni les événements de la période.\",\"format\":\"Les phrases sont réparties dans trois rubriques : D (diagnostics), A (allergies), M (médication, liste eML). Une phrase par élément. Pour la médication, donne pour chaque médicament le nom, la dose et le schéma de prise tels qu'ils figurent dans le fait cité, sans rien ajouter. Si une rubrique n'a aucun fait, ne lui donne aucune phrase. Ne propose aucun traitement et ne juge aucune valeur.\"}};\n\n// Corps de la requête HTTP du webhook, ou objet déjà contrôlé par un workflow d'entrée : seuls patient_id et prompt_id sont lus.\nconst e = $input.first().json?.body ?? $input.first().json ?? {};\nconst prompt_id = String(e.prompt_id ?? '');\nconst p = PROMPTS[prompt_id];\nif (!p) throw new Error(`Prompt inconnu : « ${prompt_id} »`);\nreturn [\n  {\n    json: {\n      patient_id: e.patient_id,\n      prompt_id,\n      heures: p.heures,\n      requete: p.requete,\n      protocoles: p.protocoles,\n      rapports_valides: p.rapports_valides === true,\n      max_faits: p.max_faits,\n      sources_prioritaires: p.sources_prioritaires,\n    },\n  },\n];\n"
+      },
+      "id": "a1c3e000-0202-4000-8000-000000000202",
+      "name": "Paramètres du prompt (vérification)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        960,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "value": "aicarebrqcherch1",
+          "mode": "id"
+        },
+        "mode": "once",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "a1c3e000-0203-4000-8000-000000000203",
+      "name": "Chercher (vérification)",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1200,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Vérifier le document – choisit la lettre la plus récente en attente de contrôle (collection « a_verifier »).\n// Sans lettre, le parcours s'arrête là : aucun appel à l'IA.\nconst c = $input.first().json;\nconst ref = $('Contrôler la demande').first().json.ref ?? '';\n// un courrier précis demandé (ex. celui qui vient d'arriver) passe avant le « plus récent »\nconst lettres = [...(c.lettres ?? [])].sort((a, b) => (b.ref === ref) - (a.ref === ref) || String(b.date).localeCompare(String(a.date)));\nif (!lettres.length) return [{ json: { aucune: true, patient: c.patient } }];\nreturn [{ json: { ...c, lettre: lettres[0], nb_lettres: lettres.length } }];\n"
+      },
+      "id": "a1c3e000-0204-4000-8000-000000000204",
+      "name": "Choisir la lettre",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1440,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "Lettre à vérifier ?",
+              "leftValue": "={{ $json.aucune !== true }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a1c3e000-0205-4000-8000-000000000205",
+      "name": "Lettre à vérifier ?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1680,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Vérifier le document – aucune lettre en attente : réponse sans brouillon (rien à valider).\nreturn [\n  {\n    json: {\n      brouillon_id: null,\n      texte: 'information non disponible : aucune lettre de médecin n\\'est en attente de vérification pour ce résident. [KIM (lettre de médecin)]',\n      sources: ['KIM (lettre de médecin)'],\n      alertes: [],\n      avertissements: [],\n    },\n  },\n];\n"
+      },
+      "id": "a1c3e000-0206-4000-8000-000000000206",
+      "name": "Réponse sans lettre",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1920,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "id": "a1c3e000-0207-4000-8000-000000000207",
+      "name": "Répondre (sans lettre)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        2160,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// « Vérifier le document » – FILET DE RÈGLES déterministe + fusion avec l'assistant IA.\n//\n// Pourquoi : un modèle de langage peut rater une contradiction grave (Llama 3 a laissé passer une amoxicilline\n// chez une résidente allergique à la pénicilline). Ces règles ne dépendent pas du modèle : elles lisent le TEXTE\n// de la lettre et les faits du dossier, avec une liste fermée de familles de médicaments (noms français, allemands\n// et anglais). Les alertes du modèle s'y ajoutent ; une alerte d'un côté ou de l'autre suffit.\n//\n// Règles (gravité haute) :\n//   allergie                 un médicament de la lettre appartient à une famille dont une allergie est connue\n//   anticoagulation_double   un anticoagulant de la lettre alors que le résident en prend déjà un autre, sans arrêt du premier\n//   insuffisance_renale      un anti-inflammatoire (AINS) alors que le dossier ou la lettre indique une insuffisance rénale\nconst ctx = $('Choisir la lettre').first().json;\nconst lettre = ctx.lettre;\n// Deux appels : « Règles seules » (réponse immédiate : les étapes d'IA n'ont PAS encore tourné) et « Règles et fusion »\n// (analyse complémentaire en tâche de fond : les étapes d'IA ont tourné, avec ou sans succès).\nconst sortie = (nom) => {\n  try {\n    return { executee: true, json: $(nom).first().json ?? {} };\n  } catch {\n    return { executee: false, json: {} };\n  }\n};\nconst iaExecutee = sortie('Rédiger (comparaison)').executee || sortie('Rédiger (extraction)').executee;\nconst extraction = sortie('Rédiger (extraction)').json;\nconst comparaison = sortie('Rédiger (comparaison)').json;\n\nconst norm = (s) => String(s).normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').toLowerCase();\nconst tl = norm(lettre.texte);\nconst motsLettre = String(lettre.texte).split(/\\s+/);\nconst SRC_LETTRE = 'KIM (lettre de médecin)';\n\n// Les faits du dossier du résident : ni les protocoles (règles générales), ni la lettre elle-même.\nconst faitsDossier = (ctx.faits ?? []).filter((f) => f.label !== 'Fichiers' && f.label !== SRC_LETTRE);\n\nconst FAMILLES = {\n  penicillines: {\n    allergie: ['penicillin', 'penicilline'],\n    medicaments: ['penicillin', 'penicilline', 'amoxicillin', 'amoxicilline', 'ampicillin', 'ampicilline', 'flucloxacillin', 'flucloxacilline', 'piperacillin', 'piperacilline'],\n    libelle: 'pénicillines',\n  },\n  sulfamides: {\n    allergie: ['sulfamide', 'sulfonamid', 'cotrimoxazol', 'sulfamethoxazol'],\n    medicaments: ['cotrimoxazol', 'cotrimoxazole', 'sulfamethoxazol', 'sulfamethoxazole', 'sulfamide', 'sulfonamid'],\n    libelle: 'sulfamides',\n  },\n};\n// anticoagulants : nom -> substance (les synonymes forment une même substance)\nconst ANTICOAGULANTS = {\n  marcumar: 'phenprocoumon', phenprocoumon: 'phenprocoumon', phenprocoumone: 'phenprocoumon',\n  apixaban: 'apixaban', rivaroxaban: 'rivaroxaban', dabigatran: 'dabigatran', edoxaban: 'edoxaban',\n  heparine: 'heparine', heparin: 'heparine', enoxaparin: 'enoxaparine', enoxaparine: 'enoxaparine',\n};\nconst AINS = ['ibuprofen', 'ibuprofene', 'diclofenac', 'naproxen', 'naproxene', 'ketoprofen', 'ketoprofene', 'indometacin', 'etoricoxib'];\nconst RENAL = /insuffisance renale|niereninsuffizienz|nierenerkrank|ains contre indiques|ains contre-indiques|\\bdfg\\b|\\begfr\\b|nephropath/;\nconst ARRET = /(absetz|abgesetz|pausier|beend|stopp|arret|arreter|discontinu|ersetz|ablos|nicht mehr|supprim)/;\n\nconst trouve = (noms, t) => noms.filter((n) => new RegExp(`\\\\b${n}`).test(t));\nconst extrait = (nom) => {\n  const i = motsLettre.findIndex((w) => norm(w).startsWith(nom));\n  return i < 0 ? '' : motsLettre.slice(Math.max(0, i - 1), i + 6).join(' ').slice(0, 120);\n};\nconst court = (s) => String(s).replace(/\\s+/g, ' ').trim().slice(0, 160);\n\nconst regles = [];\n\n// ---- allergie ----\nfor (const [cle, fam] of Object.entries(FAMILLES)) {\n  const faitAllergie = faitsDossier.find((f) => /allergi/.test(norm(f.texte)) && fam.allergie.some((k) => norm(f.texte).includes(k)));\n  const meds = trouve(fam.medicaments, tl);\n  if (faitAllergie && meds.length) {\n    regles.push({\n      type: 'allergie',\n      gravite: 'haute',\n      description: `La lettre cite ${meds[0]}, une ${fam.libelle === 'pénicillines' ? 'pénicilline' : 'molécule de la famille des ' + fam.libelle}, alors qu'une allergie à cette famille est connue.`,\n      element_lettre: extrait(meds[0]),\n      element_source: court(faitAllergie.texte),\n      sources: [SRC_LETTRE, faitAllergie.label],\n      origine: 'regles',\n      cle,\n    });\n  }\n}\n\n// ---- anticoagulation double ----\nconst substancesLettre = [...new Set(trouve(Object.keys(ANTICOAGULANTS), tl).map((n) => ANTICOAGULANTS[n]))];\nconst dossierAnticoag = new Map(); // substance -> fait\nfor (const f of faitsDossier) {\n  const tf = norm(f.texte);\n  for (const n of trouve(Object.keys(ANTICOAGULANTS), tf)) if (!dossierAnticoag.has(ANTICOAGULANTS[n])) dossierAnticoag.set(ANTICOAGULANTS[n], f);\n}\nconst arrete = (substance) => {\n  const noms = Object.keys(ANTICOAGULANTS).filter((n) => ANTICOAGULANTS[n] === substance);\n  return noms.some((n) => {\n    for (const m of tl.matchAll(new RegExp(`\\\\b${n}`, 'g'))) {\n      const fenetre = tl.slice(Math.max(0, m.index - 100), m.index + 100);\n      if (ARRET.test(fenetre)) return true;\n    }\n    return false;\n  });\n};\nfor (const nouvelle of substancesLettre) {\n  if (dossierAnticoag.has(nouvelle) || dossierAnticoag.size === 0) continue;\n  if ([...dossierAnticoag.keys()].every((ancienne) => !arrete(ancienne))) {\n    const [ancienne, fait] = [...dossierAnticoag.entries()][0];\n    const nomLettre = Object.keys(ANTICOAGULANTS).find((n) => ANTICOAGULANTS[n] === nouvelle && new RegExp(`\\\\b${n}`).test(tl));\n    regles.push({\n      type: 'anticoagulation_double',\n      gravite: 'haute',\n      description: `La lettre cite l'anticoagulant ${nomLettre}, alors que le résident prend déjà un autre anticoagulant (${ancienne}) et que la lettre ne mentionne pas son arrêt : risque de double anticoagulation.`,\n      element_lettre: extrait(nomLettre),\n      element_source: court(fait.texte),\n      sources: [SRC_LETTRE, fait.label],\n      origine: 'regles',\n    });\n  }\n}\n\n// ---- AINS et insuffisance rénale ----\nconst ainsLettre = trouve(AINS, tl);\nif (ainsLettre.length) {\n  const faitRenal = faitsDossier.find((f) => RENAL.test(norm(f.texte)));\n  const renalLettre = /niereninsuffizienz|insuffisance renale|nierenerkrank/.test(tl);\n  if (faitRenal || renalLettre) {\n    regles.push({\n      type: 'insuffisance_renale',\n      gravite: 'haute',\n      description: `La lettre cite ${ainsLettre[0]}, un anti-inflammatoire (AINS), alors qu'une insuffisance rénale est indiquée : les AINS sont à éviter, voire contre-indiqués.`,\n      element_lettre: extrait(ainsLettre[0]),\n      element_source: faitRenal ? court(faitRenal.texte) : 'Mention d\\'une insuffisance rénale dans la lettre elle-même',\n      sources: faitRenal ? [SRC_LETTRE, faitRenal.label] : [SRC_LETTRE],\n      origine: 'regles',\n    });\n  }\n}\n\n// ---- alertes de l'assistant IA (jamais prises telles quelles : JSON contrôlé, champs complétés) ----\nlet modele = [];\ntry {\n  const o = JSON.parse(comparaison.texte ?? '');\n  if (Array.isArray(o.contradictions)) modele = o.contradictions.filter((c) => c && typeof c === 'object');\n} catch {\n  /* sortie illisible : les règles suffisent */\n}\n// Une alerte du modèle n'est retenue que si elle s'appuie sur un fait RÉEL du dossier (élément source) et sur un\n// passage RÉEL de la lettre (élément lettre) : le modèle peut inventer une contradiction, ce qui fatiguerait les soignants.\nconst motsDe = (s) => new Set(norm(s).split(/[^a-z0-9]+/).filter((w) => w.length >= 5));\nconst part = (mots, cible) => (mots.size ? [...mots].filter((w) => cible.has(w)).length / mots.size : 0);\nconst motsLettre2 = motsDe(lettre.texte);\nconst soutenue = (c) => {\n  const src = motsDe(c.element_source ?? '');\n  const let_ = motsDe(c.element_lettre ?? '');\n  if (src.size < 2 || let_.size < 1) return false;\n  return faitsDossier.some((f) => part(src, motsDe(f.texte)) >= 0.6) && part(let_, motsLettre2) >= 0.6;\n};\nconst candidatsModele = modele.filter((c) => !regles.some((r) => r.type === c.type && r.type !== 'autre'));\nconst ecartes = candidatsModele.filter((c) => !soutenue(c));\nconst deModele = candidatsModele\n  .filter(soutenue)\n  .map((c) => ({\n    type: ['allergie', 'anticoagulation_double', 'insuffisance_renale'].includes(c.type) ? c.type : 'autre',\n    gravite: c.gravite === 'haute' ? 'haute' : 'moyenne',\n    description: `${String(c.description ?? 'Contradiction signalée par l\\'assistant IA').slice(0, 220)} (à confirmer : signalé par l'assistant IA seulement).`,\n    element_lettre: court(c.element_lettre ?? ''),\n    element_source: court(c.element_source ?? ''),\n    sources: [SRC_LETTRE, ...(Array.isArray(c.sources) ? c.sources.map((s) => String(s).replace(/^\\[|\\]$/g, '')).filter((s) => s !== SRC_LETTRE) : [])],\n    origine: 'modele',\n  }));\n\nconst contradictions = [...regles, ...deModele];\n\n// ---- rapport rédigé par le code (jamais par le modèle) ----\nconst lignes = [`Document analysé : ${lettre.titre ?? 'lettre de médecin'} (expéditeur : ${lettre.expediteur ?? 'inconnu'}). [${SRC_LETTRE}]`];\nif (!contradictions.length) {\n  lignes.push(`Aucune contradiction détectée par les règles de contrôle${iaExecutee ? \" ni par l'assistant IA\" : ''} ; cela ne remplace pas la relecture du soignant. [${SRC_LETTRE}]`);\n} else {\n  lignes.push(`${contradictions.length} contradiction(s) à clarifier avec le médecin avant toute administration :`);\n  contradictions.forEach((c, i) => {\n    lignes.push(`${i + 1}. ${c.description} Lettre : « ${c.element_lettre} ». Dossier : « ${c.element_source} ». ${[...new Set(c.sources)].map((s) => `[${s}]`).join(' ')}`);\n  });\n}\n\nconst avertissements = [];\nconst heriter = (etape, r) => {\n  if (!r || !r.texte) avertissements.push({ type: `${etape}_indisponible`, detail: `L'étape « ${etape} » de l'assistant IA n'a pas abouti : seules les règles de contrôle ont été appliquées.` });\n  else {\n    for (const a of r.avertissements ?? []) {\n      // clés facultatives manquantes dans l'extraction : étape interne, sans intérêt pour le soignant (valeur lue comme « null »)\n      if (etape === 'extraction' && a.type === 'json_incomplet') continue;\n      avertissements.push({ type: a.type, detail: `${etape} : ${a.detail ?? ''}`.slice(0, 200) });\n    }\n  }\n};\nif (ecartes.length) {\n  avertissements.push({ type: 'contradiction_modele_ecartee', detail: `${ecartes.length} contradiction(s) signalée(s) par l'assistant IA écartée(s) : elles ne s'appuient sur aucun fait du dossier.` });\n}\nif (iaExecutee) {\n  heriter('extraction', extraction);\n  heriter('comparaison', comparaison);\n}\nif (regles.length && !modele.length && comparaison.texte) {\n  avertissements.push({ type: 'modele_a_rate', detail: 'L\\'assistant IA n\\'a signalé aucune contradiction ; elles viennent des règles de contrôle.' });\n}\n\nreturn [\n  {\n    json: {\n      texte: lignes.join('\\n'),\n      contradictions,\n      sources: [...new Set(contradictions.flatMap((c) => c.sources).concat(SRC_LETTRE))],\n      alertes: contradictions.map((c) => ({ type: 'contradiction', message: c.description })),\n      avertissements,\n      nb_regles: regles.length,\n      nb_modele: deModele.length,\n      ia_executee: iaExecutee,\n      contradictions_modele: deModele,\n      ecartees_modele: ecartes.length,\n      lettre_ref: lettre.ref,\n      modele: comparaison.modele ?? extraction.modele ?? null,\n      prompt_versions: iaExecutee ? `extraire_faits@${extraction.prompt_version ?? '?'}+comparer@${comparaison.prompt_version ?? '?'}+regles@1.0.0` : 'regles@1.0.0',\n    },\n  },\n];\n"
+      },
+      "id": "a1c3e000-0208-4000-8000-000000000208",
+      "name": "Règles seules",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1920,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO soins.brouillons (patient_id, mode, action, consigne, prompt_id, prompt_version, modele, texte_ia, faits, avertissements) VALUES ($1, 'a', 'verifier_document', NULL, 'verifier_document', $2, NULL, $3, $4::jsonb, '[]'::jsonb) RETURNING id",
+        "options": {
+          "queryReplacement": "={{ [ $('Choisir la lettre').first().json.patient.patient_id, $json.prompt_versions, $json.texte, JSON.stringify($('Choisir la lettre').first().json.faits.map(f => ({ id: f.id, label: f.label, texte: f.texte, date: f.date, ref: f.ref })).concat([{ id: 'L1', label: 'KIM (lettre de médecin)', texte: $('Choisir la lettre').first().json.lettre.titre, date: $('Choisir la lettre').first().json.lettre.date, ref: $('Choisir la lettre').first().json.lettre.ref }])) ] }}"
+        }
+      },
+      "id": "a1c3e000-0209-4000-8000-000000000209",
+      "name": "Créer le brouillon de vérification",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        2160,
+        0
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "aicarepg00000001",
+          "name": "AI-Care Postgres"
+        }
+      },
+      "executeOnce": true,
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT coalesce((SELECT valeur FROM soins.reglages WHERE cle = 'verification_ia'), 'true'::jsonb) = 'true'::jsonb AS actif",
+        "options": {
+          "queryReplacement": "={{ [  ] }}"
+        }
+      },
+      "id": "a1c3e000-0210-4000-8000-000000000210",
+      "name": "Réglage analyse IA",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        2400,
+        0
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "aicarepg00000001",
+          "name": "AI-Care Postgres"
+        }
+      },
+      "executeOnce": true,
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "Analyse IA activée ?",
+              "leftValue": "={{ $json.actif === true }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a1c3e000-0211-4000-8000-000000000211",
+      "name": "Analyse IA activée ?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2640,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO soins.taches (type, parametres, total) VALUES ('verification_document', jsonb_build_object('brouillon_id', $1::text, 'patient_id', $2::text), 1) RETURNING id",
+        "options": {
+          "queryReplacement": "={{ [ $('Créer le brouillon de vérification').first().json.id, $('Choisir la lettre').first().json.patient.patient_id ] }}"
+        }
+      },
+      "id": "a1c3e000-0212-4000-8000-000000000212",
+      "name": "Créer la tâche d'analyse",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        2880,
+        -200
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "aicarepg00000001",
+          "name": "AI-Care Postgres"
+        }
+      },
+      "executeOnce": true,
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "jsCode": "// Vérifier le document – RÉPONSE IMMÉDIATE : le rapport des règles de contrôle (code, sans IA), rattaché à un brouillon.\n// L'analyse complémentaire de l'assistant IA, si elle est activée, continue ensuite en tâche de fond (tache_id).\nconst f = $('Règles seules').first().json;\nconst b = $('Créer le brouillon de vérification').first().json;\nconst c = $('Choisir la lettre').first().json;\nlet tache = null;\ntry {\n  tache = $('Créer la tâche d\\'analyse').first().json.id ?? null;\n} catch {\n  /* analyse IA désactivée : pas de tâche */\n}\nreturn [\n  {\n    json: {\n      reponse: {\n        brouillon_id: b.id,\n        texte: f.texte,\n        sources: f.sources,\n        alertes: f.alertes,\n        avertissements: f.avertissements,\n        retirees: [],\n        analyse: tache ? { statut: 'en_cours', tache_id: tache } : { statut: 'desactivee' },\n      },\n      evenement_journal: {\n        evenement: 'verification',\n        patient_id: c.patient.patient_id,\n        mode: 'a',\n        action: 'verifier_document',\n        prompt_id: 'verifier_document',\n        prompt_version: f.prompt_versions,\n        details: { brouillon_id: b.id, lettre: f.lettre_ref, contradictions_regles: f.nb_regles, analyse_ia: tache ? 'en_cours' : 'desactivee', tache_id: tache },\n      },\n    },\n  },\n];\n"
+      },
+      "id": "a1c3e000-0213-4000-8000-000000000213",
+      "name": "Réponse immédiate",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3120,
+        -200
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json.reponse) }}",
+        "options": {}
+      },
+      "id": "a1c3e000-0214-4000-8000-000000000214",
+      "name": "Répondre tout de suite",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        3360,
+        -200
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Vérifier le document – entrée du sous-workflow « journal ».\nreturn [{ json: $input.first().json.evenement_journal }];\n"
+      },
+      "id": "a1c3e000-0215-4000-8000-000000000215",
+      "name": "Événement (vérification)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3600,
+        -360
+      ]
+    },
+    {
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "value": "aicarebrqjourn01",
+          "mode": "id"
+        },
+        "mode": "once",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "a1c3e000-0216-4000-8000-000000000216",
+      "name": "Journal",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        3840,
+        -360
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE soins.taches SET heartbeat = now() WHERE id = $1::uuid AND statut = 'en_cours' RETURNING true AS active",
+        "options": {
+          "queryReplacement": "={{ [ $('Créer la tâche d\\'analyse').first().json.id ] }}"
+        }
+      },
+      "id": "a1c3e000-0217-4000-8000-000000000217",
+      "name": "Analyse toujours voulue (extraction)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        3480,
+        -80
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "aicarepg00000001",
+          "name": "AI-Care Postgres"
+        }
+      },
+      "executeOnce": true,
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "Analyse en cours ? (extraction)",
+              "leftValue": "={{ $json.active === true }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a1c3e000-0218-4000-8000-000000000218",
+      "name": "Analyse en cours ? (extraction)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        3600,
+        -240
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE soins.taches SET heartbeat = now() WHERE id = $1::uuid AND statut = 'en_cours' RETURNING true AS active",
+        "options": {
+          "queryReplacement": "={{ [ $('Créer la tâche d\\'analyse').first().json.id ] }}"
+        }
+      },
+      "id": "a1c3e000-0219-4000-8000-000000000219",
+      "name": "Analyse toujours voulue (comparaison)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        4440,
+        -80
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "aicarepg00000001",
+          "name": "AI-Care Postgres"
+        }
+      },
+      "executeOnce": true,
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "Analyse en cours ? (comparaison)",
+              "leftValue": "={{ $json.active === true }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a1c3e000-0220-4000-8000-000000000220",
+      "name": "Analyse en cours ? (comparaison)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        4560,
+        -240
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Vérifier le document – entrée du template « extraire_faits » : la lettre est le SEUL fait (une donnée, jamais un ordre).\nconst c = $('Choisir la lettre').first().json;\nconst l = c.lettre;\nreturn [\n  {\n    json: {\n      patient: c.patient,\n      periode: c.periode,\n      autres: c.autres,\n      prompt_id: 'extraire_faits',\n      faits: [{ id: 'F1', label: 'KIM (lettre de médecin)', texte: l.texte, date: l.date, date_affichee: null, groupe: 'fond', type: 'lettre', ref: l.ref }],\n    },\n  },\n];\n"
+      },
+      "id": "a1c3e000-0221-4000-8000-000000000221",
+      "name": "Document à extraire",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3600,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "value": "aicarebrqtmpl001",
+          "mode": "id"
+        },
+        "mode": "once",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "a1c3e000-0222-4000-8000-000000000222",
+      "name": "Template (extraction)",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        3840,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Vérifier le document – du template (extraction) vers « rédiger ».\nconst t = $input.first().json;\nconst d = $('Document à extraire').first().json;\nreturn [{ json: { ...t, faits: d.faits, patient: d.patient, autres: d.autres, mode: 'a', action: 'extraire_faits' } }];\n"
+      },
+      "id": "a1c3e000-0223-4000-8000-000000000223",
+      "name": "Vers rédiger (extraction)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4080,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "value": "aicarebrqredig01",
+          "mode": "id"
+        },
+        "mode": "once",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "a1c3e000-0224-4000-8000-000000000224",
+      "name": "Rédiger (extraction)",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        4320,
+        -80
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Vérifier le document – faits du prompt « comparer » : les faits du résident + la lettre (données extraites par\n// l'IA, ou texte brut si l'extraction a échoué : les règles, elles, lisent toujours le texte de la lettre).\nconst c = $('Choisir la lettre').first().json;\nconst r = $('Rédiger (extraction)').first().json ?? {};\nlet objet = null;\ntry {\n  objet = JSON.parse(r.texte ?? '');\n} catch {\n  /* extraction illisible : on retombe sur le texte brut */\n}\nconst l = c.lettre;\nlet texteLettre;\nif (objet && typeof objet === 'object' && !Array.isArray(objet)) {\n  const meds = (Array.isArray(objet.medicaments) ? objet.medicaments : []).map(\n    (m) => `${m?.nom ?? '?'}${m?.dose ? ' ' + m.dose : ''}${m?.frequence ? ', ' + m.frequence : ''}${m?.duree ? ', ' + m.duree : ''}${m?.action ? ' (' + m.action + ')' : ''}`,\n  );\n  const liste = (a) => (Array.isArray(a) && a.length ? a.join(' ; ') : null);\n  texteLettre =\n    `Lettre à vérifier (données extraites) : patient ${[objet.patient?.prenom, objet.patient?.nom].filter(Boolean).join(' ') || 'inconnu'}, né le ${objet.patient?.naissance ?? 'date inconnue'}. ` +\n    `Diagnostics : ${liste(objet.diagnostics) ?? 'aucun'}. Médicaments : ${meds.join(' ; ') || 'aucun'}. Recommandations : ${liste(objet.autres_recommandations) ?? 'aucune'}.`;\n} else {\n  texteLettre = `Lettre à vérifier (texte brut) : ${String(l.texte).slice(0, 1500)}`;\n}\nconst faits = [\n  ...c.faits,\n  { id: `F${c.faits.length + 1}`, label: 'KIM (lettre de médecin)', texte: texteLettre, date: l.date, date_affichee: null, groupe: 'fond', type: 'lettre', ref: l.ref },\n];\nreturn [{ json: { patient: c.patient, periode: c.periode, autres: c.autres, faits, prompt_id: 'comparer' } }];\n"
+      },
+      "id": "a1c3e000-0225-4000-8000-000000000225",
+      "name": "Faits pour comparer",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4560,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "value": "aicarebrqtmpl001",
+          "mode": "id"
+        },
+        "mode": "once",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "a1c3e000-0226-4000-8000-000000000226",
+      "name": "Template (comparaison)",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        4800,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Vérifier le document – du template (comparaison) vers « rédiger ».\nconst t = $input.first().json;\nconst d = $('Faits pour comparer').first().json;\nreturn [{ json: { ...t, faits: d.faits, patient: d.patient, autres: d.autres, mode: 'a', action: 'comparer' } }];\n"
+      },
+      "id": "a1c3e000-0227-4000-8000-000000000227",
+      "name": "Vers rédiger (comparaison)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5040,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "value": "aicarebrqredig01",
+          "mode": "id"
+        },
+        "mode": "once",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "a1c3e000-0228-4000-8000-000000000228",
+      "name": "Rédiger (comparaison)",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        5280,
+        -80
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// « Vérifier le document » – FILET DE RÈGLES déterministe + fusion avec l'assistant IA.\n//\n// Pourquoi : un modèle de langage peut rater une contradiction grave (Llama 3 a laissé passer une amoxicilline\n// chez une résidente allergique à la pénicilline). Ces règles ne dépendent pas du modèle : elles lisent le TEXTE\n// de la lettre et les faits du dossier, avec une liste fermée de familles de médicaments (noms français, allemands\n// et anglais). Les alertes du modèle s'y ajoutent ; une alerte d'un côté ou de l'autre suffit.\n//\n// Règles (gravité haute) :\n//   allergie                 un médicament de la lettre appartient à une famille dont une allergie est connue\n//   anticoagulation_double   un anticoagulant de la lettre alors que le résident en prend déjà un autre, sans arrêt du premier\n//   insuffisance_renale      un anti-inflammatoire (AINS) alors que le dossier ou la lettre indique une insuffisance rénale\nconst ctx = $('Choisir la lettre').first().json;\nconst lettre = ctx.lettre;\n// Deux appels : « Règles seules » (réponse immédiate : les étapes d'IA n'ont PAS encore tourné) et « Règles et fusion »\n// (analyse complémentaire en tâche de fond : les étapes d'IA ont tourné, avec ou sans succès).\nconst sortie = (nom) => {\n  try {\n    return { executee: true, json: $(nom).first().json ?? {} };\n  } catch {\n    return { executee: false, json: {} };\n  }\n};\nconst iaExecutee = sortie('Rédiger (comparaison)').executee || sortie('Rédiger (extraction)').executee;\nconst extraction = sortie('Rédiger (extraction)').json;\nconst comparaison = sortie('Rédiger (comparaison)').json;\n\nconst norm = (s) => String(s).normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').toLowerCase();\nconst tl = norm(lettre.texte);\nconst motsLettre = String(lettre.texte).split(/\\s+/);\nconst SRC_LETTRE = 'KIM (lettre de médecin)';\n\n// Les faits du dossier du résident : ni les protocoles (règles générales), ni la lettre elle-même.\nconst faitsDossier = (ctx.faits ?? []).filter((f) => f.label !== 'Fichiers' && f.label !== SRC_LETTRE);\n\nconst FAMILLES = {\n  penicillines: {\n    allergie: ['penicillin', 'penicilline'],\n    medicaments: ['penicillin', 'penicilline', 'amoxicillin', 'amoxicilline', 'ampicillin', 'ampicilline', 'flucloxacillin', 'flucloxacilline', 'piperacillin', 'piperacilline'],\n    libelle: 'pénicillines',\n  },\n  sulfamides: {\n    allergie: ['sulfamide', 'sulfonamid', 'cotrimoxazol', 'sulfamethoxazol'],\n    medicaments: ['cotrimoxazol', 'cotrimoxazole', 'sulfamethoxazol', 'sulfamethoxazole', 'sulfamide', 'sulfonamid'],\n    libelle: 'sulfamides',\n  },\n};\n// anticoagulants : nom -> substance (les synonymes forment une même substance)\nconst ANTICOAGULANTS = {\n  marcumar: 'phenprocoumon', phenprocoumon: 'phenprocoumon', phenprocoumone: 'phenprocoumon',\n  apixaban: 'apixaban', rivaroxaban: 'rivaroxaban', dabigatran: 'dabigatran', edoxaban: 'edoxaban',\n  heparine: 'heparine', heparin: 'heparine', enoxaparin: 'enoxaparine', enoxaparine: 'enoxaparine',\n};\nconst AINS = ['ibuprofen', 'ibuprofene', 'diclofenac', 'naproxen', 'naproxene', 'ketoprofen', 'ketoprofene', 'indometacin', 'etoricoxib'];\nconst RENAL = /insuffisance renale|niereninsuffizienz|nierenerkrank|ains contre indiques|ains contre-indiques|\\bdfg\\b|\\begfr\\b|nephropath/;\nconst ARRET = /(absetz|abgesetz|pausier|beend|stopp|arret|arreter|discontinu|ersetz|ablos|nicht mehr|supprim)/;\n\nconst trouve = (noms, t) => noms.filter((n) => new RegExp(`\\\\b${n}`).test(t));\nconst extrait = (nom) => {\n  const i = motsLettre.findIndex((w) => norm(w).startsWith(nom));\n  return i < 0 ? '' : motsLettre.slice(Math.max(0, i - 1), i + 6).join(' ').slice(0, 120);\n};\nconst court = (s) => String(s).replace(/\\s+/g, ' ').trim().slice(0, 160);\n\nconst regles = [];\n\n// ---- allergie ----\nfor (const [cle, fam] of Object.entries(FAMILLES)) {\n  const faitAllergie = faitsDossier.find((f) => /allergi/.test(norm(f.texte)) && fam.allergie.some((k) => norm(f.texte).includes(k)));\n  const meds = trouve(fam.medicaments, tl);\n  if (faitAllergie && meds.length) {\n    regles.push({\n      type: 'allergie',\n      gravite: 'haute',\n      description: `La lettre cite ${meds[0]}, une ${fam.libelle === 'pénicillines' ? 'pénicilline' : 'molécule de la famille des ' + fam.libelle}, alors qu'une allergie à cette famille est connue.`,\n      element_lettre: extrait(meds[0]),\n      element_source: court(faitAllergie.texte),\n      sources: [SRC_LETTRE, faitAllergie.label],\n      origine: 'regles',\n      cle,\n    });\n  }\n}\n\n// ---- anticoagulation double ----\nconst substancesLettre = [...new Set(trouve(Object.keys(ANTICOAGULANTS), tl).map((n) => ANTICOAGULANTS[n]))];\nconst dossierAnticoag = new Map(); // substance -> fait\nfor (const f of faitsDossier) {\n  const tf = norm(f.texte);\n  for (const n of trouve(Object.keys(ANTICOAGULANTS), tf)) if (!dossierAnticoag.has(ANTICOAGULANTS[n])) dossierAnticoag.set(ANTICOAGULANTS[n], f);\n}\nconst arrete = (substance) => {\n  const noms = Object.keys(ANTICOAGULANTS).filter((n) => ANTICOAGULANTS[n] === substance);\n  return noms.some((n) => {\n    for (const m of tl.matchAll(new RegExp(`\\\\b${n}`, 'g'))) {\n      const fenetre = tl.slice(Math.max(0, m.index - 100), m.index + 100);\n      if (ARRET.test(fenetre)) return true;\n    }\n    return false;\n  });\n};\nfor (const nouvelle of substancesLettre) {\n  if (dossierAnticoag.has(nouvelle) || dossierAnticoag.size === 0) continue;\n  if ([...dossierAnticoag.keys()].every((ancienne) => !arrete(ancienne))) {\n    const [ancienne, fait] = [...dossierAnticoag.entries()][0];\n    const nomLettre = Object.keys(ANTICOAGULANTS).find((n) => ANTICOAGULANTS[n] === nouvelle && new RegExp(`\\\\b${n}`).test(tl));\n    regles.push({\n      type: 'anticoagulation_double',\n      gravite: 'haute',\n      description: `La lettre cite l'anticoagulant ${nomLettre}, alors que le résident prend déjà un autre anticoagulant (${ancienne}) et que la lettre ne mentionne pas son arrêt : risque de double anticoagulation.`,\n      element_lettre: extrait(nomLettre),\n      element_source: court(fait.texte),\n      sources: [SRC_LETTRE, fait.label],\n      origine: 'regles',\n    });\n  }\n}\n\n// ---- AINS et insuffisance rénale ----\nconst ainsLettre = trouve(AINS, tl);\nif (ainsLettre.length) {\n  const faitRenal = faitsDossier.find((f) => RENAL.test(norm(f.texte)));\n  const renalLettre = /niereninsuffizienz|insuffisance renale|nierenerkrank/.test(tl);\n  if (faitRenal || renalLettre) {\n    regles.push({\n      type: 'insuffisance_renale',\n      gravite: 'haute',\n      description: `La lettre cite ${ainsLettre[0]}, un anti-inflammatoire (AINS), alors qu'une insuffisance rénale est indiquée : les AINS sont à éviter, voire contre-indiqués.`,\n      element_lettre: extrait(ainsLettre[0]),\n      element_source: faitRenal ? court(faitRenal.texte) : 'Mention d\\'une insuffisance rénale dans la lettre elle-même',\n      sources: faitRenal ? [SRC_LETTRE, faitRenal.label] : [SRC_LETTRE],\n      origine: 'regles',\n    });\n  }\n}\n\n// ---- alertes de l'assistant IA (jamais prises telles quelles : JSON contrôlé, champs complétés) ----\nlet modele = [];\ntry {\n  const o = JSON.parse(comparaison.texte ?? '');\n  if (Array.isArray(o.contradictions)) modele = o.contradictions.filter((c) => c && typeof c === 'object');\n} catch {\n  /* sortie illisible : les règles suffisent */\n}\n// Une alerte du modèle n'est retenue que si elle s'appuie sur un fait RÉEL du dossier (élément source) et sur un\n// passage RÉEL de la lettre (élément lettre) : le modèle peut inventer une contradiction, ce qui fatiguerait les soignants.\nconst motsDe = (s) => new Set(norm(s).split(/[^a-z0-9]+/).filter((w) => w.length >= 5));\nconst part = (mots, cible) => (mots.size ? [...mots].filter((w) => cible.has(w)).length / mots.size : 0);\nconst motsLettre2 = motsDe(lettre.texte);\nconst soutenue = (c) => {\n  const src = motsDe(c.element_source ?? '');\n  const let_ = motsDe(c.element_lettre ?? '');\n  if (src.size < 2 || let_.size < 1) return false;\n  return faitsDossier.some((f) => part(src, motsDe(f.texte)) >= 0.6) && part(let_, motsLettre2) >= 0.6;\n};\nconst candidatsModele = modele.filter((c) => !regles.some((r) => r.type === c.type && r.type !== 'autre'));\nconst ecartes = candidatsModele.filter((c) => !soutenue(c));\nconst deModele = candidatsModele\n  .filter(soutenue)\n  .map((c) => ({\n    type: ['allergie', 'anticoagulation_double', 'insuffisance_renale'].includes(c.type) ? c.type : 'autre',\n    gravite: c.gravite === 'haute' ? 'haute' : 'moyenne',\n    description: `${String(c.description ?? 'Contradiction signalée par l\\'assistant IA').slice(0, 220)} (à confirmer : signalé par l'assistant IA seulement).`,\n    element_lettre: court(c.element_lettre ?? ''),\n    element_source: court(c.element_source ?? ''),\n    sources: [SRC_LETTRE, ...(Array.isArray(c.sources) ? c.sources.map((s) => String(s).replace(/^\\[|\\]$/g, '')).filter((s) => s !== SRC_LETTRE) : [])],\n    origine: 'modele',\n  }));\n\nconst contradictions = [...regles, ...deModele];\n\n// ---- rapport rédigé par le code (jamais par le modèle) ----\nconst lignes = [`Document analysé : ${lettre.titre ?? 'lettre de médecin'} (expéditeur : ${lettre.expediteur ?? 'inconnu'}). [${SRC_LETTRE}]`];\nif (!contradictions.length) {\n  lignes.push(`Aucune contradiction détectée par les règles de contrôle${iaExecutee ? \" ni par l'assistant IA\" : ''} ; cela ne remplace pas la relecture du soignant. [${SRC_LETTRE}]`);\n} else {\n  lignes.push(`${contradictions.length} contradiction(s) à clarifier avec le médecin avant toute administration :`);\n  contradictions.forEach((c, i) => {\n    lignes.push(`${i + 1}. ${c.description} Lettre : « ${c.element_lettre} ». Dossier : « ${c.element_source} ». ${[...new Set(c.sources)].map((s) => `[${s}]`).join(' ')}`);\n  });\n}\n\nconst avertissements = [];\nconst heriter = (etape, r) => {\n  if (!r || !r.texte) avertissements.push({ type: `${etape}_indisponible`, detail: `L'étape « ${etape} » de l'assistant IA n'a pas abouti : seules les règles de contrôle ont été appliquées.` });\n  else {\n    for (const a of r.avertissements ?? []) {\n      // clés facultatives manquantes dans l'extraction : étape interne, sans intérêt pour le soignant (valeur lue comme « null »)\n      if (etape === 'extraction' && a.type === 'json_incomplet') continue;\n      avertissements.push({ type: a.type, detail: `${etape} : ${a.detail ?? ''}`.slice(0, 200) });\n    }\n  }\n};\nif (ecartes.length) {\n  avertissements.push({ type: 'contradiction_modele_ecartee', detail: `${ecartes.length} contradiction(s) signalée(s) par l'assistant IA écartée(s) : elles ne s'appuient sur aucun fait du dossier.` });\n}\nif (iaExecutee) {\n  heriter('extraction', extraction);\n  heriter('comparaison', comparaison);\n}\nif (regles.length && !modele.length && comparaison.texte) {\n  avertissements.push({ type: 'modele_a_rate', detail: 'L\\'assistant IA n\\'a signalé aucune contradiction ; elles viennent des règles de contrôle.' });\n}\n\nreturn [\n  {\n    json: {\n      texte: lignes.join('\\n'),\n      contradictions,\n      sources: [...new Set(contradictions.flatMap((c) => c.sources).concat(SRC_LETTRE))],\n      alertes: contradictions.map((c) => ({ type: 'contradiction', message: c.description })),\n      avertissements,\n      nb_regles: regles.length,\n      nb_modele: deModele.length,\n      ia_executee: iaExecutee,\n      contradictions_modele: deModele,\n      ecartees_modele: ecartes.length,\n      lettre_ref: lettre.ref,\n      modele: comparaison.modele ?? extraction.modele ?? null,\n      prompt_versions: iaExecutee ? `extraire_faits@${extraction.prompt_version ?? '?'}+comparer@${comparaison.prompt_version ?? '?'}+regles@1.0.0` : 'regles@1.0.0',\n    },\n  },\n];\n"
+      },
+      "id": "a1c3e000-0229-4000-8000-000000000229",
+      "name": "Règles et fusion",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5520,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Vérifier le document – ANALYSE COMPLÉMENTAIRE (tâche de fond) : ce que l'assistant IA ajoute aux règles de contrôle.\n// Les règles et le texte déjà donnés ne changent pas ; seules les remarques s'ajoutent, marquées « à confirmer ».\nconst f = $('Règles et fusion').first().json;\nconst tache = $('Créer la tâche d\\'analyse').first().json.id;\nconst lu = (nom) => {\n  try {\n    return $(nom).first().json ?? {};\n  } catch {\n    return {};\n  }\n};\nconst echecIA = !lu('Rédiger (extraction)').texte && !lu('Rédiger (comparaison)').texte; // les deux étapes ont échoué\nconst remarques = (f.contradictions_modele ?? []).map((c) => ({\n  type: c.type, gravite: c.gravite, description: c.description, element_lettre: c.element_lettre, element_source: c.element_source, sources: c.sources,\n}));\nconst c = $('Choisir la lettre').first().json;\nreturn [\n  {\n    json: {\n      task_id: tache,\n      statut: echecIA ? 'termine_avec_erreurs' : 'termine',\n      resultat: {\n        remarques,\n        alertes: remarques.map((r) => ({ type: 'contradiction', message: r.description })),\n        avertissements: f.avertissements ?? [],\n        ecartees: f.ecartees_modele ?? 0,\n        indisponible: echecIA,\n        modele: f.modele ?? null,\n      },\n      evenement_journal: {\n        evenement: 'analyse_complementaire',\n        patient_id: c.patient.patient_id,\n        mode: 'a',\n        action: 'verifier_document',\n        prompt_id: 'verifier_document',\n        prompt_version: f.prompt_versions,\n        modele: f.modele,\n        details: { tache_id: tache, remarques_modele: remarques.length, ecartees: f.ecartees_modele ?? 0, indisponible: echecIA },\n      },\n    },\n  },\n];\n"
+      },
+      "id": "a1c3e000-0230-4000-8000-000000000230",
+      "name": "Analyse complémentaire",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5760,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE soins.taches SET fait = 1, statut = $2, resultat = $3::jsonb, heartbeat = now(), termine_le = now() WHERE id = $1::uuid AND statut = 'en_cours' RETURNING id",
+        "options": {
+          "queryReplacement": "={{ [ $json.task_id, $json.statut, JSON.stringify($json.resultat) ] }}"
+        }
+      },
+      "id": "a1c3e000-0231-4000-8000-000000000231",
+      "name": "Enregistrer l'analyse",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        6000,
+        -80
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "aicarepg00000001",
+          "name": "AI-Care Postgres"
+        }
+      },
+      "executeOnce": true,
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Vérifier le document – événement d'audit de l'analyse complémentaire.\nreturn [{ json: $('Analyse complémentaire').first().json.evenement_journal }];\n"
+      },
+      "id": "a1c3e000-0232-4000-8000-000000000232",
+      "name": "Événement (analyse)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        6240,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "value": "aicarebrqjourn01",
+          "mode": "id"
+        },
+        "mode": "once",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "a1c3e000-0233-4000-8000-000000000233",
+      "name": "Journal (analyse)",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        6480,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Vérifier le document – RÉPONSE IMMÉDIATE : le rapport des règles de contrôle (code, sans IA), rattaché à un brouillon.\n// L'analyse complémentaire de l'assistant IA, si elle est activée, continue ensuite en tâche de fond (tache_id).\nconst f = $('Règles seules').first().json;\nconst b = $('Créer le brouillon de vérification').first().json;\nconst c = $('Choisir la lettre').first().json;\nlet tache = null;\ntry {\n  tache = $('Créer la tâche d\\'analyse').first().json.id ?? null;\n} catch {\n  /* analyse IA désactivée : pas de tâche */\n}\nreturn [\n  {\n    json: {\n      reponse: {\n        brouillon_id: b.id,\n        texte: f.texte,\n        sources: f.sources,\n        alertes: f.alertes,\n        avertissements: f.avertissements,\n        retirees: [],\n        analyse: tache ? { statut: 'en_cours', tache_id: tache } : { statut: 'desactivee' },\n      },\n      evenement_journal: {\n        evenement: 'verification',\n        patient_id: c.patient.patient_id,\n        mode: 'a',\n        action: 'verifier_document',\n        prompt_id: 'verifier_document',\n        prompt_version: f.prompt_versions,\n        details: { brouillon_id: b.id, lettre: f.lettre_ref, contradictions_regles: f.nb_regles, analyse_ia: tache ? 'en_cours' : 'desactivee', tache_id: tache },\n      },\n    },\n  },\n];\n"
+      },
+      "id": "a1c3e000-0234-4000-8000-000000000234",
+      "name": "Réponse immédiate (sans IA)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2880,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json.reponse) }}",
+        "options": {}
+      },
+      "id": "a1c3e000-0235-4000-8000-000000000235",
+      "name": "Répondre (sans IA)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        3120,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Vérifier le document – entrée du sous-workflow « journal ».\nreturn [{ json: $input.first().json.evenement_journal }];\n"
+      },
+      "id": "a1c3e000-0236-4000-8000-000000000236",
+      "name": "Événement (sans IA)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3360,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "value": "aicarebrqjourn01",
+          "mode": "id"
+        },
+        "mode": "once",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "a1c3e000-0237-4000-8000-000000000237",
+      "name": "Journal (sans IA)",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        3600,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Contrôle de session – le jeton « Bearer » de l'en-tête Authorization (43 caractères URL-safe) est haché (SHA-256) : seul le haché est en base.\nconst entetes = $input.first().json?.headers ?? {};\nconst m = String(entetes.authorization ?? '').match(/^Bearer ([A-Za-z0-9_-]{43})$/);\nif (!m) return [{ json: { hash: '' } }];\nreturn [{ json: { hash: require('crypto').createHash('sha256').update(m[1]).digest('hex') } }];\n"
+      },
+      "id": "a1c3e000-0418-4000-8000-000000000418",
+      "name": "Session (jeton)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        120,
+        -380
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT s.identifiant, g.nom, s.jeton_hash FROM soins.sessions s JOIN soins.soignants g ON g.identifiant = s.identifiant WHERE s.jeton_hash = $1 AND s.expire_le > now() AND g.actif",
+        "options": {
+          "queryReplacement": "={{ [ $json.hash ] }}"
+        }
+      },
+      "id": "a1c3e000-0419-4000-8000-000000000419",
+      "name": "Session (base)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        240,
+        -380
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "aicarepg00000001",
+          "name": "AI-Care Postgres"
+        }
+      },
+      "executeOnce": true,
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Contrôle de session – résultat : un soignant identifié (session ouverte, non expirée, compte actif) ou rien.\nconst r = $input.first().json ?? {};\nif (!r.identifiant) return [{ json: { ok: false } }];\nreturn [{ json: { ok: true, soignant: { identifiant: r.identifiant, nom: r.nom }, jeton_hash: r.jeton_hash } }];\n"
+      },
+      "id": "a1c3e000-0420-4000-8000-000000000420",
+      "name": "Session",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        360,
+        -380
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "Session valide ?",
+              "leftValue": "={{ $json.ok === true }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a1c3e000-0421-4000-8000-000000000421",
+      "name": "Session valide ?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        480,
+        -380
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Contrôle de session – la session est valide : on rend aux nœuds suivants la requête d'origine (en-têtes, corps) telle que reçue.\nreturn [{ json: $('Webhook').first().json }];\n"
+      },
+      "id": "a1c3e000-0422-4000-8000-000000000422",
+      "name": "Requête",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        600,
+        -460
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Contrôle de session – refus : aucune donnée, seulement le motif. L'interface rouvre alors la page de connexion.\nreturn [{ json: { erreur: 'session' } }];\n"
+      },
+      "id": "a1c3e000-0423-4000-8000-000000000423",
+      "name": "Refus (session)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        600,
+        -300
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "id": "a1c3e000-0424-4000-8000-000000000424",
+      "name": "Répondre (session)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        720,
+        -300
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook (interne)": {
+      "main": [
+        [
+          {
+            "node": "Contrôler la demande",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Session (jeton)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Contrôler la demande": {
+      "main": [
+        [
+          {
+            "node": "Résident de la chambre",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Résident de la chambre": {
+      "main": [
+        [
+          {
+            "node": "Choisir le parcours",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Choisir le parcours": {
+      "main": [
+        [
+          {
+            "node": "Paramètres du prompt (vérification)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Paramètres du prompt (vérification)": {
+      "main": [
+        [
+          {
+            "node": "Chercher (vérification)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chercher (vérification)": {
+      "main": [
+        [
+          {
+            "node": "Choisir la lettre",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Choisir la lettre": {
+      "main": [
+        [
+          {
+            "node": "Lettre à vérifier ?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lettre à vérifier ?": {
+      "main": [
+        [
+          {
+            "node": "Règles seules",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Réponse sans lettre",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Réponse sans lettre": {
+      "main": [
+        [
+          {
+            "node": "Répondre (sans lettre)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Règles seules": {
+      "main": [
+        [
+          {
+            "node": "Créer le brouillon de vérification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Créer le brouillon de vérification": {
+      "main": [
+        [
+          {
+            "node": "Réglage analyse IA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Réglage analyse IA": {
+      "main": [
+        [
+          {
+            "node": "Analyse IA activée ?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyse IA activée ?": {
+      "main": [
+        [
+          {
+            "node": "Créer la tâche d'analyse",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Réponse immédiate (sans IA)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Créer la tâche d'analyse": {
+      "main": [
+        [
+          {
+            "node": "Réponse immédiate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Réponse immédiate": {
+      "main": [
+        [
+          {
+            "node": "Répondre tout de suite",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Répondre tout de suite": {
+      "main": [
+        [
+          {
+            "node": "Événement (vérification)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Analyse toujours voulue (extraction)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Événement (vérification)": {
+      "main": [
+        [
+          {
+            "node": "Journal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyse toujours voulue (extraction)": {
+      "main": [
+        [
+          {
+            "node": "Analyse en cours ? (extraction)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyse en cours ? (extraction)": {
+      "main": [
+        [
+          {
+            "node": "Document à extraire",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Document à extraire": {
+      "main": [
+        [
+          {
+            "node": "Template (extraction)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Template (extraction)": {
+      "main": [
+        [
+          {
+            "node": "Vers rédiger (extraction)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vers rédiger (extraction)": {
+      "main": [
+        [
+          {
+            "node": "Rédiger (extraction)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rédiger (extraction)": {
+      "main": [
+        [
+          {
+            "node": "Analyse toujours voulue (comparaison)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyse toujours voulue (comparaison)": {
+      "main": [
+        [
+          {
+            "node": "Analyse en cours ? (comparaison)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyse en cours ? (comparaison)": {
+      "main": [
+        [
+          {
+            "node": "Faits pour comparer",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Faits pour comparer": {
+      "main": [
+        [
+          {
+            "node": "Template (comparaison)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Template (comparaison)": {
+      "main": [
+        [
+          {
+            "node": "Vers rédiger (comparaison)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vers rédiger (comparaison)": {
+      "main": [
+        [
+          {
+            "node": "Rédiger (comparaison)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rédiger (comparaison)": {
+      "main": [
+        [
+          {
+            "node": "Règles et fusion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Règles et fusion": {
+      "main": [
+        [
+          {
+            "node": "Analyse complémentaire",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyse complémentaire": {
+      "main": [
+        [
+          {
+            "node": "Enregistrer l'analyse",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enregistrer l'analyse": {
+      "main": [
+        [
+          {
+            "node": "Événement (analyse)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Événement (analyse)": {
+      "main": [
+        [
+          {
+            "node": "Journal (analyse)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Réponse immédiate (sans IA)": {
+      "main": [
+        [
+          {
+            "node": "Répondre (sans IA)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Répondre (sans IA)": {
+      "main": [
+        [
+          {
+            "node": "Événement (sans IA)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Événement (sans IA)": {
+      "main": [
+        [
+          {
+            "node": "Journal (sans IA)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Session (jeton)": {
+      "main": [
+        [
+          {
+            "node": "Session (base)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Session (base)": {
+      "main": [
+        [
+          {
+            "node": "Session",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Session": {
+      "main": [
+        [
+          {
+            "node": "Session valide ?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Session valide ?": {
+      "main": [
+        [
+          {
+            "node": "Requête",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Refus (session)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Requête": {
+      "main": [
+        [
+          {
+            "node": "Contrôler la demande",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Refus (session)": {
+      "main": [
+        [
+          {
+            "node": "Répondre (session)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Berlin"
+  },
+  "pinData": {}
+}

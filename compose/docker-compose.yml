@@ -1,0 +1,133 @@
+name: aicare
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    env_file: ../.env
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks: [aicare]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  n8n:
+    image: n8nio/n8n:2.43.8
+    restart: unless-stopped
+    env_file: ../.env
+    environment:
+      DB_TYPE: postgresdb
+      DB_POSTGRESDB_HOST: postgres
+      DB_POSTGRESDB_PORT: "5432"
+      N8N_HOST: localhost
+      N8N_PORT: "5678"
+      WEBHOOK_URL: http://localhost:5679/
+      GENERIC_TIMEZONE: Europe/Berlin
+      TZ: Europe/Berlin
+      # Les workflows de connecteurs calculent des empreintes SHA-256 dans des nœuds Code.
+      NODE_FUNCTION_ALLOW_BUILTIN: crypto
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "5679:5678"
+    volumes:
+      - n8n_data:/home/node/.n8n
+      # Dossier surveillé par le connecteur « fichiers » (lecture seule). n8n 2 n'autorise la lecture
+      # de fichiers que dans ~/.n8n-files.
+      - ../data/fichiers:/home/node/.n8n-files/fichiers:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks: [aicare]
+
+  qdrant:
+    image: qdrant/qdrant:v1.19.2
+    restart: unless-stopped
+    ports:
+      - "6335:6333"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    networks: [aicare]
+
+  # Ollama (modèle de langage + modèle d'embeddings). Par défaut, le projet réutilise l'Ollama INSTALLÉ SUR LE POSTE (port 11434) :
+  # une seule copie des modèles, et sur ce poste de 8 Go un conteneur de plus coûterait de la mémoire. Ce service est donc dans le
+  # profil « ollama » : il ne démarre pas avec `docker compose up -d`, seulement avec
+  #     docker compose --profile ollama up -d
+  # Il publie le même port 11434 : arrêter d'abord l'Ollama du poste. n8n l'appelle déjà par host.docker.internal:11434 (rien à changer).
+  # Ensuite : docker compose exec ollama ollama pull llama3.2 && docker compose exec ollama ollama pull nomic-embed-text
+  ollama:
+    image: ollama/ollama:latest
+    profiles: ["ollama"]
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    networks: [aicare]
+
+  # OCR (OCRmyPDF + Tesseract) pour les PDF scannés du connecteur « fichiers ».
+  ocr:
+    build: ./ocr
+    restart: unless-stopped
+    mem_limit: 768m
+    ports:
+      - "8009:8000"
+    networks: [aicare]
+
+  mosquitto:
+    image: eclipse-mosquitto:2
+    restart: unless-stopped
+    ports:
+      - "1884:1883"
+    volumes:
+      - ./mosquitto:/mosquitto/config:ro
+      - mosquitto_data:/mosquitto/data
+    networks: [aicare]
+
+  mailpit:
+    image: axllent/mailpit:v1.32.0
+    restart: unless-stopped
+    environment:
+      # Mailpit n'a pas de serveur IMAP (seulement SMTP et POP3) : il prévient n8n par webhook à chaque nouveau courrier.
+      # n8n relit ensuite le message par l'API de Mailpit ; le contenu de la notification n'est pas utilisé.
+      MP_WEBHOOK_URL: http://n8n:5678/webhook/courrier-recu
+      # Mailpit n'envoie qu'UNE notification par seconde et abandonne les suivantes : 5 lettres arrivées d'un coup = 1 seule notification.
+      # Le rattrapage planifié (workflow 86, toutes les 2 minutes) traite les autres. Ne pas régler MP_WEBHOOK_LIMIT : mesuré, une valeur
+      # plus grande (50) fait perdre aussi les messages espacés de quelques secondes.
+    ports:
+      - "8025:8025"
+      - "1025:1025"
+    networks: [aicare]
+
+  hapi-fhir:
+    image: hapiproject/hapi:v8.12.0-1
+    restart: unless-stopped
+    # L'image tourne par défaut en utilisateur non privilégié et ne peut pas écrire dans le volume
+    # (base H2) : on le lance en root. Acceptable en développement local uniquement.
+    user: "0:0"
+    ports:
+      - "8090:8080"
+    volumes:
+      - hapi_data:/data/hapi
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:h2:file:/data/hapi/h2
+      SPRING_DATASOURCE_USERNAME: sa
+      SPRING_DATASOURCE_PASSWORD: ""
+      SPRING_DATASOURCE_DRIVER_CLASS_NAME: org.h2.Driver
+      SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT: ca.uhn.fhir.jpa.model.dialect.HapiFhirH2Dialect
+    networks: [aicare]
+
+volumes:
+  postgres_data:
+  n8n_data:
+  qdrant_data:
+  mosquitto_data:
+  hapi_data:
+  ollama_data:
+
+networks:
+  aicare:
+    driver: bridge

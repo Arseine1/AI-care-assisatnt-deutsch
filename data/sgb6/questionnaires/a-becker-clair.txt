@@ -1,0 +1,36 @@
+Pflegekasse Sonnenhof (Beispiel) – Eingangsstempel: 05.10.2026
+FRAGEBOGEN ZUR RENTENVERSICHERUNG VON PFLEGEPERSONEN
+(Beispieldaten, frei erfunden)
+
+Aktenzeichen der Pflegekasse: PK-2026-0101
+
+1. Angaben zur Pflegeperson
+Name, Vorname der Pflegeperson:  Becker, Anna
+Geburtsdatum der Pflegeperson: 14.03.1971
+Rentenversicherungsnummer: 21 140371 B 523
+Staatsangehörigkeit: deutsch
+Anschrift: Lindenweg 12, 50667 Köln
+
+2. Angaben zur pflegebedürftigen Person (meine Mutter)
+Name, Vorname der pflegebedürftigen Person: Hartmann, Ingrid
+Geburtsdatum der pflegebedürftigen Person: 02.09.1942
+Pflegegrad: 3
+Art der Leistung (Pflegegeld / Kombinationsleistung / Sachleistung): Pflegegeld
+
+3. Pflegetätigkeit
+Beginn der Pflegetätigkeit: 01.11.2025
+Ende der Pflegetätigkeit: laufend
+Pflege zu Hause (häuslich):  [X] Ja  [ ] Nein
+Pflege unentgeltlich (nicht erwerbsmäßig): [X] Ja  [ ] Nein
+Pflegezeit pro Woche (Stunden): ca. 15
+Pflegetage pro Woche: 7
+Weitere Pflegepersonen: keine
+
+4. Erwerbstätigkeit
+Erwerbstätigkeit, Stunden pro Woche: 20 (Teilzeit, Bürokauffrau)
+Arbeitszeit variabel: Nein
+Anzahl Arbeitgeber: 1
+Bezug einer Vollrente wegen Alters: Nein
+
+Bemerkung: Ich pflege meine Mutter seit dem Sturz im Herbst.
+Datum, Unterschrift: 03.10.2026, A. Becker

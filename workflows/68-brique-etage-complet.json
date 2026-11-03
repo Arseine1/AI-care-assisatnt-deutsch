@@ -1,0 +1,158 @@
+{
+  "id": "aicarebrqetagecp1",
+  "name": "AI-Care – Brique rapport de garde d'un étage (complet)",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "id": "a1c3e000-0175-4000-8000-000000000175",
+      "name": "Entrée",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT patient_id FROM soins.residents WHERE etage = $1 ORDER BY chambre",
+        "options": {
+          "queryReplacement": "={{ [ $json.etage ] }}"
+        }
+      },
+      "id": "a1c3e000-0176-4000-8000-000000000176",
+      "name": "Résidents de l'étage",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        240,
+        0
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "aicarepg00000001",
+          "name": "AI-Care Postgres"
+        }
+      },
+      "executeOnce": true,
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Rapport de garde d'un étage – un élément par résident, traités l'un après l'autre par le sous-workflow « rapport de garde ».\n// Le prompt est FIXÉ ici (generer_sbar) : l'étage ne peut demander rien d'autre.\nconst tache = $('Entrée').first().json.task_id;\nconst residents = $('Résidents de l\\'étage').all().map((i) => i.json).filter((r) => r.patient_id);\nreturn residents.map((r) => ({ json: { patient_id: r.patient_id, prompt_id: 'generer_sbar', task_id: tache } }));\n"
+      },
+      "id": "a1c3e000-0177-4000-8000-000000000177",
+      "name": "Résidents à traiter",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "source": "database",
+        "workflowId": {
+          "__rl": true,
+          "value": "aicarebrqrapgar1",
+          "mode": "id"
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "a1c3e000-0178-4000-8000-000000000178",
+      "name": "Rapport de garde",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        720,
+        0
+      ],
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE soins.taches SET statut = CASE WHEN jsonb_path_exists(resultat, '$[*].erreur') OR fait < total THEN 'termine_avec_erreurs' ELSE 'termine' END, termine_le = now() WHERE id = $1::uuid AND statut = 'en_cours' RETURNING id",
+        "options": {
+          "queryReplacement": "={{ [ $('Entrée').first().json.task_id ] }}"
+        }
+      },
+      "id": "a1c3e000-0179-4000-8000-000000000179",
+      "name": "Terminer la tâche",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        960,
+        0
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "aicarepg00000001",
+          "name": "AI-Care Postgres"
+        }
+      },
+      "executeOnce": true,
+      "alwaysOutputData": true
+    }
+  ],
+  "connections": {
+    "Entrée": {
+      "main": [
+        [
+          {
+            "node": "Résidents de l'étage",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Résidents de l'étage": {
+      "main": [
+        [
+          {
+            "node": "Résidents à traiter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Résidents à traiter": {
+      "main": [
+        [
+          {
+            "node": "Rapport de garde",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rapport de garde": {
+      "main": [
+        [
+          {
+            "node": "Terminer la tâche",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Berlin"
+  },
+  "pinData": {}
+}

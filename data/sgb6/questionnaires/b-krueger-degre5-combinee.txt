@@ -1,0 +1,27 @@
+Eingangsstempel Pflegekasse: 06.10.2026
+Fragebogen Rentenversicherung Pflegeperson – (Beispieldaten, frei erfunden)
+
+Aktenzeichen der Pflegekasse:   PK-2026-0102
+Name der pflegebedürftigen Person ist mein Vater.
+
+Name, Vorname der pflegebedürftigen Person: Krüger, Walter
+Geburtsdatum der pflegebedürftigen Person: 30.01.1938
+Pflegegrad: 5
+Art der Leistung: Kombinationsleistung (Pflegegeld und Pflegedienst)
+
+Name, Vorname der Pflegeperson: Krüger, Thomas
+Geburtsdatum der Pflegeperson: 23.05.1964
+Versicherungsnummer (Rentenversicherung): 02230564K074
+Staatsangehörigkeit: deutsch
+Anschrift: Bahnhofstraße 7, 40213 Düsseldorf
+
+Beginn der Pflegetätigkeit: 15.08.2024
+Ende der Pflegetätigkeit: unbefristet
+Pflege zu Hause (häuslich): Ja
+Pflege unentgeltlich (nicht erwerbsmäßig): Ja
+Pflegezeit pro Woche (Stunden): 28
+Pflegetage pro Woche: 7
+Weitere Pflegepersonen: nein
+
+Erwerbstätigkeit, Stunden pro Woche: 0 (zurzeit nicht berufstätig)
+Bezug einer Vollrente wegen Alters: Nein

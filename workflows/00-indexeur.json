@@ -1,0 +1,322 @@
+{
+  "id": "aicareindexeur01",
+  "name": "AI-Care – Indexeur (sous-workflow)",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "id": "a1c3e000-0001-4000-8000-000000000001",
+      "name": "Entrée",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Indexeur – étape 1 : découper chaque document en morceaux de 300 à 500 mots et calculer les identifiants.\n//\n// Entrée (un élément par document) :\n//   { collection, texte, titre, source, source_label, source_ref, type, date,\n//     patient_id?, chambre?, patient_label?, theme? }\n// Sortie (un élément par morceau) : { id, collection, embedText, payload }\n//\n// - id        : UUID STABLE = hash de (source, source_ref, numéro de morceau). Ré-importer le même document\n//               écrase le même point au lieu de créer un doublon.\n// - empreinte : SHA-256 du contenu (texte + date + patient + type). Si elle change, le morceau est mis à jour.\nconst crypto = require('crypto');\n\nconst MIN = 300; // un morceau vise au moins 300 mots…\nconst CIBLE = 400; // …on coupe dès qu'on atteint ~400…\nconst MAX = 500; // …et jamais au-delà de 500.\n\nconst sha256 = (s) => crypto.createHash('sha256').update(s, 'utf8').digest('hex');\nconst nbMots = (s) => s.trim().split(/\\s+/).filter(Boolean).length;\nconst uuid = (h) => `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20, 32)}`;\n\n// Phrases (ou lignes) ; une phrase de plus de MAX mots est coupée de force.\nfunction phrases(texte) {\n  const brut = texte.replace(/\\r/g, '').split(/(?<=[.!?])\\s+|\\n+/).map((p) => p.trim()).filter(Boolean);\n  const res = [];\n  for (const p of brut) {\n    const mots = p.split(/\\s+/);\n    if (mots.length <= MAX) res.push(p);\n    else for (let i = 0; i < mots.length; i += CIBLE) res.push(mots.slice(i, i + CIBLE).join(' '));\n  }\n  return res;\n}\n\nfunction decouper(texte) {\n  if (nbMots(texte) <= MAX) return [texte.trim()]; // un court document reste entier\n  const morceaux = [];\n  let courant = [];\n  let n = 0;\n  for (const p of phrases(texte)) {\n    const m = nbMots(p);\n    if (n > 0 && (n + m > MAX || n >= CIBLE)) {\n      morceaux.push(courant.join('\\n'));\n      courant = [];\n      n = 0;\n    }\n    courant.push(p);\n    n += m;\n  }\n  if (courant.length) {\n    const reste = courant.join('\\n');\n    const dernier = morceaux[morceaux.length - 1];\n    // un dernier morceau trop court est rattaché au précédent si la limite le permet\n    if (n < MIN && dernier && nbMots(dernier) + n <= MAX) morceaux[morceaux.length - 1] = `${dernier}\\n${reste}`;\n    else morceaux.push(reste);\n  }\n  return morceaux;\n}\n\nconst sortie = [];\nfor (const { json: d } of $input.all()) {\n  const texte = String(d.texte ?? '').trim();\n  if (!texte) continue;\n  const morceaux = decouper(texte);\n  morceaux.forEach((morceau, i) => {\n    const id = uuid(sha256(`${d.source}|${d.source_ref}|${i}`));\n    const empreinte = sha256(`${id}|${morceau}|${d.date ?? ''}|${d.patient_id ?? ''}|${d.type ?? ''}`);\n    const contexte = [d.patient_label, d.titre].filter(Boolean).join(' – ');\n    sortie.push({\n      json: {\n        id,\n        collection: d.collection,\n        // « search_document: » est le préfixe attendu par nomic-embed-text ; le nom du résident aide la recherche.\n        embedText: `search_document: ${contexte ? contexte + '\\n' : ''}${morceau}`,\n        payload: {\n          ...(d.patient_id ? { patient_id: d.patient_id } : {}),\n          ...(d.chambre ? { chambre: String(d.chambre) } : {}),\n          ...(d.theme ? { theme: d.theme } : {}),\n          ...(d.expediteur ? { expediteur: d.expediteur } : {}),\n          ...(d.statut ? { statut: d.statut } : {}),\n          ...(d.motif ? { motif: d.motif } : {}),\n          source: d.source,\n          source_label: d.source_label,\n          source_ref: d.source_ref,\n          type: d.type,\n          titre: d.titre,\n          date: d.date,\n          texte: morceau,\n          chunk_index: i,\n          chunk_total: morceaux.length,\n          mots: nbMots(morceau),\n          empreinte,\n        },\n      },\n    });\n  });\n}\nreturn sortie;\n"
+      },
+      "id": "a1c3e000-0002-4000-8000-000000000002",
+      "name": "Découper et hacher",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        0
+      ],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT source, empreinte FROM soins.journal_imports WHERE empreinte = ANY(string_to_array($1, '|'))",
+        "options": {
+          "queryReplacement": "={{ [ $('Découper et hacher').all().map(i => i.json.payload?.empreinte ?? '').join('|') ] }}"
+        }
+      },
+      "id": "a1c3e000-0003-4000-8000-000000000003",
+      "name": "Déjà importés",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        480,
+        0
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "aicarepg00000001",
+          "name": "AI-Care Postgres"
+        }
+      },
+      "executeOnce": true,
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Indexeur – anti-doublon : on ne garde que les morceaux dont l'empreinte SHA-256 n'est pas déjà au journal.\n// Un morceau inchangé n'est ni vectorisé ni renvoyé à Qdrant ; un morceau modifié a une nouvelle empreinte\n// et remplace le point existant (même identifiant stable).\nconst morceaux = $('Découper et hacher').all().filter((m) => m.json.payload);\nconst connus = new Set($('Déjà importés').all().map((i) => `${i.json.source}|${i.json.empreinte}`));\n\nconst nouveaux = morceaux.filter((m) => !connus.has(`${m.json.payload.source}|${m.json.payload.empreinte}`));\n\n// Toujours au moins un élément : le marqueur « rien » est aiguillé vers la branche « Rien de nouveau ».\nif (nouveaux.length === 0) return [{ json: { rien: true, total: morceaux.length } }];\nreturn nouveaux;\n"
+      },
+      "id": "a1c3e000-0004-4000-8000-000000000004",
+      "name": "Garder les nouveautés",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "nouveautes",
+              "leftValue": "={{ $json.rien === true }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "false",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a1c3e000-0005-4000-8000-000000000005",
+      "name": "Nouveautés ?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        960,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Indexeur – branche « rien de nouveau » : tous les morceaux étaient déjà au journal.\nconst total = $('Découper et hacher').all().filter((m) => m.json.payload).length;\nreturn [{ json: { morceaux_indexes: 0, ignores_deja_importes: total, par_collection: {} } }];\n"
+      },
+      "id": "a1c3e000-0006-4000-8000-000000000006",
+      "name": "Rien de nouveau",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:11434/api/embed",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: \"nomic-embed-text\", input: $json.embedText }) }}",
+        "options": {
+          "timeout": 300000
+        }
+      },
+      "id": "a1c3e000-0007-4000-8000-000000000007",
+      "name": "Embedding (nomic-embed-text)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1200,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Indexeur – associer chaque embedding à son morceau et préparer les requêtes Qdrant\n// (un lot de 50 points maximum par collection).\nconst morceaux = $('Garder les nouveautés').all();\nconst embeddings = $input.all();\n\nif (morceaux.length !== embeddings.length) {\n  throw new Error(`${morceaux.length} morceaux mais ${embeddings.length} embeddings : correspondance impossible.`);\n}\n\nconst parCollection = {};\nmorceaux.forEach((m, i) => {\n  const vecteur = embeddings[i].json.embeddings?.[0];\n  if (!Array.isArray(vecteur) || vecteur.length !== 768) {\n    throw new Error(`Embedding invalide pour ${m.json.payload.source_ref} (attendu : 768 dimensions).`);\n  }\n  (parCollection[m.json.collection] ??= []).push({ id: m.json.id, vector: vecteur, payload: m.json.payload });\n});\n\nconst sortie = [];\nfor (const [collection, points] of Object.entries(parCollection)) {\n  for (let i = 0; i < points.length; i += 50) {\n    const lot = points.slice(i, i + 50);\n    sortie.push({ json: { collection, n: lot.length, body: { points: lot } } });\n  }\n}\nreturn sortie;\n"
+      },
+      "id": "a1c3e000-0008-4000-8000-000000000008",
+      "name": "Construire les points",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1440,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "=http://qdrant:6333/collections/{{ $json.collection }}/points?wait=true",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.body) }}",
+        "options": {
+          "timeout": 300000
+        }
+      },
+      "id": "a1c3e000-0009-4000-8000-000000000009",
+      "name": "Upsert Qdrant",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1680,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO soins.journal_imports (source, reference, patient_id, empreinte, statut, detail) SELECT x.source, x.reference, x.patient_id, x.empreinte, 'importe', x.detail FROM jsonb_to_recordset($1::jsonb) AS x(source text, reference text, patient_id text, empreinte text, detail text) ON CONFLICT (source, empreinte) DO NOTHING",
+        "options": {
+          "queryReplacement": "={{ [ JSON.stringify($('Garder les nouveautés').all().map(i => ({ source: i.json.payload.source, reference: i.json.payload.source_ref + '#' + i.json.payload.chunk_index, patient_id: i.json.payload.patient_id ?? null, empreinte: i.json.payload.empreinte, detail: i.json.collection + ' / ' + i.json.payload.type }))) ] }}"
+        }
+      },
+      "id": "a1c3e000-0010-4000-8000-000000000010",
+      "name": "Journaliser",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1920,
+        0
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "aicarepg00000001",
+          "name": "AI-Care Postgres"
+        }
+      },
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Indexeur – dernière étape : résumé renvoyé au workflow appelant.\nconst lots = $('Construire les points').all();\nconst total = $('Découper et hacher').all().filter((m) => m.json.payload).length;\nconst parCollection = {};\nfor (const l of lots) parCollection[l.json.collection] = (parCollection[l.json.collection] ?? 0) + l.json.n;\nconst importes = Object.values(parCollection).reduce((a, b) => a + b, 0);\nreturn [{ json: { morceaux_indexes: importes, ignores_deja_importes: total - importes, par_collection: parCollection } }];\n"
+      },
+      "id": "a1c3e000-0011-4000-8000-000000000011",
+      "name": "Résumé",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2160,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Entrée": {
+      "main": [
+        [
+          {
+            "node": "Découper et hacher",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Découper et hacher": {
+      "main": [
+        [
+          {
+            "node": "Déjà importés",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Déjà importés": {
+      "main": [
+        [
+          {
+            "node": "Garder les nouveautés",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Garder les nouveautés": {
+      "main": [
+        [
+          {
+            "node": "Nouveautés ?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Nouveautés ?": {
+      "main": [
+        [
+          {
+            "node": "Embedding (nomic-embed-text)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Rien de nouveau",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embedding (nomic-embed-text)": {
+      "main": [
+        [
+          {
+            "node": "Construire les points",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Construire les points": {
+      "main": [
+        [
+          {
+            "node": "Upsert Qdrant",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upsert Qdrant": {
+      "main": [
+        [
+          {
+            "node": "Journaliser",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Journaliser": {
+      "main": [
+        [
+          {
+            "node": "Résumé",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Berlin"
+  },
+  "pinData": {}
+}

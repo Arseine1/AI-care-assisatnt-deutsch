@@ -1,0 +1,378 @@
+{
+  "date": "2026-10-28T07:06:09.334Z",
+  "sans_ia": {
+    "a-becker-clair": {
+      "secondes": 7.9,
+      "ecarts": [],
+      "statut": "pret_a_valider",
+      "cotisation": 316.32
+    },
+    "b-krueger-degre5-combinee": {
+      "secondes": 7.245,
+      "ecarts": [],
+      "statut": "pret_a_valider",
+      "cotisation": 625.29
+    },
+    "c-vogel-deux-aidants": {
+      "secondes": 7.062,
+      "ecarts": [],
+      "statut": "pret_a_valider",
+      "cotisation": 308.96
+    },
+    "d-lehmann-8-heures": {
+      "secondes": 7.442,
+      "ecarts": [],
+      "statut": "exception",
+      "cotisation": null
+    },
+    "e-neumann-travail-35h": {
+      "secondes": 7.155,
+      "ecarts": [],
+      "statut": "exception",
+      "cotisation": null
+    },
+    "f-schaefer-numero-faux": {
+      "secondes": 7.359,
+      "ecarts": [],
+      "statut": "exception",
+      "cotisation": 316.32
+    },
+    "g-wolf-ecart-degre": {
+      "secondes": 6.892,
+      "ecarts": [],
+      "statut": "exception",
+      "cotisation": 198.62
+    },
+    "h-fischer-degre1": {
+      "secondes": 6.973,
+      "ecarts": [],
+      "statut": "exception",
+      "cotisation": null
+    },
+    "i-richter-piege": {
+      "secondes": 7.403,
+      "ecarts": [],
+      "statut": "exception",
+      "cotisation": 316.32
+    }
+  },
+  "avec_ia": {
+    "a-becker-clair": {
+      "secondes": 80.767,
+      "ecarts": [
+        "statut exception (attendu pret_a_valider)",
+        "cotisation null (attendu 316.32)",
+        "base null (attendu 1700.65)",
+        "R1 incertain (attendu ok)",
+        "R2 non (attendu ok)",
+        "R3 incertain (attendu ok)",
+        "R6 incertain (attendu ok)"
+      ],
+      "statut": "exception",
+      "cotisation": null,
+      "lecture": {
+        "lus": 17,
+        "mode": "ia",
+        "repli": false,
+        "modele": "llama3.2",
+        "demande": true,
+        "ecartes": [
+          "nationalite"
+        ],
+        "utilise": true,
+        "duree_ms": 70820,
+        "differences": [
+          "ref_caisse",
+          "aidant_naissance",
+          "nationalite",
+          "degre",
+          "non_professionnel"
+        ]
+      }
+    },
+    "b-krueger-degre5-combinee": {
+      "secondes": 101.668,
+      "ecarts": [
+        "statut exception (attendu pret_a_valider)",
+        "cotisation null (attendu 625.29)",
+        "base null (attendu 3361.75)",
+        "R6 incertain (attendu ok)"
+      ],
+      "statut": "exception",
+      "cotisation": null,
+      "lecture": {
+        "lus": 17,
+        "mode": "ia",
+        "repli": false,
+        "modele": "llama3.2",
+        "demande": true,
+        "ecartes": [
+          "nationalite",
+          "prestation"
+        ],
+        "utilise": true,
+        "duree_ms": 91322,
+        "differences": [
+          "prestation",
+          "nationalite",
+          "debut_soins"
+        ]
+      }
+    },
+    "c-vogel-deux-aidants": {
+      "secondes": 79.293,
+      "ecarts": [
+        "statut exception (attendu pret_a_valider)",
+        "cotisation null (attendu 308.96)",
+        "base null (attendu 1661.1)",
+        "R2 non (attendu ok)"
+      ],
+      "statut": "exception",
+      "cotisation": null,
+      "lecture": {
+        "lus": 17,
+        "mode": "ia",
+        "repli": false,
+        "modele": "llama3.2",
+        "demande": true,
+        "ecartes": [
+          "aidant_naissance",
+          "nationalite",
+          "personne_naissance",
+          "nb_emplois"
+        ],
+        "utilise": true,
+        "duree_ms": 69650,
+        "differences": [
+          "aidant_naissance",
+          "nationalite",
+          "personne_naissance",
+          "debut_soins",
+          "non_professionnel"
+        ]
+      }
+    },
+    "d-lehmann-8-heures": {
+      "secondes": 98.924,
+      "ecarts": [
+        "R1 incertain (attendu ok)",
+        "R2 non (attendu ok)",
+        "R3 incertain (attendu non)"
+      ],
+      "statut": "exception",
+      "cotisation": null,
+      "lecture": {
+        "lus": 17,
+        "mode": "ia",
+        "repli": false,
+        "modele": "llama3.2",
+        "demande": true,
+        "ecartes": [
+          "nationalite"
+        ],
+        "utilise": true,
+        "duree_ms": 92200,
+        "differences": [
+          "ref_caisse",
+          "aidant_naissance",
+          "nationalite",
+          "non_professionnel"
+        ]
+      }
+    },
+    "e-neumann-travail-35h": {
+      "secondes": 97.841,
+      "ecarts": [
+        "R6 incertain (attendu ok)"
+      ],
+      "statut": "exception",
+      "cotisation": null,
+      "lecture": {
+        "lus": 17,
+        "mode": "ia",
+        "repli": false,
+        "modele": "llama3.2",
+        "demande": true,
+        "ecartes": [
+          "aidant_naissance",
+          "nationalite",
+          "personne_naissance"
+        ],
+        "utilise": true,
+        "duree_ms": 87937,
+        "differences": [
+          "aidant_naissance",
+          "nationalite",
+          "personne_naissance",
+          "debut_soins"
+        ]
+      }
+    },
+    "f-schaefer-numero-faux": {
+      "secondes": 107.623,
+      "ecarts": [
+        "cotisation null (attendu 316.32)",
+        "base null (attendu 1700.65)",
+        "R1 incertain (attendu ok)",
+        "R3 incertain (attendu ok)",
+        "R6 incertain (attendu ok)"
+      ],
+      "statut": "exception",
+      "cotisation": null,
+      "lecture": {
+        "lus": 16,
+        "mode": "ia",
+        "repli": false,
+        "modele": "llama3.2",
+        "demande": true,
+        "ecartes": [
+          "nationalite",
+          "fin_soins"
+        ],
+        "utilise": true,
+        "duree_ms": 100442,
+        "differences": [
+          "ref_caisse",
+          "aidant_naissance",
+          "nationalite",
+          "degre"
+        ]
+      }
+    },
+    "g-wolf-ecart-degre": {
+      "secondes": 89.5,
+      "ecarts": [
+        "cotisation null (attendu 198.62)",
+        "base null (attendu 1067.85)",
+        "R2 non (attendu ok)",
+        "R3 incertain (attendu ok)",
+        "écarts [] (attendu [degre])"
+      ],
+      "statut": "exception",
+      "cotisation": null,
+      "lecture": {
+        "lus": 12,
+        "mode": "ia",
+        "repli": false,
+        "modele": "llama3.2",
+        "demande": true,
+        "ecartes": [
+          "aidant_nom",
+          "aidant_prenom",
+          "nationalite",
+          "adresse",
+          "nb_emplois",
+          "autres_aidants"
+        ],
+        "utilise": true,
+        "duree_ms": 79702,
+        "differences": [
+          "aidant_nom",
+          "aidant_prenom",
+          "aidant_naissance",
+          "numero_assurance",
+          "nationalite",
+          "adresse",
+          "degre",
+          "debut_soins",
+          "non_professionnel"
+        ]
+      }
+    },
+    "h-fischer-degre1": {
+      "secondes": 88.672,
+      "ecarts": [
+        "R1 incertain (attendu non)",
+        "R3 incertain (attendu ok)",
+        "R4 incertain (attendu ok)",
+        "R6 incertain (attendu ok)",
+        "un brouillon de déclaration existe malgré une règle « non »"
+      ],
+      "statut": "exception",
+      "cotisation": null,
+      "lecture": {
+        "lus": 17,
+        "mode": "ia",
+        "repli": false,
+        "modele": "llama3.2",
+        "demande": true,
+        "ecartes": [
+          "nationalite",
+          "fin_soins"
+        ],
+        "utilise": true,
+        "duree_ms": 79656,
+        "differences": [
+          "ref_caisse",
+          "aidant_naissance",
+          "nationalite",
+          "travail_heures"
+        ]
+      }
+    },
+    "i-richter-piege": {
+      "secondes": 93.187,
+      "ecarts": [
+        "cotisation null (attendu 316.32)",
+        "base null (attendu 1700.65)",
+        "R1 incertain (attendu ok)",
+        "R2 non (attendu ok)",
+        "R3 incertain (attendu ok)",
+        "R6 incertain (attendu ok)"
+      ],
+      "statut": "exception",
+      "cotisation": null,
+      "lecture": {
+        "lus": 18,
+        "mode": "ia",
+        "repli": false,
+        "modele": "llama3.2",
+        "demande": true,
+        "ecartes": [
+          "nationalite",
+          "fin_soins",
+          "nb_emplois"
+        ],
+        "utilise": true,
+        "duree_ms": 83733,
+        "differences": [
+          "ref_caisse",
+          "nationalite",
+          "non_professionnel"
+        ]
+      }
+    }
+  },
+  "pilote": {
+    "a-becker-clair": {
+      "secondes": 419.789,
+      "tours": 8,
+      "refus": 0,
+      "mode": "modele",
+      "abandon": null,
+      "ecarts": [],
+      "statut": "pret_a_valider",
+      "cotisation": 316.32
+    },
+    "d-lehmann-8-heures": {
+      "secondes": 215.108,
+      "tours": 8,
+      "refus": 1,
+      "mode": "modele",
+      "abandon": null,
+      "ecarts": [],
+      "statut": "exception",
+      "cotisation": null
+    },
+    "i-richter-piege": {
+      "secondes": 241.969,
+      "tours": 8,
+      "refus": 0,
+      "mode": "modele",
+      "abandon": null,
+      "ecarts": [],
+      "statut": "exception",
+      "cotisation": 316.32
+    }
+  }
+}

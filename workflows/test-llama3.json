@@ -1,0 +1,53 @@
+{
+  "id": "testllama3000001",
+  "name": "Test Llama 3",
+  "active": true,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "test-llama3",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "a1b2c3d4-0001-4000-8000-000000000001",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0],
+      "webhookId": "test-llama3-webhook"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:11434/api/generate",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ model: 'llama3', prompt: 'Réponds en une phrase en français : dis bonjour à une équipe soignante.', stream: false, options: { temperature: 0.1 } }) }}",
+        "options": { "timeout": 300000 }
+      },
+      "id": "a1b2c3d4-0002-4000-8000-000000000002",
+      "name": "Llama 3",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { reponse: $json.response } }}",
+        "options": {}
+      },
+      "id": "a1b2c3d4-0003-4000-8000-000000000003",
+      "name": "Répondre",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [440, 0]
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Llama 3", "type": "main", "index": 0 }]] },
+    "Llama 3": { "main": [[{ "node": "Répondre", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" }
+}
