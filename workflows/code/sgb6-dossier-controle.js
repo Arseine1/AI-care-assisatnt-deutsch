@@ -1,4 +1,4 @@
-// Cotisations retraite – dernier résultat d'un dossier : { id }.
+// Rentenbeiträge – letztes Ergebnis einer Akte: { id }.
 const id = String($input.first().json?.body?.id ?? '');
-if (!/^[a-z0-9][a-z0-9-]{2,63}$/.test(id)) throw new Error('id de dossier invalide');
+if (!/^[a-z0-9][a-z0-9-]{2,63}$/.test(id)) throw new Error('Ungültige Akten-ID');
 return [{ json: { id } }];

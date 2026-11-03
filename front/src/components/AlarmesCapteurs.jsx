@@ -5,8 +5,8 @@ export function heure(iso) {
   return new Date(iso).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 }
 
-// Une alarme : alarme de capteur (faits codés tout de suite, contexte de l'assistant IA ensuite) ou alerte de document
-// (courrier reçu : contradiction, courrier non identifié, rien à signaler ; nouveauté de l'ePA).
+// Ein Alarm: Sensoralarm (codierte Fakten sofort, Kontext des KI-Assistenten danach) oder Dokumentmeldung
+// (eingegangenes Schreiben: Widerspruch, nicht zugeordnetes Schreiben, nichts zu melden; Neuigkeit aus der ePA).
 export function CarteAlarme({ alarme: a, onAcquitter, onOuvrir }) {
   const f = a.faits ?? {};
   const c = a.contexte ?? { statut: 'aucun' };
@@ -57,7 +57,7 @@ export function CarteAlarme({ alarme: a, onAcquitter, onOuvrir }) {
     </article>
   );
 }
-// Bandeau ROUGE affiché en haut des pages de travail : une alarme reste affichée jusqu'à ce qu'un soignant l'acquitte.
+// ROTES Banner oben auf den Arbeitsseiten: Ein Alarm bleibt angezeigt, bis eine Pflegekraft ihn quittiert.
 export default function AlarmesCapteurs({ alarmes, onAcquitter, onOuvrir, onVoirTout }) {
   if (!alarmes.length) return null;
   return (

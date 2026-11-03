@@ -1,6 +1,6 @@
 {
   "id": "aicareimpkim0001",
-  "name": "AI-Care – Connecteur KIM (lettres de médecin)",
+  "name": "AI-Care – Anbindung KIM (Arztbriefe)",
   "active": false,
   "nodes": [
     {
@@ -15,7 +15,7 @@
         }
       },
       "id": "a1c3e000-0048-4000-8000-000000000048",
-      "name": "Planification",
+      "name": "Zeitplan",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
       "position": [
@@ -26,7 +26,7 @@
     {
       "parameters": {},
       "id": "a1c3e000-0049-4000-8000-000000000049",
-      "name": "Démarrage manuel",
+      "name": "Manueller Start",
       "type": "n8n-nodes-base.manualTrigger",
       "typeVersion": 1,
       "position": [
@@ -67,7 +67,7 @@
         "options": {}
       },
       "id": "a1c3e000-0051-4000-8000-000000000051",
-      "name": "Résidents",
+      "name": "Bewohnerliste",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
@@ -90,7 +90,7 @@
         }
       },
       "id": "a1c3e000-0052-4000-8000-000000000052",
-      "name": "Lister les messages",
+      "name": "Nachrichten auflisten",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
@@ -100,10 +100,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Connecteur « KIM » (boîte simulée par Mailpit) : ne garder que les messages qui ont une pièce jointe.\nconst liste = $input.first().json.messages ?? [];\nreturn liste.filter((m) => m.Attachments > 0).map((m) => ({ json: { id: m.ID } }));\n"
+        "jsCode": "// KIM-Konnektor (von Mailpit simuliertes Postfach): nur Nachrichten mit Anhang behalten.\nconst liste = $input.first().json.messages ?? [];\nreturn liste.filter((m) => m.Attachments > 0).map((m) => ({ json: { id: m.ID } }));\n"
       },
       "id": "a1c3e000-0053-4000-8000-000000000053",
-      "name": "Messages à lire",
+      "name": "Zu lesende Nachrichten",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -119,7 +119,7 @@
         }
       },
       "id": "a1c3e000-0054-4000-8000-000000000054",
-      "name": "Détail du message",
+      "name": "Nachrichtendetail",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
@@ -129,10 +129,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Connecteur « KIM » : une ligne par PDF joint (lettre de médecin).\nconst sortie = [];\nfor (const { json: m } of $input.all()) {\n  for (const pj of m.Attachments ?? []) {\n    const estPdf = /pdf/i.test(pj.ContentType ?? '') || /\\.pdf$/i.test(pj.FileName ?? '');\n    if (!estPdf) continue;\n    sortie.push({\n      json: {\n        id: m.ID,\n        partId: pj.PartID,\n        fileName: pj.FileName,\n        from: m.From?.Address,\n        expediteur: m.From?.Name || m.From?.Address,\n        subject: m.Subject,\n        date: m.Date,\n      },\n    });\n  }\n}\nreturn sortie;\n"
+        "jsCode": "// KIM-Konnektor: eine Zeile je angehängtem PDF (Arztbrief).\nconst sortie = [];\nfor (const { json: m } of $input.all()) {\n  for (const pj of m.Attachments ?? []) {\n    const estPdf = /pdf/i.test(pj.ContentType ?? '') || /\\.pdf$/i.test(pj.FileName ?? '');\n    if (!estPdf) continue;\n    sortie.push({\n      json: {\n        id: m.ID,\n        partId: pj.PartID,\n        fileName: pj.FileName,\n        from: m.From?.Address,\n        expediteur: m.From?.Name || m.From?.Address,\n        subject: m.Subject,\n        date: m.Date,\n      },\n    });\n  }\n}\nreturn sortie;\n"
       },
       "id": "a1c3e000-0055-4000-8000-000000000055",
-      "name": "Pièces jointes",
+      "name": "Anhänge",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -154,7 +154,7 @@
         }
       },
       "id": "a1c3e000-0056-4000-8000-000000000056",
-      "name": "Télécharger la pièce jointe",
+      "name": "Anhang herunterladen",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
@@ -183,7 +183,7 @@
         }
       },
       "id": "a1c3e000-0057-4000-8000-000000000057",
-      "name": "Texte du PDF (OCRmyPDF)",
+      "name": "PDF-Text (OCRmyPDF)",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
@@ -193,10 +193,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Connecteur « KIM » : lettre de médecin (texte du PDF ou OCR) -> document de la collection « a_verifier ».\n//\n// Une lettre est TOUJOURS déposée dans « a_verifier » : tant qu'elle n'a pas été contrôlée (contradiction avec\n// l'allergie, le traitement, la fonction rénale…), son contenu n'est pas présenté comme fiable.\n// Rattachement au résident : le nom ET la date de naissance (jj.mm.aaaa) du courrier doivent correspondre à UN\n// seul résident (les deux « Heinz Müller » ne se distinguent que par la date). Sinon on ne devine pas :\n// la lettre reste sans patient_id, avec le motif identite_inconnue ou identite_ambigue.\nconst residents = $('Résidents').all().map((i) => i.json);\nconst pieces = $('Pièces jointes').all();\nconst norm = (s) => String(s).normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').toLowerCase();\n\nconst docs = [];\n$input.all().forEach((item, i) => {\n  const p = pieces[i].json;\n  const texte = String(item.json.texte ?? '').trim();\n  if (!texte) return;\n\n  const t = norm(texte);\n  const trouves = residents.filter((r) => t.includes(norm(r.nom)) && texte.includes(r.naissance));\n  const base = {\n    collection: 'a_verifier',\n    source: 'kim',\n    source_label: 'KIM (lettre de médecin)',\n    // Référence stable (expéditeur + nom du fichier) : renvoyer le même courrier ne crée pas de doublon.\n    source_ref: `kim/${p.from}/${p.fileName}`,\n    type: 'lettre',\n    titre: p.subject,\n    expediteur: p.expediteur,\n    statut: 'a_verifier',\n    texte,\n    date: new Date(p.date).toISOString(),\n  };\n\n  if (trouves.length === 1) {\n    const r = trouves[0];\n    docs.push({\n      ...base,\n      motif: 'lettre_a_verifier',\n      patient_id: r.patient_id,\n      chambre: r.chambre,\n      patient_label: `${r.civilite} ${r.prenom} ${r.nom} (chambre ${r.chambre})`,\n    });\n  } else {\n    docs.push({ ...base, motif: trouves.length === 0 ? 'identite_inconnue' : 'identite_ambigue' });\n  }\n});\nreturn docs.map((json) => ({ json }));\n"
+        "jsCode": "// KIM-Konnektor: Arztbrief (PDF-Text oder OCR) -> Dokument der Collection « a_verifier ».\n//\n// Ein Arztbrief wird IMMER in « a_verifier » abgelegt: Solange er nicht geprüft wurde (Widerspruch zu\n// Allergie, Behandlung, Nierenfunktion …), wird sein Inhalt nicht als verlässlich dargestellt.\n// Zuordnung zum Bewohner: Name UND Geburtsdatum (TT.MM.JJJJ) des Schreibens müssen zu GENAU EINEM\n// Bewohner passen (die beiden „Heinz Müller“ unterscheiden sich nur durch das Datum). Sonst wird nicht geraten:\n// Der Brief bleibt ohne patient_id, mit dem Motiv identite_inconnue oder identite_ambigue.\nconst residents = $('Bewohnerliste').all().map((i) => i.json);\nconst pieces = $('Anhänge').all();\nconst norm = (s) => String(s).normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').toLowerCase();\n\nconst docs = [];\n$input.all().forEach((item, i) => {\n  const p = pieces[i].json;\n  const texte = String(item.json.texte ?? '').trim();\n  if (!texte) return;\n\n  const t = norm(texte);\n  const trouves = residents.filter((r) => t.includes(norm(r.nom)) && texte.includes(r.naissance));\n  const base = {\n    collection: 'a_verifier',\n    source: 'kim',\n    source_label: 'KIM (Arztbrief)',\n    // Stabile Referenz (Absender + Dateiname): Das erneute Senden desselben Schreibens erzeugt kein Duplikat.\n    source_ref: `kim/${p.from}/${p.fileName}`,\n    type: 'lettre',\n    titre: p.subject,\n    expediteur: p.expediteur,\n    statut: 'a_verifier',\n    texte,\n    date: new Date(p.date).toISOString(),\n  };\n\n  if (trouves.length === 1) {\n    const r = trouves[0];\n    docs.push({\n      ...base,\n      motif: 'lettre_a_verifier',\n      patient_id: r.patient_id,\n      chambre: r.chambre,\n      patient_label: `${r.civilite} ${r.prenom} ${r.nom} (Zimmer ${r.chambre})`,\n    });\n  } else {\n    docs.push({ ...base, motif: trouves.length === 0 ? 'identite_inconnue' : 'identite_ambigue' });\n  }\n});\nreturn docs.map((json) => ({ json }));\n"
       },
       "id": "a1c3e000-0058-4000-8000-000000000058",
-      "name": "Documents KIM",
+      "name": "KIM-Dokumente",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -219,7 +219,7 @@
         }
       },
       "id": "a1c3e000-0059-4000-8000-000000000059",
-      "name": "Indexer",
+      "name": "Indizieren",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.2,
       "position": [
@@ -229,10 +229,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Contrôle de session – le jeton « Bearer » de l'en-tête Authorization (43 caractères URL-safe) est haché (SHA-256) : seul le haché est en base.\nconst entetes = $input.first().json?.headers ?? {};\nconst m = String(entetes.authorization ?? '').match(/^Bearer ([A-Za-z0-9_-]{43})$/);\nif (!m) return [{ json: { hash: '' } }];\nreturn [{ json: { hash: require('crypto').createHash('sha256').update(m[1]).digest('hex') } }];\n"
+        "jsCode": "// Sitzungsprüfung – das « Bearer »-Token im Authorization-Header (43 URL-sichere Zeichen) wird gehasht (SHA-256): Nur der Hash steht in der Datenbank.\nconst entetes = $input.first().json?.headers ?? {};\nconst m = String(entetes.authorization ?? '').match(/^Bearer ([A-Za-z0-9_-]{43})$/);\nif (!m) return [{ json: { hash: '' } }];\nreturn [{ json: { hash: require('crypto').createHash('sha256').update(m[1]).digest('hex') } }];\n"
       },
       "id": "a1c3e000-0357-4000-8000-000000000357",
-      "name": "Session (jeton)",
+      "name": "Sitzung (Token)",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -249,7 +249,7 @@
         }
       },
       "id": "a1c3e000-0358-4000-8000-000000000358",
-      "name": "Session (base)",
+      "name": "Sitzung (Datenbank)",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
@@ -267,10 +267,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Contrôle de session – résultat : un soignant identifié (session ouverte, non expirée, compte actif) ou rien.\nconst r = $input.first().json ?? {};\nif (!r.identifiant) return [{ json: { ok: false } }];\nreturn [{ json: { ok: true, soignant: { identifiant: r.identifiant, nom: r.nom }, jeton_hash: r.jeton_hash } }];\n"
+        "jsCode": "// Sitzungsprüfung – Ergebnis: eine identifizierte Pflegekraft (Sitzung offen, nicht abgelaufen, Konto aktiv) oder nichts.\nconst r = $input.first().json ?? {};\nif (!r.identifiant) return [{ json: { ok: false } }];\nreturn [{ json: { ok: true, soignant: { identifiant: r.identifiant, nom: r.nom }, jeton_hash: r.jeton_hash } }];\n"
       },
       "id": "a1c3e000-0359-4000-8000-000000000359",
-      "name": "Session",
+      "name": "Sitzung",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -289,7 +289,7 @@
           },
           "conditions": [
             {
-              "id": "Session valide ?",
+              "id": "Sitzung gültig?",
               "leftValue": "={{ $json.ok === true }}",
               "rightValue": "",
               "operator": {
@@ -304,7 +304,7 @@
         "options": {}
       },
       "id": "a1c3e000-0360-4000-8000-000000000360",
-      "name": "Session valide ?",
+      "name": "Sitzung gültig?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
@@ -314,10 +314,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Contrôle de session – la session est valide : on rend aux nœuds suivants la requête d'origine (en-têtes, corps) telle que reçue.\nreturn [{ json: $('Webhook').first().json }];\n"
+        "jsCode": "// Sitzungsprüfung – die Sitzung ist gültig: Die ursprüngliche Anfrage (Header, Body) wird unverändert an die folgenden Knoten zurückgegeben.\nreturn [{ json: $('Webhook').first().json }];\n"
       },
       "id": "a1c3e000-0361-4000-8000-000000000361",
-      "name": "Requête",
+      "name": "Anfrage",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -327,10 +327,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Contrôle de session – refus : aucune donnée, seulement le motif. L'interface rouvre alors la page de connexion.\nreturn [{ json: { erreur: 'session' } }];\n"
+        "jsCode": "// Sitzungsprüfung – Ablehnung: keine Daten, nur der Grund. Die Oberfläche öffnet dann wieder die Anmeldeseite.\nreturn [{ json: { erreur: 'session' } }];\n"
       },
       "id": "a1c3e000-0362-4000-8000-000000000362",
-      "name": "Refus (session)",
+      "name": "Ablehnung (Sitzung)",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -340,22 +340,22 @@
     }
   ],
   "connections": {
-    "Planification": {
+    "Zeitplan": {
       "main": [
         [
           {
-            "node": "Résidents",
+            "node": "Bewohnerliste",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Démarrage manuel": {
+    "Manueller Start": {
       "main": [
         [
           {
-            "node": "Résidents",
+            "node": "Bewohnerliste",
             "type": "main",
             "index": 0
           }
@@ -366,157 +366,157 @@
       "main": [
         [
           {
-            "node": "Session (jeton)",
+            "node": "Sitzung (Token)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Résidents": {
+    "Bewohnerliste": {
       "main": [
         [
           {
-            "node": "Lister les messages",
+            "node": "Nachrichten auflisten",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Lister les messages": {
+    "Nachrichten auflisten": {
       "main": [
         [
           {
-            "node": "Messages à lire",
+            "node": "Zu lesende Nachrichten",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Messages à lire": {
+    "Zu lesende Nachrichten": {
       "main": [
         [
           {
-            "node": "Détail du message",
+            "node": "Nachrichtendetail",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Détail du message": {
+    "Nachrichtendetail": {
       "main": [
         [
           {
-            "node": "Pièces jointes",
+            "node": "Anhänge",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Pièces jointes": {
+    "Anhänge": {
       "main": [
         [
           {
-            "node": "Télécharger la pièce jointe",
+            "node": "Anhang herunterladen",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Télécharger la pièce jointe": {
+    "Anhang herunterladen": {
       "main": [
         [
           {
-            "node": "Texte du PDF (OCRmyPDF)",
+            "node": "PDF-Text (OCRmyPDF)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Texte du PDF (OCRmyPDF)": {
+    "PDF-Text (OCRmyPDF)": {
       "main": [
         [
           {
-            "node": "Documents KIM",
+            "node": "KIM-Dokumente",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Documents KIM": {
+    "KIM-Dokumente": {
       "main": [
         [
           {
-            "node": "Indexer",
+            "node": "Indizieren",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Session (jeton)": {
+    "Sitzung (Token)": {
       "main": [
         [
           {
-            "node": "Session (base)",
+            "node": "Sitzung (Datenbank)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Session (base)": {
+    "Sitzung (Datenbank)": {
       "main": [
         [
           {
-            "node": "Session",
+            "node": "Sitzung",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Session": {
+    "Sitzung": {
       "main": [
         [
           {
-            "node": "Session valide ?",
+            "node": "Sitzung gültig?",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Session valide ?": {
+    "Sitzung gültig?": {
       "main": [
         [
           {
-            "node": "Requête",
+            "node": "Anfrage",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Refus (session)",
+            "node": "Ablehnung (Sitzung)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Requête": {
+    "Anfrage": {
       "main": [
         [
           {
-            "node": "Résidents",
+            "node": "Bewohnerliste",
             "type": "main",
             "index": 0
           }

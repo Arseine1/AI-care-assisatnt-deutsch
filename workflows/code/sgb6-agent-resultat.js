@@ -1,14 +1,14 @@
-// Cotisations retraite, agent – assemblage du résultat final de la MISSION GUIDÉE (tout est déjà journalisé étape par étape ; reste la ligne « enregistrer »).
-// Si le pilotage par le modèle a été abandonné, la mention est ajoutée : « pilotage par le modèle abandonné : <raison> ».
-const x = $($('Entrée').first().json.lecture_ia === true ? "Lire la réponse de l'IA" : 'Extraction par règles').first().json;
-const { journal, ...resultat } = finaliserTraitement($('Préparer la déclaration').first().json.etat);
+// Rentenbeiträge, Agent – Zusammenstellung des Endergebnisses der GEFÜHRTEN MISSION (alles ist schon Schritt für Schritt protokolliert; es fehlt die Zeile « enregistrer »).
+// Wurde die Steuerung durch das Modell abgebrochen, wird der Vermerk ergänzt: « Steuerung durch das Modell abgebrochen: <Grund> ».
+const x = $($('Eingang').first().json.lecture_ia === true ? "KI-Antwort lesen" : 'Extraktion durch Regeln').first().json;
+const { journal, ...resultat } = finaliserTraitement($('Meldung vorbereiten').first().json.etat);
 resultat.lecture_ia = x.lecture;
 resultat.traite_le = new Date().toISOString();
 resultat.pilote = { mode: 'mission_guidee', abandon: null, mention: null, compte_rendu: null, contradictions: [] };
 try {
-  const f = $('Fin du pilotage').first().json.sess; // n'existe que si le pilotage par le modèle a été essayé
-  resultat.pilote = { mode: 'mission_guidee', modele: f.modele, tours: f.tours, refus: f.refus, abandon: f.abandon, mention: `pilotage par le modèle abandonné : ${f.abandon}`, compte_rendu: null, contradictions: [] };
+  const f = $('Ende der Steuerung').first().json.sess; // existiert nur, wenn die Steuerung durch das Modell versucht wurde
+  resultat.pilote = { mode: 'mission_guidee', modele: f.modele, tours: f.tours, refus: f.refus, abandon: f.abandon, mention: `Steuerung durch das Modell abgebrochen: ${f.abandon}`, compte_rendu: null, contradictions: [] };
 } catch {
-  /* mission guidée demandée directement */
+  /* geführte Mission direkt angefordert */
 }
-return [{ json: { journal: [{ etape: 'enregistrer', outil: 'enregistrer', resultat: `résultat enregistré (statut : ${resultat.statut})`, duree_ms: 0 }], resultat } }];
+return [{ json: { journal: [{ etape: 'enregistrer', outil: 'enregistrer', resultat: `Ergebnis gespeichert (Status: ${resultat.statut})`, duree_ms: 0 }], resultat } }];

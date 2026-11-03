@@ -1,6 +1,6 @@
 {
   "id": "aicaremaitrealar1",
-  "name": "AI-Care – Alarmes affichées (liste et acquittement)",
+  "name": "AI-Care – Angezeigte Alarme (Liste und Quittierung)",
   "active": false,
   "nodes": [
     {
@@ -31,10 +31,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Alarmes affichées – contrôle de la demande de l'interface :\n//   { }                          les alarmes non acquittées\n//   { historique: true }         + les alarmes acquittées des 24 dernières heures\n//   { acquitter: \"<uuid>\" }      acquitte une alarme\nconst e = $input.first().json?.body ?? {};\nlet acquitter = '';\nif (e.acquitter !== undefined) {\n  acquitter = String(e.acquitter);\n  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(acquitter)) throw new Error('acquitter : identifiant invalide');\n}\nreturn [{ json: { acquitter, historique: e.historique === true ? 'true' : '' } }];\n"
+        "jsCode": "// Angezeigte Alarme – Prüfung der Anfrage der Oberfläche:\n//   { }                          die nicht quittierten Alarme\n//   { historique: true }         + die quittierten Alarme der letzten 24 Stunden\n//   { acquitter: \"<uuid>\" }      quittiert einen Alarm\nconst e = $input.first().json?.body ?? {};\nlet acquitter = '';\nif (e.acquitter !== undefined) {\n  acquitter = String(e.acquitter);\n  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(acquitter)) throw new Error('acquitter: ungültige Kennung');\n}\nreturn [{ json: { acquitter, historique: e.historique === true ? 'true' : '' } }];\n"
       },
       "id": "a1c3e000-0277-4000-8000-000000000277",
-      "name": "Contrôler la demande",
+      "name": "Anfrage prüfen",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -51,7 +51,7 @@
         }
       },
       "id": "a1c3e000-0278-4000-8000-000000000278",
-      "name": "Lire les alarmes",
+      "name": "Alarme lesen",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
@@ -69,10 +69,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Alarmes affichées – réponse à l'interface (les alarmes non acquittées des 12 dernières heures, la plus récente d'abord).\nconst lignes = $input.all().map((i) => i.json).filter((r) => r.id);\nreturn [\n  {\n    json: {\n      alarmes: lignes.map((r) => ({\n        id: r.id,\n        recue_le: r.recue_le,\n        chambre: r.chambre,\n        type: r.type,\n        libelle: r.libelle,\n        faits: r.faits,\n        contexte: r.contexte ?? { statut: 'aucun' },\n        statut: r.statut ?? 'nouvelle',\n        acquittee_le: r.acquittee_le ?? null,\n      })),\n    },\n  },\n];\n"
+        "jsCode": "// Angezeigte Alarme – Antwort an die Oberfläche (die nicht quittierten Alarme der letzten 12 Stunden, der neueste zuerst).\nconst lignes = $input.all().map((i) => i.json).filter((r) => r.id);\nreturn [\n  {\n    json: {\n      alarmes: lignes.map((r) => ({\n        id: r.id,\n        recue_le: r.recue_le,\n        chambre: r.chambre,\n        type: r.type,\n        libelle: r.libelle,\n        faits: r.faits,\n        contexte: r.contexte ?? { statut: 'aucun' },\n        statut: r.statut ?? 'nouvelle',\n        acquittee_le: r.acquittee_le ?? null,\n      })),\n    },\n  },\n];\n"
       },
       "id": "a1c3e000-0279-4000-8000-000000000279",
-      "name": "Réponse",
+      "name": "Antwort",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -82,10 +82,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Contrôle de session – le jeton « Bearer » de l'en-tête Authorization (43 caractères URL-safe) est haché (SHA-256) : seul le haché est en base.\nconst entetes = $input.first().json?.headers ?? {};\nconst m = String(entetes.authorization ?? '').match(/^Bearer ([A-Za-z0-9_-]{43})$/);\nif (!m) return [{ json: { hash: '' } }];\nreturn [{ json: { hash: require('crypto').createHash('sha256').update(m[1]).digest('hex') } }];\n"
+        "jsCode": "// Sitzungsprüfung – das « Bearer »-Token im Authorization-Header (43 URL-sichere Zeichen) wird gehasht (SHA-256): Nur der Hash steht in der Datenbank.\nconst entetes = $input.first().json?.headers ?? {};\nconst m = String(entetes.authorization ?? '').match(/^Bearer ([A-Za-z0-9_-]{43})$/);\nif (!m) return [{ json: { hash: '' } }];\nreturn [{ json: { hash: require('crypto').createHash('sha256').update(m[1]).digest('hex') } }];\n"
       },
       "id": "a1c3e000-0437-4000-8000-000000000437",
-      "name": "Session (jeton)",
+      "name": "Sitzung (Token)",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -102,7 +102,7 @@
         }
       },
       "id": "a1c3e000-0438-4000-8000-000000000438",
-      "name": "Session (base)",
+      "name": "Sitzung (Datenbank)",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
@@ -120,10 +120,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Contrôle de session – résultat : un soignant identifié (session ouverte, non expirée, compte actif) ou rien.\nconst r = $input.first().json ?? {};\nif (!r.identifiant) return [{ json: { ok: false } }];\nreturn [{ json: { ok: true, soignant: { identifiant: r.identifiant, nom: r.nom }, jeton_hash: r.jeton_hash } }];\n"
+        "jsCode": "// Sitzungsprüfung – Ergebnis: eine identifizierte Pflegekraft (Sitzung offen, nicht abgelaufen, Konto aktiv) oder nichts.\nconst r = $input.first().json ?? {};\nif (!r.identifiant) return [{ json: { ok: false } }];\nreturn [{ json: { ok: true, soignant: { identifiant: r.identifiant, nom: r.nom }, jeton_hash: r.jeton_hash } }];\n"
       },
       "id": "a1c3e000-0439-4000-8000-000000000439",
-      "name": "Session",
+      "name": "Sitzung",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -142,7 +142,7 @@
           },
           "conditions": [
             {
-              "id": "Session valide ?",
+              "id": "Sitzung gültig?",
               "leftValue": "={{ $json.ok === true }}",
               "rightValue": "",
               "operator": {
@@ -157,7 +157,7 @@
         "options": {}
       },
       "id": "a1c3e000-0440-4000-8000-000000000440",
-      "name": "Session valide ?",
+      "name": "Sitzung gültig?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
@@ -167,10 +167,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Contrôle de session – la session est valide : on rend aux nœuds suivants la requête d'origine (en-têtes, corps) telle que reçue.\nreturn [{ json: $('Webhook').first().json }];\n"
+        "jsCode": "// Sitzungsprüfung – die Sitzung ist gültig: Die ursprüngliche Anfrage (Header, Body) wird unverändert an die folgenden Knoten zurückgegeben.\nreturn [{ json: $('Webhook').first().json }];\n"
       },
       "id": "a1c3e000-0441-4000-8000-000000000441",
-      "name": "Requête",
+      "name": "Anfrage",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -180,10 +180,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Contrôle de session – refus : aucune donnée, seulement le motif. L'interface rouvre alors la page de connexion.\nreturn [{ json: { erreur: 'session' } }];\n"
+        "jsCode": "// Sitzungsprüfung – Ablehnung: keine Daten, nur der Grund. Die Oberfläche öffnet dann wieder die Anmeldeseite.\nreturn [{ json: { erreur: 'session' } }];\n"
       },
       "id": "a1c3e000-0442-4000-8000-000000000442",
-      "name": "Refus (session)",
+      "name": "Ablehnung (Sitzung)",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -197,91 +197,91 @@
       "main": [
         [
           {
-            "node": "Session (jeton)",
+            "node": "Sitzung (Token)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Contrôler la demande": {
+    "Anfrage prüfen": {
       "main": [
         [
           {
-            "node": "Lire les alarmes",
+            "node": "Alarme lesen",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Lire les alarmes": {
+    "Alarme lesen": {
       "main": [
         [
           {
-            "node": "Réponse",
+            "node": "Antwort",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Session (jeton)": {
+    "Sitzung (Token)": {
       "main": [
         [
           {
-            "node": "Session (base)",
+            "node": "Sitzung (Datenbank)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Session (base)": {
+    "Sitzung (Datenbank)": {
       "main": [
         [
           {
-            "node": "Session",
+            "node": "Sitzung",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Session": {
+    "Sitzung": {
       "main": [
         [
           {
-            "node": "Session valide ?",
+            "node": "Sitzung gültig?",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Session valide ?": {
+    "Sitzung gültig?": {
       "main": [
         [
           {
-            "node": "Requête",
+            "node": "Anfrage",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Refus (session)",
+            "node": "Ablehnung (Sitzung)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Requête": {
+    "Anfrage": {
       "main": [
         [
           {
-            "node": "Contrôler la demande",
+            "node": "Anfrage prüfen",
             "type": "main",
             "index": 0
           }

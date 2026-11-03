@@ -10,13 +10,13 @@ requete: lettre de médecin médicaments diagnostic recommandation
 protocoles: false
 ---
 ## INSTRUCTION
-Le bloc FAITS DES SOURCES contient un document (par exemple une lettre de médecin) dont le texte est parfois imparfait, notamment après la lecture automatique d'un scan. Extrais-en les informations demandées sous forme de données structurées. N'extrais que ce que le document dit expressément : n'interprète pas, ne complète pas, ne corrige aucune dose et ne tiens compte d'aucune autre information. Une information absente du document vaut null, ou une liste vide.
+Der Block FAITS DES SOURCES enthält ein Dokument (zum Beispiel einen Arztbrief), dessen Text mitunter unvollkommen ist, insbesondere nach der automatischen Erkennung eines Scans. Extrahiere daraus die verlangten Informationen als strukturierte Daten. Extrahiere nur, was das Dokument ausdrücklich sagt: nicht interpretieren, nicht ergänzen, keine Dosis korrigieren und keine andere Information berücksichtigen. Eine im Dokument fehlende Information ergibt null oder eine leere Liste.
 
 ## FORMAT DE SORTIE
-Réponds par UN SEUL objet JSON valide, sans texte avant ni après et sans bloc de code, avec exactement ces clés :
-- "patient" : objet avec "nom" (texte ou null), "prenom" (texte ou null) et "naissance" (texte au format JJ.MM.AAAA, ou null) ;
-- "diagnostics" : liste de textes ;
-- "medicaments" : liste d'objets avec "nom" (texte), "dose" (texte ou null), "frequence" (texte ou null), "duree" (texte ou null) et "action" ("debut", "arret", "poursuite", "changement" ou "inconnu") ;
-- "allergies_mentionnees" : liste de textes ;
-- "autres_recommandations" : liste de textes.
-Chaque médicament cité dans le document va dans "medicaments", même sans dose, et jamais dans "autres_recommandations" (qui ne contient que les conseils et contrôles prévus). Recopie les noms, les doses et les durées comme ils sont écrits dans le document, sans les traduire. Valeur de "action" : "debut" pour un médicament que la lettre prescrit ou recommande de commencer ; "poursuite" pour un médicament que la lettre dit inchangé ou poursuivi ; "changement" pour un remplacement ou un changement de dose ; "arret" pour un arrêt ; "inconnu" si la lettre ne le dit pas. Écris les clés exactement comme ci-dessus, sans accent.
+Antworte mit EINEM EINZIGEN gültigen JSON-Objekt, ohne Text davor oder danach und ohne Codeblock, mit genau diesen Schlüsseln:
+- "patient": Objekt mit "nom" (Text oder null), "prenom" (Text oder null) und "naissance" (Text im Format TT.MM.JJJJ oder null);
+- "diagnostics": Liste von Texten;
+- "medicaments": Liste von Objekten mit "nom" (Text), "dose" (Text oder null), "frequence" (Text oder null), "duree" (Text oder null) und "action" ("debut", "arret", "poursuite", "changement" oder "inconnu");
+- "allergies_mentionnees": Liste von Texten;
+- "autres_recommandations": Liste von Texten.
+Jedes im Dokument genannte Medikament gehört in "medicaments", auch ohne Dosis, und niemals in "autres_recommandations" (das nur die vorgesehenen Ratschläge und Kontrollen enthält). Übernimm Namen, Dosen und Dauern so, wie sie im Dokument stehen, ohne sie zu übersetzen. Wert von "action": "debut" für ein Medikament, dessen Beginn der Brief verordnet oder empfiehlt; "poursuite" für ein Medikament, das der Brief als unverändert oder fortgeführt bezeichnet; "changement" für einen Ersatz oder eine Dosisänderung; "arret" für ein Absetzen; "inconnu", wenn der Brief es nicht sagt. Schreibe die Schlüssel exakt wie oben, ohne Akzente.

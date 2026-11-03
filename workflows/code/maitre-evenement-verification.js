@@ -1,2 +1,2 @@
-// Vérifier le document – entrée du sous-workflow « journal ».
+// Dokument prüfen – Eingang des Unter-Workflows « Protokoll ».
 return [{ json: $input.first().json.evenement_journal }];

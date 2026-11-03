@@ -1,4 +1,4 @@
-# Petit service HTTP d'OCR pour le connecteur « fichiers » (n8n) : OCRmyPDF + Tesseract (allemand, français, anglais).
+# Kleiner HTTP-OCR-Dienst für den Connector „Dateien“ (n8n): OCRmyPDF + Tesseract (Deutsch, Französisch, Englisch).
 FROM debian:bookworm-slim
 
 RUN apt-get update \

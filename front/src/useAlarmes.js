@@ -3,7 +3,7 @@ import { alarmes as lireAlarmes, acquitterAlarme } from './api.js';
 
 const INTERVALLE_MS = 2000;
 
-// Deux bips courts (Web Audio) : le navigateur n'autorise le son qu'après un premier clic sur la page.
+// Zwei kurze Pieptöne (Web Audio): Der Browser erlaubt Ton erst nach einem ersten Klick auf die Seite.
 function bip() {
   try {
     const Contexte = window.AudioContext || window.webkitAudioContext;
@@ -20,18 +20,18 @@ function bip() {
     });
     setTimeout(() => ctx.close(), 1000);
   } catch {
-    /* pas de son possible : l'alarme reste affichée */
+    /* Ton nicht möglich: Der Alarm bleibt angezeigt */
   }
 }
 
-// Interroge les alarmes toutes les 2 secondes. À chaque NOUVELLE alarme : deux bips courts, et le titre de l'onglet annonce
-// le nombre d'alarmes en attente.
+// Fragt die Alarme alle 2 Sekunden ab. Bei jedem NEUEN Alarm: zwei kurze Pieptöne, und der Tab-Titel zeigt
+// die Anzahl der offenen Alarme an.
 export function useAlarmes() {
   const [liste, setListe] = useState([]);
   const [historique, setHistorique] = useState([]);
   const [observeHistorique, setObserveHistorique] = useState(false);
-  const [connexionPerdue, setConnexionPerdue] = useState(false); // 3 interrogations de suite sans réponse : l'affichage n'est peut-être plus à jour
-  const vues = useRef(null); // alarmes de capteurs déjà connues (la première lecture ne sonne pas)
+  const [connexionPerdue, setConnexionPerdue] = useState(false); // 3 Abfragen in Folge ohne Antwort: Die Anzeige ist möglicherweise nicht mehr aktuell
+  const vues = useRef(null); // bereits bekannte Sensoralarme (die erste Abfrage löst keinen Ton aus)
   const titreOrigine = useRef(typeof document !== 'undefined' ? document.title : '');
 
   useEffect(() => {
@@ -46,7 +46,7 @@ export function useAlarmes() {
         setConnexionPerdue(false);
         setListe(toutes.filter((a) => a.statut !== 'acquittee'));
         setHistorique(toutes.filter((a) => a.statut === 'acquittee'));
-        // le signal sonore ne concerne QUE les alarmes de capteurs ; les documents arrivent sans bruit
+        // der Signalton betrifft NUR Sensoralarme; Dokumente kommen ohne Ton an
         const capteurs = toutes.filter((a) => a.statut !== 'acquittee' && a.type !== 'document');
         if (vues.current === null) vues.current = new Set(capteurs.map((a) => a.id));
         else {
@@ -55,7 +55,7 @@ export function useAlarmes() {
           if (nouvelles.length) bip();
         }
       } catch {
-        // connexion perdue : on garde l'affichage actuel, on réessaie, et au bout de 3 échecs on le DIT (une alarme manquée ne doit jamais être silencieuse)
+        // Verbindung verloren: Die aktuelle Anzeige bleibt, wir versuchen es erneut und melden es nach 3 Fehlversuchen (ein verpasster Alarm darf nie unbemerkt bleiben)
         echecs += 1;
         if (actif && echecs >= 3) setConnexionPerdue(true);
       }
@@ -72,9 +72,9 @@ export function useAlarmes() {
   const documents = liste.filter((a) => a.type === 'document');
 
   useEffect(() => {
-    document.title = alarmes.length ? `(${alarmes.length}) ALARME – ${titreOrigine.current}` : titreOrigine.current;
+    document.title = alarmes.length ? `(${alarmes.length}) ALARM – ${titreOrigine.current}` : titreOrigine.current;
     return () => {
-      document.title = titreOrigine.current; // déconnexion : plus d'alarme annoncée dans l'onglet
+      document.title = titreOrigine.current; // Abmeldung: kein Alarm mehr im Tab angekündigt
     };
   }, [alarmes.length]);
 
@@ -83,7 +83,7 @@ export function useAlarmes() {
     try {
       await acquitterAlarme(id);
     } catch {
-      /* l'alerte réapparaîtra au prochain tour si l'acquittement n'a pas été enregistré */
+      /* Die Meldung erscheint bei der nächsten Abfrage erneut, falls die Quittierung nicht gespeichert wurde */
     }
   }, []);
 

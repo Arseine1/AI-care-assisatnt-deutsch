@@ -1,8 +1,8 @@
-// Crée (ou met à jour) les comptes de démonstration des soignants (FICTIFS) dans PostgreSQL.
-// Les codes PIN viennent de .env (DEMO_PIN_*, générés par scripts/generer-secrets.mjs) ; ils sont HACHÉS (scrypt, sel propre à chaque compte)
-// avant d'être enregistrés : la base ne contient jamais un PIN en clair. Les PIN ne sont pas affichés : ouvrir .env pour les lire.
-// Rejouable : relancer le script remet les PIN de .env.
-// Usage : node scripts/creer-soignants.mjs
+// Erstellt (oder aktualisiert) die Demokonten der Pflegekräfte (FIKTIV) in PostgreSQL.
+// Die PIN-Codes stammen aus .env (DEMO_PIN_*, erzeugt von scripts/generer-secrets.mjs); sie werden GEHASHT (scrypt, eigener Salt pro Konto),
+// bevor sie gespeichert werden: Die Datenbank enthält nie eine PIN im Klartext. Die PINs werden nicht angezeigt: zum Lesen die .env öffnen.
+// Wiederholbar: Ein erneuter Aufruf setzt die PINs aus .env wieder ein.
+// Aufruf: node scripts/creer-soignants.mjs
 import { randomBytes, scryptSync } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
@@ -14,13 +14,13 @@ const env = readFileSync(join(racine, '.env'), 'utf8');
 const lire = (cle) => new RegExp(`^${cle}=(.*)$`, 'm').exec(env)?.[1]?.trim();
 
 const COMPTES = [
-  { identifiant: 'martin', nom: 'Mme Claudia Martin (soins)', pin: 'DEMO_PIN_MARTIN' },
-  { identifiant: 'keller', nom: 'M. Jonas Keller (soins)', pin: 'DEMO_PIN_KELLER' },
-  { identifiant: 'roth', nom: 'Mme Eva Roth (infirmière)', pin: 'DEMO_PIN_ROTH' },
-  { identifiant: 'arsene', nom: 'Arsène (compte de test)', pin: 'DEMO_PIN_ARSENE' },
+  { identifiant: 'martin', nom: 'Frau Claudia Martin (Pflege)', pin: 'DEMO_PIN_MARTIN' },
+  { identifiant: 'keller', nom: 'Herr Jonas Keller (Pflege)', pin: 'DEMO_PIN_KELLER' },
+  { identifiant: 'roth', nom: 'Frau Eva Roth (Pflegefachkraft)', pin: 'DEMO_PIN_ROTH' },
+  { identifiant: 'arsene', nom: 'Arsène (Testkonto)', pin: 'DEMO_PIN_ARSENE' },
 ];
 
-// format : scrypt$<sel en hexadécimal>$<empreinte en hexadécimal> (lu par le nœud « Vérifier le PIN »)
+// Format: scrypt$<Salt hexadezimal>$<Fingerabdruck hexadezimal> (gelesen vom Knoten „PIN prüfen“)
 export const hacher = (pin) => {
   const sel = randomBytes(16);
   return `scrypt$${sel.toString('hex')}$${scryptSync(pin, sel, 32).toString('hex')}`;
@@ -30,7 +30,7 @@ const lignes = [];
 for (const c of COMPTES) {
   const pin = lire(c.pin);
   if (!/^\d{4,8}$/.test(pin ?? '')) {
-    console.error(`${c.pin} manque ou n'a pas 4 à 8 chiffres dans .env : lancer d'abord node scripts/generer-secrets.mjs`);
+    console.error(`${c.pin} fehlt oder hat in der .env nicht 4 bis 8 Ziffern: zuerst node scripts/generer-secrets.mjs ausführen`);
     process.exit(1);
   }
   const echap = (v) => v.replace(/'/g, "''");
@@ -48,4 +48,4 @@ if (r.status !== 0) {
   console.error(r.stderr.replace(/scrypt\$[0-9a-f$]+/g, 'scrypt$***'));
   process.exit(1);
 }
-console.log(`${COMPTES.length} comptes de démonstration enregistrés : ${COMPTES.map((c) => c.identifiant).join(', ')}. PIN : voir DEMO_PIN_* dans .env (non affichés).`);
+console.log(`${COMPTES.length} Demokonten gespeichert: ${COMPTES.map((c) => c.identifiant).join(', ')}. PIN: siehe DEMO_PIN_* in der .env (nicht angezeigt).`);

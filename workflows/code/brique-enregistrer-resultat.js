@@ -1,6 +1,6 @@
-// Brique « enregistrer » – résultat de la validation, et événement d'audit associé.
-const c = $('Contrôler la validation').first().json;
-const v = $('Valider le brouillon').first().json;
+// Baustein « Speichern » – Ergebnis der Bestätigung und zugehöriges Prüfereignis.
+const c = $('Bestätigung prüfen').first().json;
+const v = $('Entwurf bestätigen').first().json;
 
 const resultat = v.validation_id
   ? {
@@ -15,7 +15,7 @@ const resultat = v.validation_id
       valide_par: c.valide_par,
       soignant_id: c.soignant_id,
     }
-  : { ok: false, erreur: 'Brouillon introuvable ou déjà validé.', brouillon_id: c.brouillon_id };
+  : { ok: false, erreur: 'Entwurf nicht gefunden oder bereits bestätigt.', brouillon_id: c.brouillon_id };
 
 return [
   {

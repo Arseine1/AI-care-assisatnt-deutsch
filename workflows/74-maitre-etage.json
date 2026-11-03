@@ -1,6 +1,6 @@
 {
   "id": "aicaremaitreeta01",
-  "name": "AI-Care – Entrée rapport de garde d'un étage (tâche)",
+  "name": "AI-Care – Eingang Dienstbericht einer Etage (Aufgabe)",
   "active": false,
   "nodes": [
     {
@@ -31,10 +31,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Rapport de garde d'un étage – contrôle de la demande {etage}. Aucun texte libre : un numéro d'étage seulement.\nconst e = $input.first().json?.body ?? {};\nconst etage = Number(e.etage);\nif (!Number.isInteger(etage) || etage < 0 || etage > 20) throw new Error(`Étage invalide : « ${e.etage} »`);\nreturn [{ json: { etage } }];\n"
+        "jsCode": "// Dienstbericht einer Etage – Prüfung der Anfrage {etage}. Kein Freitext: nur eine Etagennummer.\nconst e = $input.first().json?.body ?? {};\nconst etage = Number(e.etage);\nif (!Number.isInteger(etage) || etage < 0 || etage > 20) throw new Error(`Ungültige Etage: „${e.etage}“`);\nreturn [{ json: { etage } }];\n"
       },
       "id": "a1c3e000-0181-4000-8000-000000000181",
-      "name": "Contrôler l'étage",
+      "name": "Etage prüfen",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -51,7 +51,7 @@
         }
       },
       "id": "a1c3e000-0182-4000-8000-000000000182",
-      "name": "Résidents de l'étage",
+      "name": "Bewohner der Etage",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
@@ -72,11 +72,11 @@
         "operation": "executeQuery",
         "query": "INSERT INTO soins.taches (type, parametres, total, statut, termine_le) VALUES ('rapport_garde_etage', jsonb_build_object('etage', $1::int), $2::int, CASE WHEN $2::int = 0 THEN 'termine' ELSE 'en_cours' END, CASE WHEN $2::int = 0 THEN now() END) RETURNING id",
         "options": {
-          "queryReplacement": "={{ [ $('Contrôler l\\'étage').first().json.etage, $('Résidents de l\\'étage').all().filter(i => i.json.patient_id).length ] }}"
+          "queryReplacement": "={{ [ $('Etage prüfen').first().json.etage, $('Bewohner der Etage').all().filter(i => i.json.patient_id).length ] }}"
         }
       },
       "id": "a1c3e000-0183-4000-8000-000000000183",
-      "name": "Créer la tâche",
+      "name": "Aufgabe erstellen",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
@@ -95,11 +95,11 @@
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={{ JSON.stringify({ tache_id: $json.id, total: $('Résidents de l\\'étage').all().filter(i => i.json.patient_id).length }) }}",
+        "responseBody": "={{ JSON.stringify({ tache_id: $json.id, total: $('Bewohner der Etage').all().filter(i => i.json.patient_id).length }) }}",
         "options": {}
       },
       "id": "a1c3e000-0184-4000-8000-000000000184",
-      "name": "Répondre tout de suite",
+      "name": "Sofort antworten",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
       "position": [
@@ -109,10 +109,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Rapport de garde d'un étage – ce qui part vers le sous-workflow « étage complet » : l'étage et la tâche déjà créée.\nconst etage = $('Contrôler l\\'étage').first().json.etage;\nconst task_id = $('Créer la tâche').first().json.id;\nreturn [{ json: { etage, task_id } }];\n"
+        "jsCode": "// Dienstbericht einer Etage – was an den Unter-Workflow « Etage komplett » geht: die Etage und die bereits erstellte Aufgabe.\nconst etage = $('Etage prüfen').first().json.etage;\nconst task_id = $('Aufgabe erstellen').first().json.id;\nreturn [{ json: { etage, task_id } }];\n"
       },
       "id": "a1c3e000-0185-4000-8000-000000000185",
-      "name": "Vers étage complet",
+      "name": "Zum vollständigen Etagenbericht",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -134,7 +134,7 @@
         }
       },
       "id": "a1c3e000-0186-4000-8000-000000000186",
-      "name": "Étage complet",
+      "name": "Vollständiger Etagenbericht",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.2,
       "position": [
@@ -145,10 +145,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Contrôle de session – le jeton « Bearer » de l'en-tête Authorization (43 caractères URL-safe) est haché (SHA-256) : seul le haché est en base.\nconst entetes = $input.first().json?.headers ?? {};\nconst m = String(entetes.authorization ?? '').match(/^Bearer ([A-Za-z0-9_-]{43})$/);\nif (!m) return [{ json: { hash: '' } }];\nreturn [{ json: { hash: require('crypto').createHash('sha256').update(m[1]).digest('hex') } }];\n"
+        "jsCode": "// Sitzungsprüfung – das « Bearer »-Token im Authorization-Header (43 URL-sichere Zeichen) wird gehasht (SHA-256): Nur der Hash steht in der Datenbank.\nconst entetes = $input.first().json?.headers ?? {};\nconst m = String(entetes.authorization ?? '').match(/^Bearer ([A-Za-z0-9_-]{43})$/);\nif (!m) return [{ json: { hash: '' } }];\nreturn [{ json: { hash: require('crypto').createHash('sha256').update(m[1]).digest('hex') } }];\n"
       },
       "id": "a1c3e000-0399-4000-8000-000000000399",
-      "name": "Session (jeton)",
+      "name": "Sitzung (Token)",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -165,7 +165,7 @@
         }
       },
       "id": "a1c3e000-0400-4000-8000-000000000400",
-      "name": "Session (base)",
+      "name": "Sitzung (Datenbank)",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
@@ -183,10 +183,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Contrôle de session – résultat : un soignant identifié (session ouverte, non expirée, compte actif) ou rien.\nconst r = $input.first().json ?? {};\nif (!r.identifiant) return [{ json: { ok: false } }];\nreturn [{ json: { ok: true, soignant: { identifiant: r.identifiant, nom: r.nom }, jeton_hash: r.jeton_hash } }];\n"
+        "jsCode": "// Sitzungsprüfung – Ergebnis: eine identifizierte Pflegekraft (Sitzung offen, nicht abgelaufen, Konto aktiv) oder nichts.\nconst r = $input.first().json ?? {};\nif (!r.identifiant) return [{ json: { ok: false } }];\nreturn [{ json: { ok: true, soignant: { identifiant: r.identifiant, nom: r.nom }, jeton_hash: r.jeton_hash } }];\n"
       },
       "id": "a1c3e000-0401-4000-8000-000000000401",
-      "name": "Session",
+      "name": "Sitzung",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -205,7 +205,7 @@
           },
           "conditions": [
             {
-              "id": "Session valide ?",
+              "id": "Sitzung gültig?",
               "leftValue": "={{ $json.ok === true }}",
               "rightValue": "",
               "operator": {
@@ -220,7 +220,7 @@
         "options": {}
       },
       "id": "a1c3e000-0402-4000-8000-000000000402",
-      "name": "Session valide ?",
+      "name": "Sitzung gültig?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
@@ -230,10 +230,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Contrôle de session – la session est valide : on rend aux nœuds suivants la requête d'origine (en-têtes, corps) telle que reçue.\nreturn [{ json: $('Webhook').first().json }];\n"
+        "jsCode": "// Sitzungsprüfung – die Sitzung ist gültig: Die ursprüngliche Anfrage (Header, Body) wird unverändert an die folgenden Knoten zurückgegeben.\nreturn [{ json: $('Webhook').first().json }];\n"
       },
       "id": "a1c3e000-0403-4000-8000-000000000403",
-      "name": "Requête",
+      "name": "Anfrage",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -243,10 +243,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Contrôle de session – refus : aucune donnée, seulement le motif. L'interface rouvre alors la page de connexion.\nreturn [{ json: { erreur: 'session' } }];\n"
+        "jsCode": "// Sitzungsprüfung – Ablehnung: keine Daten, nur der Grund. Die Oberfläche öffnet dann wieder die Anmeldeseite.\nreturn [{ json: { erreur: 'session' } }];\n"
       },
       "id": "a1c3e000-0404-4000-8000-000000000404",
-      "name": "Refus (session)",
+      "name": "Ablehnung (Sitzung)",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -261,7 +261,7 @@
         "options": {}
       },
       "id": "a1c3e000-0405-4000-8000-000000000405",
-      "name": "Répondre (session)",
+      "name": "Antworten (Sitzung)",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
       "position": [
@@ -275,135 +275,135 @@
       "main": [
         [
           {
-            "node": "Session (jeton)",
+            "node": "Sitzung (Token)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Contrôler l'étage": {
+    "Etage prüfen": {
       "main": [
         [
           {
-            "node": "Résidents de l'étage",
+            "node": "Bewohner der Etage",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Résidents de l'étage": {
+    "Bewohner der Etage": {
       "main": [
         [
           {
-            "node": "Créer la tâche",
+            "node": "Aufgabe erstellen",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Créer la tâche": {
+    "Aufgabe erstellen": {
       "main": [
         [
           {
-            "node": "Répondre tout de suite",
+            "node": "Sofort antworten",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Répondre tout de suite": {
+    "Sofort antworten": {
       "main": [
         [
           {
-            "node": "Vers étage complet",
+            "node": "Zum vollständigen Etagenbericht",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Vers étage complet": {
+    "Zum vollständigen Etagenbericht": {
       "main": [
         [
           {
-            "node": "Étage complet",
+            "node": "Vollständiger Etagenbericht",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Session (jeton)": {
+    "Sitzung (Token)": {
       "main": [
         [
           {
-            "node": "Session (base)",
+            "node": "Sitzung (Datenbank)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Session (base)": {
+    "Sitzung (Datenbank)": {
       "main": [
         [
           {
-            "node": "Session",
+            "node": "Sitzung",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Session": {
+    "Sitzung": {
       "main": [
         [
           {
-            "node": "Session valide ?",
+            "node": "Sitzung gültig?",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Session valide ?": {
+    "Sitzung gültig?": {
       "main": [
         [
           {
-            "node": "Requête",
+            "node": "Anfrage",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Refus (session)",
+            "node": "Ablehnung (Sitzung)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Requête": {
+    "Anfrage": {
       "main": [
         [
           {
-            "node": "Contrôler l'étage",
+            "node": "Etage prüfen",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Refus (session)": {
+    "Ablehnung (Sitzung)": {
       "main": [
         [
           {
-            "node": "Répondre (session)",
+            "node": "Antworten (Sitzung)",
             "type": "main",
             "index": 0
           }

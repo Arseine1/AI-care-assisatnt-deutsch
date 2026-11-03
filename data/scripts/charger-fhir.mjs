@@ -1,8 +1,8 @@
-// Base de données de l'hôpital (FHIR) : construit un bundle à partir de data/source/residents.mjs,
-// l'écrit dans data/fhir/bundle.json, puis charge chaque ressource dans HAPI FHIR par PUT
-// (identifiants fixes => rejouable sans créer de doublons).
+// Datenbank des Krankenhauses (FHIR): baut ein Bundle aus data/source/residents.mjs,
+// schreibt es nach data/fhir/bundle.json und lädt dann jede Ressource per PUT in HAPI FHIR
+// (feste Kennungen => wiederholbar, ohne Duplikate zu erzeugen).
 //
-// Usage : node scripts/charger-fhir.mjs [url]   (défaut : http://localhost:8090/fhir)
+// Aufruf: node scripts/charger-fhir.mjs [url]   (Standard: http://localhost:8090/fhir)
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -96,13 +96,13 @@ const bundle = {
 
 mkdirSync(join(racine, 'fhir'), { recursive: true });
 writeFileSync(join(racine, 'fhir', 'bundle.json'), JSON.stringify(bundle, null, 2), 'utf8');
-console.log(`bundle.json écrit : ${entries.length} ressources.`);
+console.log(`bundle.json geschrieben: ${entries.length} Ressourcen.`);
 
 try {
   const meta = await fetch(`${FHIR}/metadata`);
   if (!meta.ok) throw new Error(`HTTP ${meta.status}`);
 } catch (e) {
-  console.error(`HAPI FHIR injoignable sur ${FHIR} (${e.message}). Lancez « docker compose up -d » dans compose/.`);
+  console.error(`HAPI FHIR nicht erreichbar unter ${FHIR} (${e.message}). Starten Sie „docker compose up -d“ in compose/.`);
   process.exit(1);
 }
 
@@ -114,9 +114,9 @@ for (const { resource } of bundle.entry) {
     body: JSON.stringify(resource),
   });
   if (!res.ok) {
-    console.error(`ÉCHEC ${resource.resourceType}/${resource.id} : HTTP ${res.status} ${(await res.text()).slice(0, 300)}`);
+    console.error(`FEHLER ${resource.resourceType}/${resource.id}: HTTP ${res.status} ${(await res.text()).slice(0, 300)}`);
     process.exit(1);
   }
   ok++;
 }
-console.log(`HAPI FHIR : ${ok} ressources chargées par PUT.`);
+console.log(`HAPI FHIR: ${ok} Ressourcen per PUT geladen.`);

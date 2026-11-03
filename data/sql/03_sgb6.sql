@@ -1,4 +1,4 @@
--- GÉNÉRÉ par data/scripts/generer-sgb6.mjs (ne pas modifier à la main). Données entièrement fictives.
+-- ERZEUGT von data/scripts/generer-sgb6.mjs (nicht von Hand ändern). Vollständig fiktive Daten.
 INSERT INTO soins.sgb6_dossiers (id, questionnaire, aidant, personne, recu_le) VALUES
   ('a-becker-clair', 'Pflegekasse Sonnenhof (Beispiel) – Eingangsstempel: 05.10.2026
 FRAGEBOGEN ZUR RENTENVERSICHERUNG VON PFLEGEPERSONEN

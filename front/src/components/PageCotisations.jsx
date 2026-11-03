@@ -9,9 +9,9 @@ function Pastille({ statut }) {
   return <span className={`pastille pastille-${statut}`} role="img" aria-label={t(`cotisations.regles.${statut}`)} title={t(`cotisations.regles.${statut}`)} />;
 }
 
-// Page « Cotisations retraite » : un agent IA traite les questionnaires des aidants familiaux (données fictives).
-// L'agent lit, contrôle, calcule et prépare ; valider, refuser ou demander une revue reste un acte humain.
-// Modèle choisi, retenu dans le navigateur (confort seulement : n8n contrôle le nom contre sa liste fermée à chaque lancement).
+// Seite „Rentenbeiträge“: Ein KI-Agent bearbeitet die Fragebögen pflegender Angehöriger (fiktive Daten).
+// Der Agent liest, prüft, berechnet und bereitet vor; Bestätigen, Ablehnen oder eine Überprüfung anfordern bleibt eine menschliche Handlung.
+// Gewähltes Modell, im Browser gemerkt (nur zur Bequemlichkeit: n8n prüft den Namen bei jedem Start gegen seine geschlossene Liste).
 const CLE_MODELE = 'aicare-sgb6-modele';
 const modeleRetenu = () => {
   try {
@@ -22,16 +22,16 @@ const modeleRetenu = () => {
 };
 export default function PageCotisations({ dossiers, modele, modeles = [], erreurChargement, onChange }) {
   const [choisi, setChoisi] = useState(null);
-  const [pilote, setPilote] = useState('modele'); // modele : piloté par un modèle local ; guidee : mission guidée par le code
+  const [pilote, setPilote] = useState('modele'); // modele: von einem lokalen Modell gesteuert; guidee: vom Code geführte Mission
   const [choixModele, setChoixModele] = useState(modeleRetenu);
-  const [lectureIA, setLectureIA] = useState(MOCK); // simulé : cochée ; réel : décochée (la lecture par l'IA prend plusieurs minutes)
+  const [lectureIA, setLectureIA] = useState(MOCK); // simuliert: angehakt; real: nicht angehakt (das Lesen durch die KI dauert mehrere Minuten)
   const [suivi, setSuivi] = useState({}); // id -> { fait, termine, resultat, lecture_ia, pilote, tours, erreur }
-  const [decisions, setDecisions] = useState({}); // id -> { type, motif } (message de confirmation)
+  const [decisions, setDecisions] = useState({}); // id -> { type, motif } (Bestätigungsmeldung)
   const [enLot, setEnLot] = useState(false);
   const [motif, setMotif] = useState('');
   const [erreurDecision, setErreurDecision] = useState(false);
   const [enDecision, setEnDecision] = useState(false);
-  const [depot, setDepot] = useState(null); // { ok, message } du dernier dépôt
+  const [depot, setDepot] = useState(null); // { ok, message } der letzten Ablage
   const champFichier = useRef(null);
   const actif = useRef(true);
   useEffect(() => {
@@ -41,7 +41,7 @@ export default function PageCotisations({ dossiers, modele, modeles = [], erreur
     };
   }, []);
 
-  // modèle utilisé : le choix de la personne s'il est installé, sinon le modèle par défaut s'il est installé, sinon le premier installé
+  // verwendetes Modell: die Wahl der Person, falls installiert, sonst das Standardmodell, falls installiert, sonst das erste installierte
   const installes = modeles.filter((m) => m.installe).map((m) => m.nom);
   const modeleActif = installes.includes(choixModele) ? choixModele : installes.includes(modele) ? modele : (installes[0] ?? modele);
   const choisirModele = (nom) => {
@@ -49,7 +49,7 @@ export default function PageCotisations({ dossiers, modele, modeles = [], erreur
     try {
       localStorage.setItem(CLE_MODELE, nom);
     } catch {
-      /* confort seulement */
+      /* nur zur Bequemlichkeit */
     }
   };
   const enCours = Object.values(suivi).some((s) => !s.termine && !s.erreur);
@@ -74,7 +74,7 @@ export default function PageCotisations({ dossiers, modele, modeles = [], erreur
     if (actif.current) onChange();
   }
 
-  // Choisir un dossier déjà traité : on affiche le dernier résultat ENREGISTRÉ, sans relancer l'agent.
+  // Eine bereits bearbeitete Akte wählen: Es wird das zuletzt GESPEICHERTE Ergebnis angezeigt, ohne den Agenten neu zu starten.
   async function choisir(id) {
     setChoisi(id);
     setMotif('');
@@ -145,10 +145,10 @@ export default function PageCotisations({ dossiers, modele, modeles = [], erreur
   const r = s?.resultat;
   const fait = s?.fait ?? 0;
   const termine = Boolean(s?.termine);
-  const faitAff = termine ? 7 : fait; // les sections du résultat s'affichent quand l'agent a fini
+  const faitAff = termine ? 7 : fait; // die Abschnitte des Ergebnisses erscheinen, wenn der Agent fertig ist
   const tours = s?.tours ?? [];
   const piloteModele = r?.pilote?.mode === 'modele' || (s?.pilote === 'modele' && !r);
-  const avecEtapes = !piloteModele; // pilotage par le modèle : les tours remplacent la liste des étapes (sauf repli sur la mission guidée)
+  const avecEtapes = !piloteModele; // Steuerung durch das Modell: Die Runden ersetzen die Liste der Schritte (außer bei Rückfall auf die geführte Mission)
   const decide = dossier && ['valide', 'refuse'].includes(dossier.statut);
   const enAttente = termine && dossier && ['pret_a_valider', 'exception'].includes(dossier.statut);
 

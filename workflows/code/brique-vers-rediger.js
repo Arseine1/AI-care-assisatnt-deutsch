@@ -1,4 +1,4 @@
-// Banc d'essai – du template vers « rédiger » : le prompt assemblé + le contexte nécessaire au contrôle.
+// Prüfstand – vom Template zu « Verfassen »: der zusammengesetzte Prompt + der für die Prüfung nötige Kontext.
 const t = $input.first().json;
-const c = $('Chercher').first().json;
+const c = $('Suchen').first().json;
 return [{ json: { ...t, faits: c.faits, patient: c.patient, autres: c.autres, mode: 'a', action: t.prompt_id } }];

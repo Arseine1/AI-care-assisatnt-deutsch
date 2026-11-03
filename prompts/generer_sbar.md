@@ -2,14 +2,14 @@
 id: generer_sbar
 version: 1.1.0
 sortie: phrases
-sections: S=S – Situation :|B=B – Background (contexte) :|A=A – Assessment (évaluation) :|R=R – Recommendation :
+sections: S=S – Situation :|B=B – Background (Hintergrund) :|A=A – Assessment (Beurteilung) :|R=R – Recommendation (Empfehlung) :
 temperature: 0.1
 heures: 12
 requete: incident chute douleur tension pouls température glycémie traitement médicament observation risque surveillance
 protocoles: false
 ---
 ## INSTRUCTION
-Rédige la transmission SBAR des {periode_heures} dernières heures pour ce résident, à l'attention de l'équipe suivante. Reprends uniquement les faits de cette période et classe-les par importance pour la sécurité du résident : incidents d'abord, puis constantes, traitements et observations. Pour chaque incident, donne l'heure, la valeur mesurée et ce qui a été fait. Reformule chaque fait en une phrase courte : ne recopie jamais les lignes des faits ni leurs dates en tête de ligne. Les informations de fond (diagnostics, allergies, risques, plan de médication) ne servent qu'à la rubrique B.
+Verfasse die SBAR-Übergabe der letzten {periode_heures} Stunden für diese Bewohnerin bzw. diesen Bewohner, zuhanden des nächsten Teams. Übernimm ausschließlich die Fakten dieses Zeitraums und ordne sie nach ihrer Bedeutung für die Sicherheit der Person: zuerst Vorfälle, dann Vitalwerte, Behandlungen und Beobachtungen. Nenne zu jedem Vorfall die Uhrzeit, den gemessenen Wert und was unternommen wurde. Formuliere jeden Fakt in einem kurzen Satz neu: Übernimm niemals die Zeilen der Fakten und ihre Datumsangaben am Zeilenanfang. Die Hintergrundinformationen (Diagnosen, Allergien, Risiken, Medikationsplan) dienen nur der Rubrik B.
 
 ## FORMAT DE SORTIE
-Les phrases sont réparties dans quatre rubriques : S (situation : l'incident ou l'événement principal), B (contexte du résident : fond, allergies, antécédents), A (évaluation : constantes et observations de la période), R (recommandation). Chaque rubrique contient 1 à 4 phrases au plus. N'écris que des heures, des valeurs et des actions qui figurent dans les faits : n'invente aucun contrôle, aucun rendez-vous et aucune date. Une glycémie de contrôle après un resucrage n'est pas une nouvelle hypoglycémie. Ne regroupe jamais plusieurs faits sur une seule phrase. Dans R, ne reprends que des actions ou des consignes déjà présentes dans les faits (surveillance, protocole, contrôle prévu) ; ne propose aucun traitement, aucune dose et aucun diagnostic nouveau. Si une rubrique n'a aucun fait, ne lui donne aucune phrase.
+Die Sätze verteilen sich auf vier Rubriken: S (Situation: der Vorfall oder das Hauptereignis), B (Kontext der Bewohnerin / des Bewohners: Hintergrund, Allergien, Vorgeschichte), A (Beurteilung: Vitalwerte und Beobachtungen des Zeitraums), R (Empfehlung). Jede Rubrik enthält 1 bis höchstens 4 Sätze. Schreibe nur Uhrzeiten, Werte und Maßnahmen, die in den Fakten stehen: Erfinde keine Kontrolle, keinen Termin und kein Datum. Ein Kontrollblutzucker nach der Zuckergabe ist keine neue Hypoglykämie. Fasse niemals mehrere Fakten in einem Satz zusammen. Übernimm in R nur Maßnahmen oder Anweisungen, die bereits in den Fakten stehen (Überwachung, Protokoll, vorgesehene Kontrolle); schlage keine Behandlung, keine Dosis und keine neue Diagnose vor. Hat eine Rubrik keinen Fakt, gib ihr keinen Satz.

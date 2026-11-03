@@ -11,18 +11,18 @@ protocoles: true
 max_faits: 40
 ---
 ## INSTRUCTION
-Compare la lettre à vérifier (le fait de source [KIM (lettre de médecin)]) avec les autres faits du résident : allergies, plan de médication, risques, diagnostics, fonction rénale et protocoles de la maison. Signale une contradiction seulement si DEUX faits précis s'opposent, l'un venant de la lettre, l'autre d'une autre source.
+Vergleiche den zu prüfenden Brief (den Fakt mit der Quelle [KIM (lettre de médecin)]) mit den übrigen Fakten der Bewohnerin bzw. des Bewohners: Allergien, Medikationsplan, Risiken, Diagnosen, Nierenfunktion und Protokolle des Hauses. Melde einen Widerspruch nur, wenn sich ZWEI konkrete Fakten widersprechen, der eine aus dem Brief, der andere aus einer anderen Quelle.
 
-Correspondances à utiliser pour comparer (liste fermée, n'en ajoute aucune) :
-- pénicillines : pénicilline, amoxicilline, ampicilline, flucloxacilline ;
-- sulfamides : sulfamides, cotrimoxazole, sulfaméthoxazole ;
-- anticoagulants : Marcumar, phenprocoumon, apixaban, rivaroxaban, dabigatran, héparine ;
-- anti-inflammatoires (AINS) : ibuprofène, diclofénac, naproxène, kétoprofène.
+Zuordnungen für den Vergleich (geschlossene Liste, füge keine hinzu):
+- Penicilline: Penicillin, Amoxicillin, Ampicillin, Flucloxacillin;
+- Sulfonamide: Sulfonamide, Cotrimoxazol, Sulfamethoxazol;
+- Antikoagulanzien: Marcumar, Phenprocoumon, Apixaban, Rivaroxaban, Dabigatran, Heparin;
+- Entzündungshemmer (NSAR): Ibuprofen, Diclofenac, Naproxen, Ketoprofen.
 
-Contradictions admises : un médicament de la lettre de la même famille qu'une allergie connue ; un second anticoagulant alors que le résident en prend déjà un, sans que l'arrêt du premier soit mentionné ; un AINS chez un résident dont les faits indiquent une insuffisance rénale ou « AINS contre-indiqués ». Si la lettre ne s'oppose à aucun fait, ne signale rien. Ne juge pas la décision du médecin : tu signales, un soignant décide.
+Zulässige Widersprüche: ein Medikament des Briefs aus derselben Familie wie eine bekannte Allergie; ein zweites Antikoagulans, obwohl die Person bereits eines einnimmt, ohne dass das Absetzen des ersten erwähnt wird; ein NSAR bei einer Person, deren Fakten eine Niereninsuffizienz oder « AINS contre-indiqués » (NSAR kontraindiziert) angeben. Widerspricht der Brief keinem Fakt, melde nichts. Beurteile nicht die Entscheidung der Ärztin bzw. des Arztes: Du meldest, eine Pflegekraft entscheidet.
 
 ## FORMAT DE SORTIE
-Réponds par UN SEUL objet JSON valide, sans texte avant ni après et sans bloc de code, avec exactement ces clés :
-- "contradictions" : liste, vide s'il n'y en a pas, d'objets avec "type" ("allergie", "anticoagulation_double", "insuffisance_renale" ou "autre"), "gravite" ("haute" ou "moyenne"), "description" (une phrase), "element_lettre" (le texte de la lettre concerné), "element_source" (le texte du fait qui s'y oppose) et "sources" (liste des sources des deux faits, telles qu'écrites entre crochets dans les faits) ;
-- "aucune_contradiction" : true si et seulement si la liste "contradictions" est vide ; false dès qu'elle contient au moins une contradiction.
-Écris les clés exactement comme ci-dessus, sans accent, et renseigne les six clés de chaque contradiction.
+Antworte mit EINEM EINZIGEN gültigen JSON-Objekt, ohne Text davor oder danach und ohne Codeblock, mit genau diesen Schlüsseln:
+- "contradictions": Liste, leer wenn es keine gibt, von Objekten mit "type" ("allergie", "anticoagulation_double", "insuffisance_renale" oder "autre"), "gravite" ("haute" oder "moyenne"), "description" (ein Satz), "element_lettre" (der betroffene Text des Briefs), "element_source" (der Text des Fakts, der ihm widerspricht) und "sources" (Liste der Quellen der beiden Fakten, so wie sie in den Fakten in eckigen Klammern stehen);
+- "aucune_contradiction": true genau dann, wenn die Liste "contradictions" leer ist; false, sobald sie mindestens einen Widerspruch enthält.
+Schreibe die Schlüssel exakt wie oben, ohne Akzente, und fülle die sechs Schlüssel jedes Widerspruchs aus. Schreibe die Texte der Felder "description", "element_lettre" und "element_source" auf Deutsch (Zitate aus den Fakten unverändert).

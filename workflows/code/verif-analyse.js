@@ -1,7 +1,7 @@
-// Vérifier le document – ANALYSE COMPLÉMENTAIRE (tâche de fond) : ce que l'assistant IA ajoute aux règles de contrôle.
-// Les règles et le texte déjà donnés ne changent pas ; seules les remarques s'ajoutent, marquées « à confirmer ».
-const f = $('Règles et fusion').first().json;
-const tache = $('Créer la tâche d\'analyse').first().json.id;
+// Dokument prüfen – ZUSÄTZLICHE ANALYSE (Hintergrundaufgabe): was der KI-Assistent zu den Kontrollregeln hinzufügt.
+// Die Regeln und der bereits gelieferte Text ändern sich nicht; nur die Anmerkungen kommen hinzu, als « zu prüfen » gekennzeichnet.
+const f = $('Regeln und Zusammenführung').first().json;
+const tache = $('Analyseaufgabe erstellen').first().json.id;
 const lu = (nom) => {
   try {
     return $(nom).first().json ?? {};
@@ -9,11 +9,11 @@ const lu = (nom) => {
     return {};
   }
 };
-const echecIA = !lu('Rédiger (extraction)').texte && !lu('Rédiger (comparaison)').texte; // les deux étapes ont échoué
+const echecIA = !lu('Verfassen (Extraktion)').texte && !lu('Verfassen (Vergleich)').texte; // beide Schritte sind fehlgeschlagen
 const remarques = (f.contradictions_modele ?? []).map((c) => ({
   type: c.type, gravite: c.gravite, description: c.description, element_lettre: c.element_lettre, element_source: c.element_source, sources: c.sources,
 }));
-const c = $('Choisir la lettre').first().json;
+const c = $('Schreiben wählen').first().json;
 return [
   {
     json: {

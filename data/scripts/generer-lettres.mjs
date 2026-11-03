@@ -1,6 +1,6 @@
-// Génère les 5 lettres de médecin (PDF) de la boîte KIM simulée, en allemand (courrier réaliste).
-// 4 PDF avec texte + 1 PDF « scanné » (image seule, OCR obligatoire).
-// Aucun nom réel : médecins et patients sont fictifs.
+// Erzeugt die 5 Arztbriefe (PDF) des simulierten KIM-Postfachs, auf Deutsch (realistische Schreiben).
+// 4 PDFs mit Text + 1 „gescanntes“ PDF (nur Bild, OCR erforderlich).
+// Keine realen Namen: Ärzte und Patienten sind fiktiv.
 import { createWriteStream, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -73,4 +73,4 @@ async function ecrireScan(l) {
 
 for (const l of LETTRES) await ecrireLettre(l);
 await ecrireScan(LETTRE_SCAN);
-console.log(`${LETTRES.length + 1} lettres écrites dans data/lettres/.`);
+console.log(`${LETTRES.length + 1} Briefe in data/lettres/ geschrieben.`);

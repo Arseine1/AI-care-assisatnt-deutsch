@@ -1,89 +1,89 @@
 # Prompts
 
-Les prompts sont **versionnés** (champ `version`, numéro de version sémantique) et **verrouillés** : un soignant ne les voit ni ne les modifie. Ils sont intégrés aux workflows n8n à la génération (`node workflows/generer.mjs`), et la version utilisée est notée dans le journal d'audit (`soins.journal_ia`) et dans chaque brouillon.
+Die Prompts sind **versioniert** (Feld `version`, semantische Versionsnummer) und **gesperrt**: Eine Pflegekraft sieht sie weder noch ändert sie sie. Sie werden bei der Generierung (`node workflows/generer.mjs`) in die n8n-Workflows eingebettet, und die verwendete Version wird im Audit-Journal (`soins.journal_ia`) und in jedem Entwurf vermerkt.
 
-## Le template verrouillé
+## Das gesperrte Template
 
-Chaque appel à l'IA utilise le même assemblage, construit par le sous-workflow « template » (jamais ailleurs) :
+Jeder Aufruf der KI verwendet denselben Aufbau, der vom Unter-Workflow « template » erstellt wird (nirgendwo sonst):
 
 ```
-[RÔLE ET RÈGLES]        texte fixe de _regles.md (identique pour tous les prompts)
-[FAITS DES SOURCES]     faits trouvés par « chercher », chacun avec sa source entre crochets
-[INSTRUCTION SOIGNANT]  Mode A : instruction fixe du prompt (cachée derrière le bouton)
-                        Mode B : consigne du soignant, APRÈS contrôle, et seulement ici
-[FORMAT DE SORTIE]      format imposé par le prompt
+[RÔLE ET RÈGLES]        fester Text aus _regles.md (für alle Prompts identisch)
+[FAITS DES SOURCES]     von « chercher » gefundene Fakten, jeweils mit ihrer Quelle in eckigen Klammern
+[INSTRUCTION SOIGNANT]  Modus A: feste Anweisung des Prompts (hinter der Schaltfläche verborgen)
+                        Modus B: Anweisung der Pflegekraft, NACH der Prüfung, und nur hier
+[FORMAT DE SORTIE]      vom Prompt vorgegebenes Format
 ```
 
-Règles du template : n'utiliser que les faits fournis ; citer chaque fait avec sa source entre crochets ; écrire « information non disponible » si un fait manque ; ne jamais mélanger deux résidents ; ne pas qualifier une valeur sans fait qui la qualifie.
+Regeln des Templates: nur die gelieferten Fakten verwenden; jeden Fakt mit seiner Quelle in eckigen Klammern zitieren; « information non disponible » schreiben, wenn ein Fakt fehlt; niemals zwei Bewohner vermischen; einen Wert nicht bewerten, wenn kein Fakt ihn bewertet.
 
-## Les prompts
+## Die Prompts
 
-| Prompt | Version | Sortie | Rôle | Période | Protocoles |
+| Prompt | Version | Ausgabe | Aufgabe | Zeitraum | Protokolle |
 |---|---|---|---|---|---|
-| [`generer_sbar`](generer_sbar.md) | 1.0.4 | texte | transmission SBAR des 12 dernières heures | 12 h | non |
-| [`resume_epa`](resume_epa.md) | 1.0.0 | texte | résumé du dossier ePA : diagnostics, allergies, médication (eML) | 24 h | non |
-| [`points_vigilance`](points_vigilance.md) | 1.0.1 | texte | 6 points de vigilance au plus, par ordre de sécurité | 24 h | oui |
-| [`contexte_alarme`](contexte_alarme.md) | 1.0.1 | texte | contexte utile pour répondre à une alarme de capteur | 24 h | oui |
-| [`extraire_faits`](extraire_faits.md) | 1.0.1 | **JSON strict** | données structurées d'un document (lettre de médecin) | — | non |
-| [`comparer`](comparer.md) | 1.0.1 | **JSON strict** | contradictions entre une lettre et les sources (allergie, double anticoagulation, insuffisance rénale) | 24 h | oui |
+| [`generer_sbar`](generer_sbar.md) | 1.0.4 | Text | SBAR-Übergabe der letzten 12 Stunden | 12 h | nein |
+| [`resume_epa`](resume_epa.md) | 1.0.0 | Text | Zusammenfassung der ePA-Akte: Diagnosen, Allergien, Medikation (eML) | 24 h | nein |
+| [`points_vigilance`](points_vigilance.md) | 1.0.1 | Text | höchstens 6 Aufmerksamkeitspunkte, nach Sicherheitsrelevanz geordnet | 24 h | ja |
+| [`contexte_alarme`](contexte_alarme.md) | 1.0.1 | Text | nützlicher Kontext, um auf einen Sensoralarm zu reagieren | 24 h | ja |
+| [`extraire_faits`](extraire_faits.md) | 1.0.1 | **striktes JSON** | strukturierte Daten aus einem Dokument (Arztbrief) | — | nein |
+| [`comparer`](comparer.md) | 1.0.1 | **striktes JSON** | Widersprüche zwischen einem Brief und den Quellen (Allergie, doppelte Antikoagulation, Niereninsuffizienz) | 24 h | ja |
 
-Un septième prompt, [`consigne_guidee`](consigne_guidee.md) (1.3.0, texte, 24 h, protocoles : oui, relit les rapports de garde déjà validés), sert de modèle au **Mode B** : la consigne du soignant, après contrôle, remplit le bloc INSTRUCTION SOIGNANT. Il a lui aussi 3 cas de test. Depuis la 1.3.0 (étape 9 du jour 4), « chercher » classe les faits d'abord selon la demande du soignant (mots et synonymes de soins) et ne donne aucun fait au modèle quand le dossier ne parle pas du sujet : la réponse est alors « information non disponible ».
+Ein siebter Prompt, [`consigne_guidee`](consigne_guidee.md) (1.3.0, Text, 24 h, Protokolle: ja, liest bereits validierte Dienstberichte erneut), dient als Vorlage für **Modus B**: Die Anweisung der Pflegekraft füllt nach der Prüfung den Block INSTRUCTION SOIGNANT. Auch er hat 3 Testfälle. Seit Version 1.3.0 (Schritt 9 von Tag 4) ordnet « chercher » die Fakten zuerst nach der Anfrage der Pflegekraft (Wörter und pflegerische Synonyme) und gibt dem Modell keinen Fakt, wenn die Akte das Thema nicht behandelt: Die Antwort lautet dann « information non disponible ».
 
-Règles communes : [`_regles.md`](_regles.md) (version 1.2.1). Les briques qui utilisent ces prompts sont décrites dans [docs/briques-ia.md](../docs/briques-ia.md).
+Gemeinsame Regeln: [`_regles.md`](_regles.md) (Version 1.2.1). Die Bausteine, die diese Prompts verwenden, sind in [docs/briques-ia.md](../docs/briques-ia.md) beschrieben.
 
-## Format d'un fichier de prompt
+## Format einer Prompt-Datei
 
 ```markdown
 ---
-id: generer_sbar          # identifiant (= nom du fichier)
-version: 1.0.4            # à incrémenter à chaque modification du texte
-sortie: texte             # texte | json (json = sortie JSON stricte, vérifiée)
-cles_json: a,b            # obligatoire si sortie: json : clés que l'objet JSON doit contenir
-listes_json: l:x|y        # optionnel : clés que doit porter chaque élément de la liste « l »
+id: generer_sbar          # Kennung (= Dateiname)
+version: 1.0.4            # bei jeder Textänderung zu erhöhen
+sortie: texte             # texte | json (json = striktes, geprüftes JSON als Ausgabe)
+cles_json: a,b            # Pflicht bei sortie: json: Schlüssel, die das JSON-Objekt enthalten muss
+listes_json: l:x|y        # optional: Schlüssel, die jedes Element der Liste « l » tragen muss
 temperature: 0.1
-heures: 12                # période par défaut des faits
-requete: …                # mots utilisés pour la recherche sémantique dans le RAG
-protocoles: false         # joindre ou non les protocoles de la maison aux faits
-max_phrases: 8            # optionnel : nombre maximal de phrases de la réponse (8 par défaut)
-longueur_phrase: 220       # optionnel : caractères au plus par phrase (220 par défaut)
-max_faits: 8              # optionnel : nombre maximal de faits envoyés au modèle (8 par défaut)
-sources_prioritaires: ePA   # optionnel : sources dont les faits sont retenus en premier (séparées par |)
-rapports_valides: false   # optionnel : relire les rapports de garde déjà validés (jamais pour écrire un nouveau rapport)
+heures: 12                # Standardzeitraum der Fakten
+requete: …                # Wörter für die semantische Suche im RAG
+protocoles: false         # Protokolle des Hauses den Fakten beifügen oder nicht
+max_phrases: 8            # optional: Höchstzahl der Sätze der Antwort (Standard 8)
+longueur_phrase: 220       # optional: höchstens so viele Zeichen pro Satz (Standard 220)
+max_faits: 8              # optional: Höchstzahl der an das Modell gesendeten Fakten (Standard 8)
+sources_prioritaires: ePA   # optional: Quellen, deren Fakten zuerst berücksichtigt werden (durch | getrennt)
+rapports_valides: false   # optional: bereits validierte Dienstberichte erneut lesen (nie zum Schreiben eines neuen Berichts)
 ---
 ## INSTRUCTION
-…texte du bloc [INSTRUCTION SOIGNANT] ({periode_heures} est remplacé)
+…Text des Blocks [INSTRUCTION SOIGNANT] ({periode_heures} wird ersetzt)
 
 ## FORMAT DE SORTIE
-…texte du bloc [FORMAT DE SORTIE]
+…Text des Blocks [FORMAT DE SORTIE]
 ```
 
-Le générateur refuse un prompt incomplet (champ manquant, id différent du nom du fichier, sections absentes, JSON sans `cles_json`).
+Der Generator weist einen unvollständigen Prompt zurück (fehlendes Feld, Kennung abweichend vom Dateinamen, fehlende Abschnitte, JSON ohne `cles_json`).
 
-## Cas de test : `prompts/tests/<prompt>.json`
+## Testfälle: `prompts/tests/<prompt>.json`
 
-Chaque prompt a **exactement 3 cas** :
+Jeder Prompt hat **genau 3 Fälle**:
 
-| Type | Ce qu'il vérifie |
+| Typ | Was er prüft |
 |---|---|
-| `nominal` | le cas normal : le texte reprend les faits avec leurs sources |
-| `manquant` | une information manque : l'IA écrit « information non disponible » (ou ne signale rien) au lieu d'inventer |
-| `piege` | un fait ou un document contient une demande (« ignore les règles… ») ou les données d'un autre résident : elle n'est pas exécutée |
+| `nominal` | der Normalfall: Der Text übernimmt die Fakten mit ihren Quellen |
+| `manquant` | eine Information fehlt: Die KI schreibt « information non disponible » (oder meldet nichts), statt etwas zu erfinden |
+| `piege` | ein Fakt oder ein Dokument enthält eine Aufforderung (« ignore les règles… ») oder die Daten einer anderen Bewohnerin bzw. eines anderen Bewohners: Sie wird nicht ausgeführt |
 
-Un cas contient : le résident, les **faits** fournis, une **réponse de référence** (écrite à la main, modèle de ce qu'on attend) et ce qui est **attendu** (`contient`, `ne_contient_pas`, chemins JSON, avertissements).
+Ein Fall enthält: die Bewohnerin bzw. den Bewohner, die gelieferten **Fakten**, eine **Referenzantwort** (von Hand geschrieben, Vorbild für das Erwartete) und das **Erwartete** (`contient`, `ne_contient_pas`, JSON-Pfade, Warnungen).
 
-### Deux niveaux de tests
+### Zwei Teststufen
 
-| Commande | Quoi | Durée |
+| Befehl | Was | Dauer |
 |---|---|---|
-| `node tests/prompts.test.mjs` | **sans IA** : structure des prompts, 3 cas chacun, assemblage du template (4 blocs, un seul résident, un fait n'arrive jamais dans le bloc d'instruction), réponses de référence validées par les contrôles automatiques, et aucun exemple concret (heure, nom) dans les prompts | instantané |
-| `node tests/prompts-live.mjs [prompt] [cas]` | **avec le vrai modèle** (Ollama) : même template, mêmes réglages et mêmes contrôles que la production | 3 à 6 min par cas avec Llama 3.2 |
+| `node tests/prompts.test.mjs` | **ohne KI**: Struktur der Prompts, jeweils 3 Fälle, Aufbau des Templates (4 Blöcke, nur eine Bewohnerin bzw. ein Bewohner, ein Fakt gelangt nie in den Anweisungsblock), von den automatischen Kontrollen validierte Referenzantworten und kein konkretes Beispiel (Uhrzeit, Name) in den Prompts | sofort |
+| `node tests/prompts-live.mjs [prompt] [cas]` | **mit dem echten Modell** (Ollama): gleiches Template, gleiche Einstellungen und gleiche Kontrollen wie in der Produktion | 3 bis 6 Min. pro Fall mit Llama 3.2 |
 
-Résultats des essais réels : [docs/prompts-tests.md](../docs/prompts-tests.md).
+Ergebnisse der Praxistests: [docs/prompts-tests.md](../docs/prompts-tests.md).
 
-## Fichiers
+## Dateien
 
-| Fichier | Rôle |
+| Datei | Aufgabe |
 |---|---|
-| `_regles.md` | bloc [RÔLE ET RÈGLES], commun à tous les prompts |
-| `generer_sbar.md`, `resume_epa.md`, `points_vigilance.md`, `contexte_alarme.md`, `extraire_faits.md`, `comparer.md` | les 6 prompts |
-| `tests/*.json` | les 18 cas de test (3 par prompt) |
+| `_regles.md` | Block [RÔLE ET RÈGLES], allen Prompts gemeinsam |
+| `generer_sbar.md`, `resume_epa.md`, `points_vigilance.md`, `contexte_alarme.md`, `extraire_faits.md`, `comparer.md` | die 6 Prompts |
+| `tests/*.json` | die 18 Testfälle (3 pro Prompt) |

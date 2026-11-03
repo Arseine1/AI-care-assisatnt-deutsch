@@ -1,2 +1,2 @@
-// Lettre validée – entrée du sous-workflow « journal ».
-return [{ json: $('Résultat').first().json.evenement_journal }];
+// Bestätigter Arztbrief – Eingang des Unter-Workflows « Protokoll ».
+return [{ json: $('Ergebnis').first().json.evenement_journal }];

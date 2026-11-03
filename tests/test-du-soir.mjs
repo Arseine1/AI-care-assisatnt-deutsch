@@ -1,11 +1,11 @@
-// TEST DU SOIR (jour 2) : lance 3 passages des 5 connecteurs puis vérifie
-//   1. aucun doublon (nombre de points stable, aucun couple source/référence/morceau en double, journal stable) ;
-//   2. les passages 2 et 3 n'indexent plus rien (anti-doublon par empreinte) ;
-//   3. la recherche « M. Weber chute » renvoie des morceaux d'au moins 3 sources différentes ;
-//   4. les 5 lettres KIM sont rattachées au bon résident (dont les homonymes Müller et la lettre scannée).
+// TEST AM ABEND (Tag 2): startet 3 Durchläufe der 5 Konnektoren und prüft dann
+//   1. keine Dubletten (Punktzahl stabil, kein doppeltes Tripel Quelle/Referenz/Abschnitt, Protokoll stabil);
+//   2. Die Durchläufe 2 und 3 indizieren nichts mehr (Dublettenschutz per Fingerabdruck);
+//   3. Die Suche „Herr Weber Sturz“ liefert Abschnitte aus mindestens 3 verschiedenen Quellen;
+//   4. Die 5 KIM-Schreiben sind dem richtigen Bewohner zugeordnet (darunter die Namensvettern Müller und das gescannte Schreiben).
 //
-// Prérequis : services démarrés, workflows importés (node workflows/importer.mjs), données chargées (cd data && npm run tout && npm run qdrant).
-// Usage : node tests/test-du-soir.mjs [nombre de passages]   (défaut : 3)
+// Voraussetzungen: Dienste gestartet, Workflows importiert (node workflows/importer.mjs), Daten geladen (cd data && npm run tout && npm run qdrant).
+// Aufruf: node tests/test-du-soir.mjs [Anzahl Durchläufe]   (Standard: 3)
 import { spawnSync } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -20,7 +20,7 @@ const CONNECTEURS = ['import-soins', 'import-fhir', 'import-epa', 'import-fichie
 
 let echecs = 0;
 const verifier = (condition, message) => {
-  console.log(`${condition ? 'OK   ' : 'ÉCHEC'} ${message}`);
+  console.log(`${condition ? 'OK   ' : 'FEHLER'} ${message}`);
   if (!condition) echecs++;
 };
 
@@ -33,12 +33,12 @@ async function json(url, options) {
 async function lancer(connecteur) {
   for (let essai = 0; essai < 18; essai++) {
     const res = await appelN8n(`${N8N}/${connecteur}`, { method: 'POST' });
-    if (res.status === 404) { await new Promise((r) => setTimeout(r, 10000)); continue; } // n8n démarre
-    if (!res.ok) throw new Error(`${connecteur} : HTTP ${res.status} ${(await res.text()).slice(0, 200)}`);
+    if (res.status === 404) { await new Promise((r) => setTimeout(r, 10000)); continue; } // n8n startet
+    if (!res.ok) throw new Error(`${connecteur}: HTTP ${res.status} ${(await res.text()).slice(0, 200)}`);
     const corps = await res.json();
     return Array.isArray(corps) ? corps[0] : corps;
   }
-  throw new Error(`${connecteur} : webhook introuvable (workflows importés ?)`);
+  throw new Error(`${connecteur}: Webhook nicht gefunden (Workflows importiert?)`);
 }
 
 const points = async (collection) => (await json(`${QDRANT}/collections/${collection}`)).result.points_count;
@@ -67,7 +67,7 @@ function journal() {
   return { total, distincts };
 }
 
-console.log(`Test du soir : ${PASSAGES} passages des ${CONNECTEURS.length} connecteurs\n`);
+console.log(`Test am Abend: ${PASSAGES} Durchläufe der ${CONNECTEURS.length} Konnektoren\n`);
 const bilans = [];
 for (let p = 1; p <= PASSAGES; p++) {
   let nouveaux = 0;
@@ -79,35 +79,35 @@ for (let p = 1; p <= PASSAGES; p++) {
   }
   const b = { passage: p, nouveaux, ignores, patients: await points('patients'), connaissances: await points('connaissances'), a_verifier: await points('a_verifier'), journal: journal() };
   bilans.push(b);
-  console.log(`passage ${p} : nouveaux=${b.nouveaux} ignorés=${b.ignores} | points patients=${b.patients} connaissances=${b.connaissances} a_verifier=${b.a_verifier} | journal=${b.journal.total} lignes`);
+  console.log(`Durchlauf ${p}: neu=${b.nouveaux} ignoriert=${b.ignores} | Punkte patients=${b.patients} connaissances=${b.connaissances} a_verifier=${b.a_verifier} | Protokoll=${b.journal.total} Zeilen`);
 }
 
 console.log('');
 const dernier = bilans.at(-1);
 const premier = bilans[0];
-verifier(dernier.patients === premier.patients && dernier.connaissances === premier.connaissances, `nombre de points identique entre le passage 1 et le passage ${PASSAGES}`);
-verifier(bilans.slice(1).every((b) => b.nouveaux === 0), `les passages 2 à ${PASSAGES} n'indexent plus rien (anti-doublon par empreinte)`);
-verifier(dernier.journal.total === premier.journal.total && dernier.journal.total === dernier.journal.distincts, 'le journal des imports ne grossit plus et n\'a aucune empreinte en double');
+verifier(dernier.patients === premier.patients && dernier.connaissances === premier.connaissances, `gleiche Punktzahl zwischen Durchlauf 1 und Durchlauf ${PASSAGES}`);
+verifier(bilans.slice(1).every((b) => b.nouveaux === 0), `die Durchläufe 2 bis ${PASSAGES} indizieren nichts mehr (Dublettenschutz per Fingerabdruck)`);
+verifier(dernier.journal.total === premier.journal.total && dernier.journal.total === dernier.journal.distincts, 'das Importprotokoll wächst nicht mehr und hat keinen doppelten Fingerabdruck');
 
 for (const c of ['patients', 'connaissances', 'a_verifier']) {
   const pts = await tousLesPoints(c);
   const cles = pts.map((x) => `${x.payload.source}|${x.payload.source_ref}|${x.payload.chunk_index}`);
-  verifier(new Set(cles).size === cles.length, `${c} : aucun doublon (${cles.length} points, ${new Set(cles).size} morceaux distincts)`);
+  verifier(new Set(cles).size === cles.length, `${c}: keine Dubletten (${cles.length} Punkte, ${new Set(cles).size} verschiedene Abschnitte)`);
 }
 
-// Recherche « M. Weber chute » : vecteur de la requête (préfixe nomic search_query), puis recherche dans patients et connaissances.
-const { embeddings } = await json(`${OLLAMA}/api/embed`, { method: 'POST', body: JSON.stringify({ model: 'nomic-embed-text', input: 'search_query: M. Weber chute' }) });
+// Suche „Herr Weber Sturz“: Vektor der Anfrage (Präfix nomic search_query), dann Suche in patients und connaissances.
+const { embeddings } = await json(`${OLLAMA}/api/embed`, { method: 'POST', body: JSON.stringify({ model: 'nomic-embed-text', input: 'search_query: Herr Weber Sturz' }) });
 const cherche = async (collection, limit) =>
   (await json(`${QDRANT}/collections/${collection}/points/search`, { method: 'POST', body: JSON.stringify({ vector: embeddings[0], limit, with_payload: true }) })).result;
 const trouves = [...(await cherche('patients', 8)), ...(await cherche('connaissances', 2))];
-console.log('\nRecherche « M. Weber chute » :');
+console.log('\nSuche „Herr Weber Sturz“:');
 for (const t of trouves) console.log(`  ${t.score.toFixed(3)}  [${t.payload.source_label}] ${t.payload.patient_id ?? '—'}  ${t.payload.titre}`);
 const sources = [...new Set(trouves.map((t) => t.payload.source))];
-verifier(sources.length >= 3, `la recherche renvoie des morceaux d'au moins 3 sources différentes (${sources.join(', ')})`);
-verifier(trouves.some((t) => t.payload.patient_id === 'PAT-003' && /chute/i.test(t.payload.texte)), 'un morceau de M. Weber (PAT-003) parle de la chute');
+verifier(sources.length >= 3, `die Suche liefert Abschnitte aus mindestens 3 verschiedenen Quellen (${sources.join(', ')})`);
+verifier(trouves.some((t) => t.payload.patient_id === 'PAT-003' && /sturz/i.test(t.payload.texte)), 'ein Abschnitt von Herrn Weber (PAT-003) handelt vom Sturz');
 
 
-// Lettres KIM : rattachement attendu (nom ET date de naissance ; l'homonyme Müller est celui né le 01.12.1947).
+// KIM-Schreiben: erwartete Zuordnung (Name UND Geburtsdatum; der Namensvetter Müller ist der am 01.12.1947 geborene).
 const lettres = (
   await json(`${QDRANT}/collections/a_verifier/points/scroll`, {
     method: 'POST',
@@ -121,10 +121,10 @@ const attendu = {
   'arztbrief-fischer.pdf': 'PAT-007',
   'arztbrief-wagner-scan.pdf': 'PAT-005',
 };
-verifier(lettres.length === 5, `a_verifier contient les 5 lettres KIM (${lettres.length})`);
+verifier(lettres.length === 5, `a_verifier enthält die 5 KIM-Schreiben (${lettres.length})`);
 for (const [fichier, patient] of Object.entries(attendu)) {
   const l = lettres.find((x) => x.payload.source_ref.endsWith(`/${fichier}`));
-  verifier(l?.payload.patient_id === patient && l.payload.statut === 'a_verifier', `${fichier} rattachée à ${patient} (statut à vérifier)`);
+  verifier(l?.payload.patient_id === patient && l.payload.statut === 'a_verifier', `${fichier} dem Bewohner ${patient} zugeordnet (Status zu prüfen)`);
 }
-console.log(echecs === 0 ? '\nTEST DU SOIR : RÉUSSI' : `\nTEST DU SOIR : ${echecs} échec(s)`);
+console.log(echecs === 0 ? '\nTEST AM ABEND: BESTANDEN' : `\nTEST AM ABEND: ${echecs} Fehler`);
 process.exit(echecs === 0 ? 0 : 1);

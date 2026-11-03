@@ -26,7 +26,7 @@ const POINTS = [
   { cle: 'local', icone: 'local' },
 ];
 
-// Page de connexion : identifiant + code PIN. Le PIN n'est jamais affiché (sauf demande) ni conservé par l'interface ; n8n le compare à son empreinte.
+// Anmeldeseite: Kennung + PIN-Code. Die PIN wird nie angezeigt (außer auf Wunsch) und von der Oberfläche nicht gespeichert; n8n vergleicht sie mit ihrem Hash.
 export default function Connexion({ onConnecte, motifInitial = null }) {
   const [identifiant, setIdentifiant] = useState('');
   const [pin, setPin] = useState('');

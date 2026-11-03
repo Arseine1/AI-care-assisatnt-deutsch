@@ -1,19 +1,19 @@
-# Protocole : anti-inflammatoires (AINS) et insuffisance rénale
+# Protokoll: nichtsteroidale Antirheumatika (NSAR) und Niereninsuffizienz
 
-*Document fictif de démonstration – Haus Sonnenhof.*
+*Fiktives Demonstrationsdokument – Haus Sonnenhof.*
 
-## Principe
-Les **AINS** (ibuprofène, diclofénac, naproxène, kétoprofène…) peuvent aggraver rapidement une insuffisance rénale et favoriser l'hyperkaliémie et la rétention d'eau.
+## Grundsatz
+**NSAR** (Ibuprofen, Diclofenac, Naproxen, Ketoprofen …) können eine Niereninsuffizienz rasch verschlechtern und fördern Hyperkaliämie und Wassereinlagerungen.
 
-## Règle
-- Chez un résident avec une **insuffisance rénale chronique de stade 3b, 4 ou 5** (DFG inférieur à 45 ml/min), les AINS sont **à éviter, voire contre-indiqués**.
-- Toute prescription d'AINS chez un résident en insuffisance rénale est **signalée au médecin avant l'administration**.
-- Alternatives à discuter avec le médecin : paracétamol (dose maximale 3 g/jour), mesures non médicamenteuses, avis spécialisé.
+## Regel
+- Bei Bewohnern mit **chronischer Niereninsuffizienz Stadium 3b, 4 oder 5** (GFR unter 45 ml/min) sind NSAR **zu vermeiden, gegebenenfalls kontraindiziert**.
+- Jede Verordnung von NSAR bei einem Bewohner mit Niereninsuffizienz wird **vor der Verabreichung dem Arzt gemeldet**.
+- Mit dem Arzt zu besprechende Alternativen: Paracetamol (Höchstdosis 3 g/Tag), nichtmedikamentöse Maßnahmen, fachärztliche Meinung.
 
-## Surveillance
-- Diurèse, poids, tension artérielle, œdèmes.
-- Bilan rénal et potassium selon la prescription (créatinine, DFG).
-- Vigilance accrue en cas de déshydratation, de fièvre ou de vomissements.
+## Überwachung
+- Diurese, Gewicht, Blutdruck, Ödeme.
+- Nierenwerte und Kalium nach ärztlicher Verordnung (Kreatinin, GFR).
+- Erhöhte Wachsamkeit bei Dehydratation, Fieber oder Erbrechen.
 
-## Rappel
-Le plan de soins de chaque résident concerné indique « AINS contre-indiqués ».
+## Erinnerung
+Der Pflegeplan jedes betroffenen Bewohners enthält den Vermerk „NSAR kontraindiziert“.

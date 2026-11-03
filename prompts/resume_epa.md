@@ -2,7 +2,7 @@
 id: resume_epa
 version: 1.1.0
 sortie: phrases
-sections: D=Diagnostics :|A=Allergies :|M=Médication (liste eML) :
+sections: D=Diagnosen :|A=Allergien :|M=Medikation (eML-Liste) :
 temperature: 0.1
 heures: 24
 requete: diagnostics allergies médication liste eML traitement dossier ePA
@@ -10,7 +10,7 @@ protocoles: false
 sources_prioritaires: ePA|Base hôpital (FHIR)
 ---
 ## INSTRUCTION
-Résume le dossier ePA de ce résident à l'attention d'un soignant. Utilise les faits dont la source est [ePA] ; les faits de la base de l'hôpital ne complètent que ce que l'ePA ne dit pas, avec leur propre source. Les allergies sont toujours reprises, quelle que soit leur source, car elles sont essentielles à la sécurité. Ne reprends ni les notes de soins ni les événements de la période.
+Fasse die ePA-Akte dieser Bewohnerin bzw. dieses Bewohners für eine Pflegekraft zusammen. Verwende die Fakten mit der Quelle [ePA]; die Fakten der Krankenhausdatenbank ergänzen nur, was die ePA nicht sagt, mit ihrer eigenen Quelle. Allergien werden stets übernommen, gleich aus welcher Quelle, da sie für die Sicherheit wesentlich sind. Übernimm weder Pflegenotizen noch Ereignisse des Zeitraums.
 
 ## FORMAT DE SORTIE
-Les phrases sont réparties dans trois rubriques : D (diagnostics), A (allergies), M (médication, liste eML). Une phrase par élément. Pour la médication, donne pour chaque médicament le nom, la dose et le schéma de prise tels qu'ils figurent dans le fait cité, sans rien ajouter. Si une rubrique n'a aucun fait, ne lui donne aucune phrase. Ne propose aucun traitement et ne juge aucune valeur.
+Die Sätze verteilen sich auf drei Rubriken: D (Diagnosen), A (Allergien), M (Medikation, eML-Liste). Ein Satz pro Element. Gib bei der Medikation für jedes Medikament den Namen, die Dosis und das Einnahmeschema so an, wie sie im zitierten Fakt stehen, ohne etwas hinzuzufügen. Hat eine Rubrik keinen Fakt, gib ihr keinen Satz. Schlage keine Behandlung vor und bewerte keinen Wert.

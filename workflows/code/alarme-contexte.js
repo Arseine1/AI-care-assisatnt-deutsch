@@ -1,5 +1,5 @@
-// Alarme de capteur – contexte de l'assistant IA prêt à être affiché (texte assemblé par le code, phrases non sourcées retirées).
-const a = $('Créer l\'alarme').first().json;
+// Sensoralarm – Kontext des KI-Assistenten, anzeigebereit (vom Code zusammengesetzter Text, Sätze ohne Quelle entfernt).
+const a = $('Alarm erstellen').first().json;
 const r = $input.first().json ?? {};
 const contexte = r.brouillon_id
   ? {

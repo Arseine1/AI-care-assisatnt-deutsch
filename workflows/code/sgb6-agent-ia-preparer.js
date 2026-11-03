@@ -1,7 +1,7 @@
-// Cotisations retraite, agent – étape 2 (lecture par l'IA) : préparation de l'appel à llama3.2 via Ollama.
-// Température 0, sortie JSON imposée par un schéma fixe. Le questionnaire est une DONNÉE entre repères : la consigne ne change jamais.
+// Rentenbeiträge, Agent – Schritt 2 (Lesen durch die KI): Vorbereitung des Aufrufs von llama3.2 über Ollama.
+// Temperatur 0, JSON-Ausgabe durch ein festes Schema vorgegeben. Der Fragebogen ist ein DATENSATZ zwischen Markierungen: Die Anweisung ändert sich nie.
 const MODELE = __MODELE__;
-const texte = $('Dossier').first().json.questionnaire;
+const texte = $('Akte').first().json.questionnaire;
 const body = {
   model: MODELE,
   prompt: consigneLectureIA(texte),

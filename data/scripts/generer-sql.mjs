@@ -1,6 +1,6 @@
-// Génère data/sql/02_seed.sql à partir de data/source/residents.mjs.
-// Les horodatages sont écrits en SQL relatif (now() - interval) : rejouer le fichier
-// remet les « 12 dernières heures » à jour.
+// Erzeugt data/sql/02_seed.sql aus data/source/residents.mjs.
+// Die Zeitstempel werden als relatives SQL geschrieben (now() - interval): Beim erneuten Abspielen der Datei
+// werden die „letzten 12 Stunden“ aktualisiert.
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -12,7 +12,7 @@ const q = (s) => `'${String(s).replaceAll("'", "''")}'`;
 const tableau = (liste) => (liste.length ? `ARRAY[${liste.map(q).join(', ')}]::text[]` : `'{}'::text[]`);
 const horloge = (min) => `to_char(now() - interval '${min} minutes', 'HH24"h"MI')`;
 
-// Texte avec {{h}} / {{h:N}} -> concaténation SQL avec l'heure calculée.
+// Text mit {{h}} / {{h:N}} -> SQL-Verkettung mit der berechneten Uhrzeit.
 function texteSql(texte, minutesNote) {
   const parts = texte.split(/(\{\{h(?::\d+)?\}\})/);
   return parts
@@ -25,8 +25,8 @@ function texteSql(texte, minutesNote) {
 }
 
 const sql = [];
-sql.push(`-- GÉNÉRÉ par data/scripts/generer-sql.mjs : ne pas modifier à la main.
--- Données 100 % fictives. Rejouable : remplace les données de test et rafraîchit les horodatages.
+sql.push(`-- ERZEUGT von data/scripts/generer-sql.mjs: nicht von Hand ändern.
+-- 100 % fiktive Daten. Wiederholbar: ersetzt die Testdaten und aktualisiert die Zeitstempel.
 BEGIN;
 TRUNCATE soins.residents RESTART IDENTITY CASCADE;
 `);
@@ -59,4 +59,4 @@ sql.push('COMMIT;\n');
 
 mkdirSync(join(racine, 'sql'), { recursive: true });
 writeFileSync(join(racine, 'sql', '02_seed.sql'), sql.join('\n'), 'utf8');
-console.log(`02_seed.sql généré : ${residents.length} résidents.`);
+console.log(`02_seed.sql erzeugt: ${residents.length} Bewohner.`);

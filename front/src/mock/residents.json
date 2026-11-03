@@ -2,7 +2,7 @@
   {
     "chambre": "10",
     "etage": 1,
-    "civilite": "Mme",
+    "civilite": "Frau",
     "prenom": "Greta",
     "nom": "Schulz",
     "naissance": "1938-03-14"
@@ -10,7 +10,7 @@
   {
     "chambre": "11",
     "etage": 1,
-    "civilite": "M.",
+    "civilite": "Herr",
     "prenom": "Heinz",
     "nom": "Müller",
     "naissance": "1934-05-09"
@@ -18,7 +18,7 @@
   {
     "chambre": "12",
     "etage": 1,
-    "civilite": "M.",
+    "civilite": "Herr",
     "prenom": "Hans",
     "nom": "Weber",
     "naissance": "1941-11-23"
@@ -26,7 +26,7 @@
   {
     "chambre": "14",
     "etage": 1,
-    "civilite": "M.",
+    "civilite": "Herr",
     "prenom": "Karl",
     "nom": "Becker",
     "naissance": "1939-01-27"
@@ -34,7 +34,7 @@
   {
     "chambre": "20",
     "etage": 2,
-    "civilite": "M.",
+    "civilite": "Herr",
     "prenom": "Otto",
     "nom": "Wagner",
     "naissance": "1936-08-05"
@@ -42,7 +42,7 @@
   {
     "chambre": "21",
     "etage": 2,
-    "civilite": "M.",
+    "civilite": "Herr",
     "prenom": "Heinz",
     "nom": "Müller",
     "naissance": "1947-12-01"
@@ -50,7 +50,7 @@
   {
     "chambre": "22",
     "etage": 2,
-    "civilite": "Mme",
+    "civilite": "Frau",
     "prenom": "Elisabeth",
     "nom": "Fischer",
     "naissance": "1943-04-19"
@@ -58,7 +58,7 @@
   {
     "chambre": "23",
     "etage": 2,
-    "civilite": "Mme",
+    "civilite": "Frau",
     "prenom": "Lotte",
     "nom": "Hoffmann",
     "naissance": "1940-10-30"

@@ -1,6 +1,6 @@
-// Aligne la liste des résidents de l'interface (front/src/mock/residents.json)
-// sur les données de test, pour que le sélecteur de chambre affiche les mêmes résidents.
-// Les deux homonymes « Heinz Müller » sont distingués par la date de naissance.
+// Gleicht die Bewohnerliste der Oberfläche (front/src/mock/residents.json)
+// an die Testdaten an, damit die Zimmerauswahl dieselben Bewohner anzeigt.
+// Die beiden Namensvettern „Heinz Müller“ werden durch das Geburtsdatum unterschieden.
 import { writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -20,4 +20,4 @@ const liste = residents
   .sort((a, b) => Number(a.chambre) - Number(b.chambre));
 
 writeFileSync(join(racine, 'front', 'src', 'mock', 'residents.json'), JSON.stringify(liste, null, 2) + '\n', 'utf8');
-console.log(`front/src/mock/residents.json : ${liste.length} résidents.`);
+console.log(`front/src/mock/residents.json: ${liste.length} Bewohner.`);

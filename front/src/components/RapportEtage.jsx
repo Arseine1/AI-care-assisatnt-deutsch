@@ -7,12 +7,12 @@ import { ApresValidation } from './Reponse.jsx';
 
 const INTERVALLE_MS = 4000;
 
-// Rapport de garde de tout un étage : n8n prépare un SBAR par résident (l'un après l'autre) ; chaque rapport est relu,
-// éventuellement corrigé, puis l'étage est validé d'un coup. Rien n'est enregistré avant ce clic.
+// Übergabebericht für ein ganzes Stockwerk: n8n erstellt pro Bewohner einen SBAR (nacheinander); jeder Bericht wird gelesen,
+// gegebenenfalls korrigiert, danach wird das Stockwerk in einem Schritt bestätigt. Vor diesem Klick wird nichts gespeichert.
 export default function RapportEtage({ etage, residents, tacheExistante = null }) {
   const [tache, setTache] = useState(null);
   const [avancement, setAvancement] = useState(null);
-  const [textes, setTextes] = useState({}); // corrections du soignant, par brouillon
+  const [textes, setTextes] = useState({}); // Korrekturen der Pflegekraft, pro Entwurf
   const [erreur, setErreur] = useState(false);
   const [validation, setValidation] = useState(null); // { heure, resultat }
   const [erreurValidation, setErreurValidation] = useState(false);

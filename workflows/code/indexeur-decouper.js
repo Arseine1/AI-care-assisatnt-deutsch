@@ -1,24 +1,24 @@
-// Indexeur – étape 1 : découper chaque document en morceaux de 300 à 500 mots et calculer les identifiants.
+// Indexer – Schritt 1: Jedes Dokument in Abschnitte von 300 bis 500 Wörtern zerlegen und die Kennungen berechnen.
 //
-// Entrée (un élément par document) :
+// Eingabe (ein Element je Dokument):
 //   { collection, texte, titre, source, source_label, source_ref, type, date,
 //     patient_id?, chambre?, patient_label?, theme? }
-// Sortie (un élément par morceau) : { id, collection, embedText, payload }
+// Ausgabe (ein Element je Abschnitt): { id, collection, embedText, payload }
 //
-// - id        : UUID STABLE = hash de (source, source_ref, numéro de morceau). Ré-importer le même document
-//               écrase le même point au lieu de créer un doublon.
-// - empreinte : SHA-256 du contenu (texte + date + patient + type). Si elle change, le morceau est mis à jour.
+// - id        : STABILE UUID = Hash aus (source, source_ref, Abschnittsnummer). Wird dasselbe Dokument erneut importiert,
+//               überschreibt es denselben Punkt, statt ein Duplikat anzulegen.
+// - empreinte : SHA-256 des Inhalts (Text + Datum + Patient + Typ). Ändert er sich, wird der Abschnitt aktualisiert.
 const crypto = require('crypto');
 
-const MIN = 300; // un morceau vise au moins 300 mots…
-const CIBLE = 400; // …on coupe dès qu'on atteint ~400…
-const MAX = 500; // …et jamais au-delà de 500.
+const MIN = 300; // ein Abschnitt soll mindestens 300 Wörter haben …
+const CIBLE = 400; // … es wird geteilt, sobald ~400 erreicht sind …
+const MAX = 500; // … und nie über 500 hinaus.
 
 const sha256 = (s) => crypto.createHash('sha256').update(s, 'utf8').digest('hex');
 const nbMots = (s) => s.trim().split(/\s+/).filter(Boolean).length;
 const uuid = (h) => `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20, 32)}`;
 
-// Phrases (ou lignes) ; une phrase de plus de MAX mots est coupée de force.
+// Sätze (oder Zeilen); ein Satz mit mehr als MAX Wörtern wird zwangsweise geteilt.
 function phrases(texte) {
   const brut = texte.replace(/\r/g, '').split(/(?<=[.!?])\s+|\n+/).map((p) => p.trim()).filter(Boolean);
   const res = [];
@@ -31,7 +31,7 @@ function phrases(texte) {
 }
 
 function decouper(texte) {
-  if (nbMots(texte) <= MAX) return [texte.trim()]; // un court document reste entier
+  if (nbMots(texte) <= MAX) return [texte.trim()]; // ein kurzes Dokument bleibt ganz
   const morceaux = [];
   let courant = [];
   let n = 0;
@@ -48,7 +48,7 @@ function decouper(texte) {
   if (courant.length) {
     const reste = courant.join('\n');
     const dernier = morceaux[morceaux.length - 1];
-    // un dernier morceau trop court est rattaché au précédent si la limite le permet
+    // ein zu kurzer letzter Abschnitt wird dem vorherigen angefügt, wenn die Grenze es erlaubt
     if (n < MIN && dernier && nbMots(dernier) + n <= MAX) morceaux[morceaux.length - 1] = `${dernier}\n${reste}`;
     else morceaux.push(reste);
   }
@@ -68,7 +68,7 @@ for (const { json: d } of $input.all()) {
       json: {
         id,
         collection: d.collection,
-        // « search_document: » est le préfixe attendu par nomic-embed-text ; le nom du résident aide la recherche.
+        // „search_document:“ ist das von nomic-embed-text erwartete Präfix; der Name des Bewohners hilft bei der Suche.
         embedText: `search_document: ${contexte ? contexte + '\n' : ''}${morceau}`,
         payload: {
           ...(d.patient_id ? { patient_id: d.patient_id } : {}),

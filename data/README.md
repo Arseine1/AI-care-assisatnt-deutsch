@@ -1,69 +1,69 @@
-# Données de test (100 % fictives)
+# Testdaten (100 % fiktiv)
 
-Maison de soins fictive « Haus Sonnenhof » : 8 résidents, chambres 10–14 (étage 1) et 20–23 (étage 2).
-Aucun nom, aucune valeur ni aucun document ne provient de personnes réelles.
+Fiktives Pflegeheim „Haus Sonnenhof“: 8 Bewohner, Zimmer 10–14 (Stockwerk 1) und 20–23 (Stockwerk 2).
+Kein Name, kein Wert und kein Dokument stammt von realen Personen.
 
-## Source unique
+## Einzige Quelle
 
-`source/residents.mjs` est la **seule** source des résidents (diagnostics, allergies, médication, régime, risques, notes, constantes, analyses). Le SQL, le bundle FHIR et la liste du front en sont **générés** : on ne les modifie pas à la main.
-`source/lettres.mjs` décrit les 5 lettres de médecin.
+`source/residents.mjs` ist die **einzige** Quelle der Bewohner (Diagnosen, Allergien, Medikation, Kost, Risiken, Notizen, Vitalwerte, Laborwerte). SQL, FHIR-Bundle und die Liste des Frontends werden daraus **erzeugt**: Man ändert sie nicht von Hand.
+`source/lettres.mjs` beschreibt die 5 Arztbriefe.
 
-## Scénarios prévus exprès
+## Absichtlich vorgesehene Szenarien
 
-| Résident | Scénario | Où le trouver |
+| Bewohner | Szenario | Wo zu finden |
 |---|---|---|
-| M. Hans Weber, ch. 12 | Allergie à la **pénicilline** ; **chute cette nuit** (il y a 5 h) ; lettre prescrivant de l'**amoxicilline** → contradiction | notes de soins, FHIR, lettre KIM |
-| Mme Greta Schulz, ch. 10 | Sous **Marcumar** ; lettre prescrivant l'**apixaban** sans mentionner le Marcumar → double anticoagulation | plan de médication, lettre KIM |
-| M. Otto Wagner, ch. 20 | **Insuffisance rénale stade 4** (DFG 22) ; lettre **scannée** (image) prescrivant l'**ibuprofène** → contradiction rénale, OCR obligatoire | notes, FHIR, lettre KIM scannée |
-| M. Karl Becker, ch. 14 | **Hypoglycémies nocturnes** (52 mg/dl cette nuit, 3 en 5 jours) ; compte rendu scanné du diabétologue | notes, signes vitaux, `fichiers/` |
-| M. Heinz Müller, ch. 11 (né le 09.05.1934) et ch. 21 (né le 01.12.1947) | **Homonymes**. La lettre « Herr Müller » ne se rattache au bon résident que par la **date de naissance** : le Müller de la chambre 21 est allergique aux sulfamides, la lettre prescrit du cotrimoxazole | lettre KIM |
-| Mme Elisabeth Fischer, ch. 22 | Lettre **sans contradiction** : sert à vérifier l'absence de fausse alerte | lettre KIM |
-| Mme Lotte Hoffmann, ch. 23 | Escarre stade 1, dénutrition, allergie au latex | notes, FHIR |
+| Herr Hans Weber, Zi. 12 | Allergie gegen **Penicillin**; **Sturz heute Nacht** (vor 5 h); Brief mit Verordnung von **Amoxicillin** → Widerspruch | Pflegenotizen, FHIR, KIM-Brief |
+| Frau Greta Schulz, Zi. 10 | Unter **Marcumar**; Brief mit Verordnung von **Apixaban** ohne Erwähnung von Marcumar → doppelte Antikoagulation | Medikationsplan, KIM-Brief |
+| Herr Otto Wagner, Zi. 20 | **Niereninsuffizienz Stadium 4** (GFR 22); **gescannter** Brief (Bild) mit Verordnung von **Ibuprofen** → renaler Widerspruch, OCR erforderlich | Notizen, FHIR, gescannter KIM-Brief |
+| Herr Karl Becker, Zi. 14 | **Nächtliche Hypoglykämien** (52 mg/dl heute Nacht, 3 in 5 Tagen); gescannter Bericht des Diabetologen | Notizen, Vitalwerte, `fichiers/` |
+| Herr Heinz Müller, Zi. 11 (geb. 09.05.1934) und Zi. 21 (geb. 01.12.1947) | **Namensvettern**. Der Brief „Herr Müller“ lässt sich nur über das **Geburtsdatum** dem richtigen Bewohner zuordnen: Der Müller in Zimmer 21 ist gegen Sulfonamide allergisch, der Brief verordnet Cotrimoxazol | KIM-Brief |
+| Frau Elisabeth Fischer, Zi. 22 | Brief **ohne Widerspruch**: dient dazu, das Ausbleiben von Fehlalarmen zu prüfen | KIM-Brief |
+| Frau Lotte Hoffmann, Zi. 23 | Dekubitus Stadium 1, Mangelernährung, Latexallergie | Notizen, FHIR |
 
-## Horodatages relatifs
+## Relative Zeitstempel
 
-Les notes et constantes sont enregistrées « il y a N minutes » (`now() - interval …`) : rejouer le chargement remet les **12 dernières heures** à jour. Quelques notes de plusieurs jours servent à tester le filtre.
-L'heure affichée dans le texte est calculée (ex. « Chute constatée à 04h41 ») : elle correspond toujours à l'horodatage de la note (fuseau Europe/Berlin).
+Die Notizen und Vitalwerte werden als „vor N Minuten“ gespeichert (`now() - interval …`): Ein erneutes Laden aktualisiert die **letzten 12 Stunden**. Einige mehrere Tage alte Notizen dienen zum Testen des Filters.
+Die im Text angezeigte Uhrzeit wird berechnet (z. B. „Sturz festgestellt um 04h41“): Sie entspricht immer dem Zeitstempel der Notiz (Zeitzone Europe/Berlin).
 
-## Commandes
+## Befehle
 
-Prérequis : `docker compose up -d` dans `compose/`, puis `npm install` dans `data/`.
+Voraussetzungen: `docker compose up -d` in `compose/`, dann `npm install` in `data/`.
 
 ```bash
 cd data
 ```
 ```bash
-npm run generer    # régénère data/sql/02_seed.sql et front/src/mock/residents.json
+npm run generer    # erzeugt data/sql/02_seed.sql und front/src/mock/residents.json neu
 ```
 ```bash
-npm run postgres   # logiciel de soins fictif : schéma « soins » + données (rejouable)
+npm run postgres   # fiktive Pflegesoftware: Schema „soins“ + Daten (wiederholbar)
 ```
 ```bash
-npm run fhir       # base de l'hôpital : bundle FHIR + PUT dans HAPI (idempotent)
+npm run fhir       # Krankenhausdatenbank: FHIR-Bundle + PUT in HAPI (idempotent)
 ```
 ```bash
-npm run kim        # boîte KIM simulée : 5 lettres PDF dans Mailpit (sans doublon)
+npm run kim        # simuliertes KIM-Postfach: 5 PDF-Briefe in Mailpit (ohne Duplikate)
 ```
 ```bash
-npm run lettres    # régénère les PDF des lettres (data/lettres/)
+npm run lettres    # erzeugt die PDFs der Briefe neu (data/lettres/)
 ```
 ```bash
-npm run scan       # régénère le compte rendu scanné (data/fichiers/)
+npm run scan       # erzeugt den gescannten Bericht neu (data/fichiers/)
 ```
 
-`npm run epa` charge l'eML et les diagnostics des résidents dans les mocks ePA de gematik (voir README racine).
-`npm run qdrant` crée les 3 collections du RAG (patients, connaissances, a_verifier ; 768 dimensions, Cosine) : rejouable, sans suppression.
+`npm run epa` lädt die eML und die Diagnosen der Bewohner in die ePA-Mocks von gematik (siehe README im Stammverzeichnis).
+`npm run qdrant` erstellt die 3 Collections des RAG (patients, connaissances, a_verifier; 768 Dimensionen, Cosine): wiederholbar, ohne Löschen.
 
-`npm run tout` enchaîne generer, postgres, fhir, kim et epa.
+`npm run tout` führt generer, postgres, fhir, kim und epa nacheinander aus.
 
-## Contenu
+## Inhalt
 
-| Dossier | Contenu |
+| Ordner | Inhalt |
 |---|---|
-| `sql/` | `01_schema.sql` (schéma `soins`), `02_seed.sql` (généré) |
-| `fhir/` | `bundle.json` (généré : Patient, Condition, AllergyIntolerance, MedicationStatement, Observation) |
-| `lettres/` | 4 lettres PDF (texte) + 1 lettre scannée (image), en allemand |
-| `fichiers/` | 5 protocoles (`.md`) + 1 compte rendu scanné (`.pdf` image) |
-| `scripts/` | générateurs et chargeurs (Node, sans dépendance native) |
+| `sql/` | `01_schema.sql` (Schema `soins`), `02_seed.sql` (erzeugt) |
+| `fhir/` | `bundle.json` (erzeugt: Patient, Condition, AllergyIntolerance, MedicationStatement, Observation) |
+| `lettres/` | 4 PDF-Briefe (Text) + 1 gescannter Brief (Bild), auf Deutsch |
+| `fichiers/` | 5 Protokolle (`.md`) + 1 gescannter Bericht (`.pdf`, Bild) |
+| `scripts/` | Generatoren und Lader (Node, ohne native Abhängigkeit) |
 
-Les scans sont dessinés avec une police système (Arial sous Windows, DejaVu sous Linux). Le texte des PDF « scannés » n'est pas sélectionnable : il faut un OCR pour le lire.
+Die Scans werden mit einer Systemschrift gezeichnet (Arial unter Windows, DejaVu unter Linux). Der Text der „gescannten“ PDFs ist nicht auswählbar: Zum Lesen ist eine OCR nötig.

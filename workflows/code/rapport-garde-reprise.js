@@ -1,2 +1,2 @@
-// Rapport de garde d'un résident – la tâche est bien en cours : on reprend l'entrée d'origine (patient, prompt fixé, tâche).
-return [{ json: $('Entrée').first().json }];
+// Dienstbericht eines Bewohners – die Aufgabe läuft: Der ursprüngliche Eingang wird übernommen (Patient, festgelegter Prompt, Aufgabe).
+return [{ json: $('Eingang').first().json }];

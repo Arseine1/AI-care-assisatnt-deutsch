@@ -1,6 +1,6 @@
 {
   "id": "aicarerepriseta01",
-  "name": "AI-Care – Reprise des tâches (démarrage de n8n et veilleur)",
+  "name": "AI-Care – Wiederaufnahme der Aufgaben (n8n-Start und Wächter)",
   "active": false,
   "nodes": [
     {
@@ -10,7 +10,7 @@
         ]
       },
       "id": "a1c3e000-0246-4000-8000-000000000246",
-      "name": "Démarrage de n8n",
+      "name": "n8n-Start",
       "type": "n8n-nodes-base.n8nTrigger",
       "typeVersion": 1,
       "position": [
@@ -27,7 +27,7 @@
         }
       },
       "id": "a1c3e000-0247-4000-8000-000000000247",
-      "name": "Reprise au démarrage",
+      "name": "Wiederaufnahme beim Start",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
@@ -55,7 +55,7 @@
         }
       },
       "id": "a1c3e000-0248-4000-8000-000000000248",
-      "name": "Toutes les 5 minutes",
+      "name": "Alle 5 Minuten",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
       "position": [
@@ -66,7 +66,7 @@
     {
       "parameters": {},
       "id": "a1c3e000-0249-4000-8000-000000000249",
-      "name": "Démarrage manuel",
+      "name": "Manueller Start",
       "type": "n8n-nodes-base.manualTrigger",
       "typeVersion": 1,
       "position": [
@@ -83,7 +83,7 @@
         }
       },
       "id": "a1c3e000-0250-4000-8000-000000000250",
-      "name": "Contextes d'alarme (démarrage)",
+      "name": "Alarmkontexte (Start)",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
@@ -108,7 +108,7 @@
         }
       },
       "id": "a1c3e000-0251-4000-8000-000000000251",
-      "name": "Contextes d'alarme (veilleur)",
+      "name": "Alarmkontexte (Wächter)",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
@@ -133,7 +133,7 @@
         }
       },
       "id": "a1c3e000-0252-4000-8000-000000000252",
-      "name": "Tâches sans signe de vie",
+      "name": "Aufgaben ohne Lebenszeichen",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
@@ -151,55 +151,55 @@
     }
   ],
   "connections": {
-    "Démarrage de n8n": {
+    "n8n-Start": {
       "main": [
         [
           {
-            "node": "Reprise au démarrage",
+            "node": "Wiederaufnahme beim Start",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Reprise au démarrage": {
+    "Wiederaufnahme beim Start": {
       "main": [
         [
           {
-            "node": "Contextes d'alarme (démarrage)",
+            "node": "Alarmkontexte (Start)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Toutes les 5 minutes": {
+    "Alle 5 Minuten": {
       "main": [
         [
           {
-            "node": "Tâches sans signe de vie",
+            "node": "Aufgaben ohne Lebenszeichen",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Démarrage manuel": {
+    "Manueller Start": {
       "main": [
         [
           {
-            "node": "Tâches sans signe de vie",
+            "node": "Aufgaben ohne Lebenszeichen",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Tâches sans signe de vie": {
+    "Aufgaben ohne Lebenszeichen": {
       "main": [
         [
           {
-            "node": "Contextes d'alarme (veilleur)",
+            "node": "Alarmkontexte (Wächter)",
             "type": "main",
             "index": 0
           }

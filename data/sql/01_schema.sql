@@ -1,8 +1,8 @@
--- Logiciel de soins FICTIF (données de démonstration).
--- Schéma dédié « soins » pour ne pas se mélanger avec les tables internes de n8n.
--- Ce fichier ne supprime rien : il peut être rejoué sans risque.
+-- FIKTIVE Pflegesoftware (Demonstrationsdaten).
+-- Eigenes Schema „soins“, um sich nicht mit den internen Tabellen von n8n zu vermischen.
+-- Diese Datei löscht nichts: Sie kann risikolos wiederholt ausgeführt werden.
 
--- Heures affichées dans les notes (« chute à 02h40 ») : heure de la maison de soins, pas UTC.
+-- In den Notizen angezeigte Uhrzeiten („Sturz um 02h40“): Ortszeit des Pflegeheims, nicht UTC.
 DO $$
 BEGIN
   EXECUTE format('ALTER DATABASE %I SET timezone TO %L', current_database(), 'Europe/Berlin');
@@ -26,7 +26,7 @@ CREATE TABLE IF NOT EXISTS soins.residents (
   risques         text[] NOT NULL DEFAULT '{}'
 );
 
--- Un seul patient_id pour tous les systèmes : logiciel de soins, FHIR, KVNR (ePA), capteurs, chambre.
+-- Eine einzige patient_id für alle Systeme: Pflegesoftware, FHIR, KVNR (ePA), Sensoren, Zimmer.
 CREATE TABLE IF NOT EXISTS soins.correspondance (
   patient_id  text NOT NULL REFERENCES soins.residents(patient_id) ON DELETE CASCADE,
   systeme     text NOT NULL CHECK (systeme IN ('logiciel_soins', 'fhir', 'epa_kvnr', 'capteur', 'chambre')),
@@ -35,17 +35,17 @@ CREATE TABLE IF NOT EXISTS soins.correspondance (
 );
 CREATE INDEX IF NOT EXISTS correspondance_patient ON soins.correspondance (patient_id);
 
--- Résolution d'identité : les homonymes (deux « Heinz Müller ») ne se distinguent que par la date de naissance.
+-- Identitätsauflösung: Namensvettern (zwei „Heinz Müller“) lassen sich nur über das Geburtsdatum unterscheiden.
 CREATE UNIQUE INDEX IF NOT EXISTS residents_identite ON soins.residents (lower(nom), lower(prenom), date_naissance);
 
--- patient_id à partir d'un identifiant d'un système (ex. 'epa_kvnr', 'Z000000012'), NULL si inconnu.
+-- patient_id aus einer Kennung eines Systems (z. B. 'epa_kvnr', 'Z000000012'), NULL wenn unbekannt.
 CREATE OR REPLACE FUNCTION soins.resoudre_patient(p_systeme text, p_identifiant text)
 RETURNS text LANGUAGE sql STABLE AS $$
   SELECT patient_id FROM soins.correspondance WHERE systeme = p_systeme AND identifiant = p_identifiant
 $$;
 
--- patient_id à partir du nom et de la date de naissance (lettres de médecin) : 0 ligne si inconnu,
--- 2 lignes ou plus si ambigu (à traiter comme « à vérifier », jamais deviner).
+-- patient_id aus Name und Geburtsdatum (Arztbriefe): 0 Zeilen, wenn unbekannt,
+-- 2 oder mehr Zeilen, wenn mehrdeutig (als „zu prüfen“ behandeln, niemals raten).
 CREATE OR REPLACE FUNCTION soins.trouver_par_identite(p_nom text, p_naissance date)
 RETURNS SETOF text LANGUAGE sql STABLE AS $$
   SELECT patient_id FROM soins.residents WHERE lower(nom) = lower(p_nom) AND date_naissance = p_naissance
@@ -82,7 +82,7 @@ CREATE TABLE IF NOT EXISTS soins.signes_vitaux (
 );
 CREATE INDEX IF NOT EXISTS vitaux_patient_date ON soins.signes_vitaux (patient_id, horodatage DESC);
 
--- Vue à plat de la correspondance : un patient_id, tous ses identifiants.
+-- Flache Sicht auf die Zuordnung: eine patient_id, alle ihre Kennungen.
 CREATE OR REPLACE VIEW soins.v_correspondance AS
 SELECT r.patient_id, r.civilite, r.prenom, r.nom, r.date_naissance, r.chambre, r.etage,
        max(c.identifiant) FILTER (WHERE c.systeme = 'fhir')     AS fhir_id,
@@ -92,8 +92,8 @@ FROM soins.residents r
 JOIN soins.correspondance c USING (patient_id)
 GROUP BY r.patient_id, r.civilite, r.prenom, r.nom, r.date_naissance, r.chambre, r.etage;
 
--- Journal des imports vers le RAG (jour 2, étape 5) : l'empreinte SHA-256 évite les doublons.
--- Pas de clé étrangère : un rechargement des données de test ne doit pas effacer l'historique.
+-- Protokoll der Importe ins RAG (Tag 2, Schritt 5): Der SHA-256-Fingerabdruck verhindert Duplikate.
+-- Kein Fremdschlüssel: Ein erneutes Laden der Testdaten darf den Verlauf nicht löschen.
 CREATE TABLE IF NOT EXISTS soins.journal_imports (
   id          bigserial PRIMARY KEY,
   source      text NOT NULL,
@@ -106,8 +106,8 @@ CREATE TABLE IF NOT EXISTS soins.journal_imports (
   UNIQUE (source, empreinte)
 );
 
--- Brouillons : réponse brute de l'IA, AVANT toute validation (jour 3). Le bouton « Valider & Enregistrer »
--- ne peut enregistrer que le texte d'un brouillon existant, jamais un texte arrivé d'ailleurs.
+-- Entwürfe: Rohantwort der KI, VOR jeder Bestätigung (Tag 3). Die Schaltfläche „Bestätigen & Speichern“
+-- darf nur den Text eines vorhandenen Entwurfs speichern, niemals einen Text, der von anderswo kommt.
 CREATE TABLE IF NOT EXISTS soins.brouillons (
   id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   cree_le         timestamptz NOT NULL DEFAULT now(),
@@ -125,11 +125,11 @@ CREATE TABLE IF NOT EXISTS soins.brouillons (
 );
 CREATE INDEX IF NOT EXISTS brouillons_patient ON soins.brouillons (patient_id, cree_le DESC);
 
--- Phrases du modèle RETIRÉES par le filtre anti-invention (non appuyées par leur fait) : gardées pour l'audit.
+-- Vom Filter gegen Erfundenes ENTFERNTE Sätze des Modells (nicht durch ihre Tatsache gestützt): für die Revision aufbewahrt.
 ALTER TABLE soins.brouillons ADD COLUMN IF NOT EXISTS retirees jsonb NOT NULL DEFAULT '[]';
 
--- Tâches longues lancées par l'interface (ex. rapport de garde d'un étage entier : une génération par résident,
--- plusieurs minutes chacune) : l'interface reçoit un identifiant tout de suite, puis consulte l'avancement.
+-- Lange Aufgaben, die von der Oberfläche gestartet werden (z. B. Übergabebericht für ein ganzes Stockwerk: eine Erzeugung pro Bewohner,
+-- jeweils mehrere Minuten): Die Oberfläche erhält sofort eine Kennung und fragt dann den Fortschritt ab.
 CREATE TABLE IF NOT EXISTS soins.taches (
   id           uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   cree_le      timestamptz NOT NULL DEFAULT now(),
@@ -142,12 +142,12 @@ CREATE TABLE IF NOT EXISTS soins.taches (
   termine_le   timestamptz
 );
 
--- Tâches fiables (jour 4, étape 4) : un battement de coeur (heartbeat) est écrit à chaque étape ; une tâche « en cours » dont
--- n8n s'est arrêté, ou sans battement depuis trop longtemps, passe à « interrompue » ; le soignant peut aussi l'annuler.
+-- Zuverlässige Aufgaben (Tag 4, Schritt 4): Bei jedem Schritt wird ein Herzschlag (Heartbeat) geschrieben; eine Aufgabe „en_cours“, deren
+-- n8n angehalten wurde oder die zu lange keinen Herzschlag hatte, wird „interrompue“; die Pflegekraft kann sie auch abbrechen.
 ALTER TABLE soins.taches ADD COLUMN IF NOT EXISTS heartbeat timestamptz NOT NULL DEFAULT now();
 ALTER TABLE soins.taches DROP CONSTRAINT IF EXISTS taches_statut_check;
 ALTER TABLE soins.taches ADD CONSTRAINT taches_statut_check CHECK (statut IN ('en_cours', 'termine', 'termine_avec_erreurs', 'interrompue', 'annulee'));
--- Transmissions à l'équipe suivante, faites APRÈS validation d'un rapport de garde par un soignant.
+-- Weitergaben an das nächste Team, NACH der Bestätigung eines Übergabeberichts durch eine Pflegekraft.
 CREATE TABLE IF NOT EXISTS soins.transmissions (
   id              bigserial PRIMARY KEY,
   cree_le         timestamptz NOT NULL DEFAULT now(),
@@ -162,7 +162,7 @@ CREATE TABLE IF NOT EXISTS soins.transmissions (
   detail          jsonb NOT NULL DEFAULT '{}'
 );
 
--- Journal d'audit de l'IA : chaque génération, refus de consigne, validation ou transmission.
+-- Prüfprotokoll der KI: jede Erzeugung, Ablehnung einer Anweisung, Bestätigung oder Weitergabe.
 CREATE TABLE IF NOT EXISTS soins.journal_ia (
   id              bigserial PRIMARY KEY,
   horodatage      timestamptz NOT NULL DEFAULT now(),
@@ -178,7 +178,7 @@ CREATE TABLE IF NOT EXISTS soins.journal_ia (
 );
 CREATE INDEX IF NOT EXISTS journal_ia_date ON soins.journal_ia (horodatage DESC);
 
--- Réponses validées par les soignants (bouton « Valider & Enregistrer »). Aucune clé étrangère, pour la même raison.
+-- Von den Pflegekräften bestätigte Antworten (Schaltfläche „Bestätigen & Speichern“). Kein Fremdschlüssel, aus demselben Grund.
 CREATE TABLE IF NOT EXISTS soins.validations (
   id          bigserial PRIMARY KEY,
   patient_id  text NOT NULL,
@@ -191,11 +191,11 @@ CREATE TABLE IF NOT EXISTS soins.validations (
   valide_par  text,
   valide_le   timestamptz NOT NULL DEFAULT now()
 );
--- Lien vers le brouillon d'origine ; un brouillon ne peut être validé qu'une fois.
+-- Verweis auf den ursprünglichen Entwurf; ein Entwurf kann nur einmal bestätigt werden.
 ALTER TABLE soins.validations ADD COLUMN IF NOT EXISTS brouillon_id uuid;
 CREATE UNIQUE INDEX IF NOT EXISTS validations_brouillon ON soins.validations (brouillon_id);
 
--- Réglages modifiables sans toucher au code (jour 4) : « verification_ia » = analyse complémentaire de l'IA pour « Vérifier le document ».
+-- Ohne Codeänderung anpassbare Einstellungen (Tag 4): „verification_ia“ = ergänzende Analyse der KI für „Dokument prüfen“.
 CREATE TABLE IF NOT EXISTS soins.reglages (
   cle         text PRIMARY KEY,
   valeur      jsonb NOT NULL,
@@ -203,9 +203,9 @@ CREATE TABLE IF NOT EXISTS soins.reglages (
 );
 INSERT INTO soins.reglages (cle, valeur) VALUES ('verification_ia', 'true'::jsonb) ON CONFLICT (cle) DO NOTHING;
 
--- Alarmes de capteurs (jour 4, étape 5). Le message MQTT n'est jamais stocké : seul le sujet capteurs/chambre{n}/{type} compte.
--- « faits » = faits CODÉS lus dans le logiciel de soins (résident, risques, allergies, médication à risque), affichés tout de suite ;
--- « contexte » = texte de l'assistant IA, ajouté quand il est prêt : {statut: aucun | differe | en_cours | pret | indisponible, texte, …}.
+-- Sensoralarme (Tag 4, Schritt 5). Die MQTT-Nachricht wird nie gespeichert: Nur das Thema capteurs/chambre{n}/{type} zählt.
+-- „faits“ = CODIERTE Fakten aus der Pflegesoftware (Bewohner, Risiken, Allergien, Risikomedikation), sofort angezeigt;
+-- „contexte“ = Text des KI-Assistenten, ergänzt, sobald er bereit ist: {statut: aucun | differe | en_cours | pret | indisponible, texte, …}.
 CREATE TABLE IF NOT EXISTS soins.alarmes (
   id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   recue_le      timestamptz NOT NULL DEFAULT now(),
@@ -220,23 +220,23 @@ CREATE TABLE IF NOT EXISTS soins.alarmes (
   acquittee_le  timestamptz
 );
 CREATE INDEX IF NOT EXISTS alarmes_recue ON soins.alarmes (recue_le DESC);
--- « document » : courrier reçu (contradiction, courrier non identifié, rien à signaler) ou nouveauté de l'ePA ; faits->>'gravite' = rouge | attention | info.
+-- „document“: eingegangener Brief (Widerspruch, nicht zugeordneter Brief, nichts zu melden) oder Neuigkeit aus der ePA; faits->>'gravite' = rouge | attention | info.
 ALTER TABLE soins.alarmes DROP CONSTRAINT IF EXISTS alarmes_type_check;
 ALTER TABLE soins.alarmes ADD CONSTRAINT alarmes_type_check CHECK (type IN ('chute', 'sortie_lit', 'appel', 'document'));
--- une alerte de courrier ne se crée qu'une fois par courrier (le sujet porte la référence du courrier)
+-- eine Briefmeldung wird pro Brief nur einmal angelegt (das Thema enthält die Referenz des Briefs)
 CREATE UNIQUE INDEX IF NOT EXISTS alarmes_document_unique ON soins.alarmes (topic) WHERE type = 'document';
 
--- Courriers (messages Mailpit) déjà traités par le workflow « courrier reçu » : le rattrapage planifié ne retraite que les autres
--- (notification perdue, n8n arrêté au moment de l'arrivée). L'identifiant d'un message Mailpit ne survit pas à sa recréation : c'est voulu.
+-- Briefe (Mailpit-Nachrichten), die vom Workflow „Brief eingegangen“ bereits verarbeitet wurden: Der geplante Nachlauf verarbeitet nur die übrigen
+-- (verlorene Benachrichtigung, n8n war beim Eingang angehalten). Die Kennung einer Mailpit-Nachricht überlebt ihre Neuerstellung nicht: Das ist gewollt.
 CREATE TABLE IF NOT EXISTS soins.courriers_traites (
   message_id  text PRIMARY KEY,
   traite_le   timestamptz NOT NULL DEFAULT now()
 );
--- verrou : un courrier « en_cours » depuis moins de 15 minutes n'est pas repris (notification et rattrapage ne le traitent pas deux fois)
+-- Sperre: Ein Brief im Zustand „en_cours“ seit weniger als 15 Minuten wird nicht erneut aufgegriffen (Benachrichtigung und Nachlauf verarbeiten ihn nicht doppelt)
 ALTER TABLE soins.courriers_traites ADD COLUMN IF NOT EXISTS etat text NOT NULL DEFAULT 'traite';
 ALTER TABLE soins.courriers_traites ADD COLUMN IF NOT EXISTS debut timestamptz NOT NULL DEFAULT now();
 
--- Soignants (comptes fictifs de démonstration) : identifiant + code PIN. Le PIN n'est JAMAIS stocké en clair : scrypt avec un sel propre à chaque soignant.
+-- Pflegekräfte (fiktive Demokonten): Kennung + PIN-Code. Die PIN wird NIE im Klartext gespeichert: scrypt mit einem eigenen Salt pro Pflegekraft.
 CREATE TABLE IF NOT EXISTS soins.soignants (
   identifiant  text PRIMARY KEY CHECK (identifiant ~ '^[a-z0-9._-]{2,40}$'),
   nom          text NOT NULL,
@@ -244,7 +244,7 @@ CREATE TABLE IF NOT EXISTS soins.soignants (
   actif        boolean NOT NULL DEFAULT true,
   cree_le      timestamptz NOT NULL DEFAULT now()
 );
--- Sessions : le jeton n'est donné qu'une fois au soignant ; seule son empreinte SHA-256 est gardée ici. Durée : 12 heures.
+-- Sitzungen: Das Token wird der Pflegekraft nur einmal mitgeteilt; hier wird nur sein SHA-256-Fingerabdruck aufbewahrt. Dauer: 12 Stunden.
 CREATE TABLE IF NOT EXISTS soins.sessions (
   jeton_hash   text PRIMARY KEY,
   identifiant  text NOT NULL REFERENCES soins.soignants (identifiant) ON DELETE CASCADE,
@@ -252,22 +252,22 @@ CREATE TABLE IF NOT EXISTS soins.sessions (
   expire_le    timestamptz NOT NULL DEFAULT now() + interval '12 hours'
 );
 CREATE INDEX IF NOT EXISTS sessions_expire ON soins.sessions (expire_le);
--- Échecs de connexion (verrouillage : 5 échecs en 5 minutes pour un même identifiant). Aucun PIN n'est conservé.
+-- Fehlgeschlagene Anmeldungen (Sperre: 5 Fehlversuche in 5 Minuten für dieselbe Kennung). Es wird keine PIN aufbewahrt.
 CREATE TABLE IF NOT EXISTS soins.connexions_echecs (
   id           bigserial PRIMARY KEY,
   identifiant  text NOT NULL,
   le           timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS connexions_echecs_recents ON soins.connexions_echecs (identifiant, le DESC);
--- Qui a validé : l'identifiant du compte, pris dans la SESSION (jamais dans la requête), en plus du nom affiché.
+-- Wer bestätigt hat: die Kennung des Kontos, aus der SITZUNG entnommen (niemals aus der Anfrage), zusätzlich zum angezeigten Namen.
 ALTER TABLE soins.validations ADD COLUMN IF NOT EXISTS soignant_id text;
 
--- Cotisations retraite des aidants familiaux (page « Cotisations retraite », données FICTIVES).
--- sgb6_dossiers : un questionnaire (texte) et le dernier résultat de l'agent. C'est la seule table qui contient des noms
---   (ceux du questionnaire, nécessaires pour relire le dossier) ; le journal n'en contient JAMAIS.
--- sgb6_journal  : une ligne par étape (agent) ou par décision (humain) : dossier, étape, outil, résultat court, durée, qui.
---   Ni nom ni numéro d'assurance : seulement l'identifiant du dossier et des comptes/statuts.
--- sgb6_decisions : valider, revue ou refuser, avec le soignant de la SESSION (jamais celui du corps de la requête).
+-- Rentenbeiträge pflegender Angehöriger (Seite „Rentenbeiträge“, FIKTIVE Daten).
+-- sgb6_dossiers: ein Fragebogen (Text) und das letzte Ergebnis des Agenten. Das ist die einzige Tabelle mit Namen
+--   (denen des Fragebogens, zum erneuten Lesen der Akte nötig); das Protokoll enthält NIEMALS welche.
+-- sgb6_journal  : eine Zeile pro Schritt (Agent) oder pro Entscheidung (Mensch): Akte, Schritt, Werkzeug, kurzes Ergebnis, Dauer, wer.
+--   Weder Name noch Versicherungsnummer: nur die Kennung der Akte sowie Zähler/Status.
+-- sgb6_decisions : bestätigen, Überprüfung oder ablehnen, mit der Pflegekraft der SITZUNG (niemals der aus dem Anfragekörper).
 CREATE TABLE IF NOT EXISTS soins.sgb6_dossiers (
   id              text PRIMARY KEY,
   questionnaire   text NOT NULL,
@@ -303,8 +303,8 @@ CREATE TABLE IF NOT EXISTS soins.sgb6_decisions (
   CHECK (decision <> 'refuser' OR btrim(coalesce(motif, '')) <> '')
 );
 CREATE INDEX IF NOT EXISTS sgb6_decisions_dossier ON soins.sgb6_decisions (dossier_id, id);
--- Agent piloté par un modèle (cotisations) : une ligne de journal par TOUR du modèle (outil choisi, raison donnée, accepté ou refusé par la garde).
--- La raison est écrite par le modèle : le code en retire les noms et numéros avant de l'enregistrer. choisi_par = 'modele' pour ces lignes.
+-- Von einem Modell gesteuerter Agent (Beiträge): eine Protokollzeile pro RUNDE des Modells (gewähltes Werkzeug, angegebener Grund, von der Schutzprüfung akzeptiert oder abgelehnt).
+-- Der Grund wird vom Modell geschrieben: Der Code entfernt Namen und Nummern, bevor er ihn speichert. choisi_par = 'modele' für diese Zeilen.
 ALTER TABLE soins.sgb6_journal ADD COLUMN IF NOT EXISTS raison text;
 ALTER TABLE soins.sgb6_journal ADD COLUMN IF NOT EXISTS accepte boolean;
 ALTER TABLE soins.sgb6_journal DROP CONSTRAINT IF EXISTS sgb6_journal_choisi_par_check;

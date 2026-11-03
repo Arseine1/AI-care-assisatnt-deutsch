@@ -1,6 +1,6 @@
 {
   "id": "aicareimpsoins001",
-  "name": "AI-Care – Connecteur logiciel de soins",
+  "name": "AI-Care – Anbindung Pflegesoftware",
   "active": false,
   "nodes": [
     {
@@ -15,7 +15,7 @@
         }
       },
       "id": "a1c3e000-0012-4000-8000-000000000012",
-      "name": "Planification",
+      "name": "Zeitplan",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
       "position": [
@@ -26,7 +26,7 @@
     {
       "parameters": {},
       "id": "a1c3e000-0013-4000-8000-000000000013",
-      "name": "Démarrage manuel",
+      "name": "Manueller Start",
       "type": "n8n-nodes-base.manualTrigger",
       "typeVersion": 1,
       "position": [
@@ -67,7 +67,7 @@
         "options": {}
       },
       "id": "a1c3e000-0015-4000-8000-000000000015",
-      "name": "Notes récentes",
+      "name": "Aktuelle Notizen",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
@@ -88,7 +88,7 @@
         "options": {}
       },
       "id": "a1c3e000-0016-4000-8000-000000000016",
-      "name": "Fiches résidents",
+      "name": "Bewohnerakten",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
@@ -105,10 +105,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Connecteur « logiciel de soins » : transforme les notes et les fiches résidents en documents à indexer.\n// Une note courte reste un morceau entier (garder sa date exacte permet de filtrer « les 12 dernières heures ») ;\n// le découpage 300–500 mots de l'Indexeur ne s'applique qu'aux textes plus longs.\nconst iso = (d) => new Date(d).toISOString();\nconst etiquette = (r) => `${r.civilite} ${r.prenom} ${r.nom} (chambre ${r.chambre})`;\nconst base = { source: 'logiciel_soins', source_label: 'Logiciel de soins', collection: 'patients' };\n\nconst docs = [];\n\nfor (const { json: n } of $('Notes récentes').all()) {\n  docs.push({\n    ...base,\n    type: 'note',\n    titre: `Note de soins (${n.categorie}) par ${n.auteur}`,\n    texte: n.texte,\n    source_ref: `note-${n.id}`,\n    patient_id: n.patient_id,\n    chambre: n.chambre,\n    patient_label: etiquette(n),\n    categorie: n.categorie,\n    date: iso(n.horodatage),\n  });\n}\n\nfor (const { json: f } of $('Fiches résidents').all()) {\n  const liste = (a, vide) => (a && a.length ? a.join(' ; ') : vide);\n  const texte = [\n    `Fiche résident : ${etiquette(f)}, né(e) le ${f.naissance}, étage ${f.etage}.`,\n    `Diagnostics : ${liste(f.diagnostics, 'aucun')}.`,\n    `Allergies : ${liste(f.allergies, 'aucune connue')}.`,\n    `Régime : ${(f.regime ?? 'non précisé').replace(/\\.\\s*$/, '')}.`,\n    `Risques : ${liste(f.risques, 'aucun signalé')}.`,\n    `Plan de médication : ${f.medication ?? 'aucun'}.`,\n    `Dernières constantes : ${f.vitaux ?? 'aucune'}.`,\n  ].join('\\n');\n  docs.push({\n    ...base,\n    type: 'fiche',\n    titre: 'Fiche résident (logiciel de soins)',\n    texte,\n    source_ref: `fiche-${f.patient_id}`,\n    patient_id: f.patient_id,\n    chambre: f.chambre,\n    patient_label: etiquette(f),\n    date: iso(f.maj ?? f.admission),\n  });\n}\n\nreturn docs.map((json) => ({ json }));\n"
+        "jsCode": "// Konnektor « Pflegesoftware »: wandelt die Notizen und Bewohnerakten in zu indexierende Dokumente um.\n// Eine kurze Notiz bleibt ein ganzer Abschnitt (das genaue Datum zu behalten erlaubt das Filtern nach „den letzten 12 Stunden“);\n// die Zerlegung des Indexers in 300–500 Wörter gilt nur für längere Texte.\nconst iso = (d) => new Date(d).toISOString();\nconst etiquette = (r) => `${r.civilite} ${r.prenom} ${r.nom} (Zimmer ${r.chambre})`;\nconst base = { source: 'logiciel_soins', source_label: 'Pflegesoftware', collection: 'patients' };\n\nconst docs = [];\n\nfor (const { json: n } of $('Aktuelle Notizen').all()) {\n  docs.push({\n    ...base,\n    type: 'note',\n    titre: `Pflegenotiz (${n.categorie}) von ${n.auteur}`,\n    texte: n.texte,\n    source_ref: `note-${n.id}`,\n    patient_id: n.patient_id,\n    chambre: n.chambre,\n    patient_label: etiquette(n),\n    categorie: n.categorie,\n    date: iso(n.horodatage),\n  });\n}\n\nfor (const { json: f } of $('Bewohnerakten').all()) {\n  const liste = (a, vide) => (a && a.length ? a.join(' ; ') : vide);\n  const texte = [\n    `Bewohnerakte: ${etiquette(f)}, geboren am ${f.naissance}, Etage ${f.etage}.`,\n    `Diagnosen: ${liste(f.diagnostics, 'keine')}.`,\n    `Allergien: ${liste(f.allergies, 'keine bekannt')}.`,\n    `Ernährung: ${(f.regime ?? 'nicht angegeben').replace(/\\.\\s*$/, '')}.`,\n    `Risiken: ${liste(f.risques, 'keine gemeldet')}.`,\n    `Medikationsplan: ${f.medication ?? 'keiner'}.`,\n    `Letzte Vitalwerte: ${f.vitaux ?? 'keine'}.`,\n  ].join('\\n');\n  docs.push({\n    ...base,\n    type: 'fiche',\n    titre: 'Bewohnerakte (Pflegesoftware)',\n    texte,\n    source_ref: `fiche-${f.patient_id}`,\n    patient_id: f.patient_id,\n    chambre: f.chambre,\n    patient_label: etiquette(f),\n    date: iso(f.maj ?? f.admission),\n  });\n}\n\nreturn docs.map((json) => ({ json }));\n"
       },
       "id": "a1c3e000-0017-4000-8000-000000000017",
-      "name": "Documents soins",
+      "name": "Pflegedokumente",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -130,7 +130,7 @@
         }
       },
       "id": "a1c3e000-0018-4000-8000-000000000018",
-      "name": "Indexer",
+      "name": "Indizieren",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.2,
       "position": [
@@ -140,10 +140,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Contrôle de session – le jeton « Bearer » de l'en-tête Authorization (43 caractères URL-safe) est haché (SHA-256) : seul le haché est en base.\nconst entetes = $input.first().json?.headers ?? {};\nconst m = String(entetes.authorization ?? '').match(/^Bearer ([A-Za-z0-9_-]{43})$/);\nif (!m) return [{ json: { hash: '' } }];\nreturn [{ json: { hash: require('crypto').createHash('sha256').update(m[1]).digest('hex') } }];\n"
+        "jsCode": "// Sitzungsprüfung – das « Bearer »-Token im Authorization-Header (43 URL-sichere Zeichen) wird gehasht (SHA-256): Nur der Hash steht in der Datenbank.\nconst entetes = $input.first().json?.headers ?? {};\nconst m = String(entetes.authorization ?? '').match(/^Bearer ([A-Za-z0-9_-]{43})$/);\nif (!m) return [{ json: { hash: '' } }];\nreturn [{ json: { hash: require('crypto').createHash('sha256').update(m[1]).digest('hex') } }];\n"
       },
       "id": "a1c3e000-0333-4000-8000-000000000333",
-      "name": "Session (jeton)",
+      "name": "Sitzung (Token)",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -160,7 +160,7 @@
         }
       },
       "id": "a1c3e000-0334-4000-8000-000000000334",
-      "name": "Session (base)",
+      "name": "Sitzung (Datenbank)",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
@@ -178,10 +178,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Contrôle de session – résultat : un soignant identifié (session ouverte, non expirée, compte actif) ou rien.\nconst r = $input.first().json ?? {};\nif (!r.identifiant) return [{ json: { ok: false } }];\nreturn [{ json: { ok: true, soignant: { identifiant: r.identifiant, nom: r.nom }, jeton_hash: r.jeton_hash } }];\n"
+        "jsCode": "// Sitzungsprüfung – Ergebnis: eine identifizierte Pflegekraft (Sitzung offen, nicht abgelaufen, Konto aktiv) oder nichts.\nconst r = $input.first().json ?? {};\nif (!r.identifiant) return [{ json: { ok: false } }];\nreturn [{ json: { ok: true, soignant: { identifiant: r.identifiant, nom: r.nom }, jeton_hash: r.jeton_hash } }];\n"
       },
       "id": "a1c3e000-0335-4000-8000-000000000335",
-      "name": "Session",
+      "name": "Sitzung",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -200,7 +200,7 @@
           },
           "conditions": [
             {
-              "id": "Session valide ?",
+              "id": "Sitzung gültig?",
               "leftValue": "={{ $json.ok === true }}",
               "rightValue": "",
               "operator": {
@@ -215,7 +215,7 @@
         "options": {}
       },
       "id": "a1c3e000-0336-4000-8000-000000000336",
-      "name": "Session valide ?",
+      "name": "Sitzung gültig?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
@@ -225,10 +225,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Contrôle de session – la session est valide : on rend aux nœuds suivants la requête d'origine (en-têtes, corps) telle que reçue.\nreturn [{ json: $('Webhook').first().json }];\n"
+        "jsCode": "// Sitzungsprüfung – die Sitzung ist gültig: Die ursprüngliche Anfrage (Header, Body) wird unverändert an die folgenden Knoten zurückgegeben.\nreturn [{ json: $('Webhook').first().json }];\n"
       },
       "id": "a1c3e000-0337-4000-8000-000000000337",
-      "name": "Requête",
+      "name": "Anfrage",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -238,10 +238,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Contrôle de session – refus : aucune donnée, seulement le motif. L'interface rouvre alors la page de connexion.\nreturn [{ json: { erreur: 'session' } }];\n"
+        "jsCode": "// Sitzungsprüfung – Ablehnung: keine Daten, nur der Grund. Die Oberfläche öffnet dann wieder die Anmeldeseite.\nreturn [{ json: { erreur: 'session' } }];\n"
       },
       "id": "a1c3e000-0338-4000-8000-000000000338",
-      "name": "Refus (session)",
+      "name": "Ablehnung (Sitzung)",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -251,22 +251,22 @@
     }
   ],
   "connections": {
-    "Planification": {
+    "Zeitplan": {
       "main": [
         [
           {
-            "node": "Notes récentes",
+            "node": "Aktuelle Notizen",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Démarrage manuel": {
+    "Manueller Start": {
       "main": [
         [
           {
-            "node": "Notes récentes",
+            "node": "Aktuelle Notizen",
             "type": "main",
             "index": 0
           }
@@ -277,102 +277,102 @@
       "main": [
         [
           {
-            "node": "Session (jeton)",
+            "node": "Sitzung (Token)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Notes récentes": {
+    "Aktuelle Notizen": {
       "main": [
         [
           {
-            "node": "Fiches résidents",
+            "node": "Bewohnerakten",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Fiches résidents": {
+    "Bewohnerakten": {
       "main": [
         [
           {
-            "node": "Documents soins",
+            "node": "Pflegedokumente",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Documents soins": {
+    "Pflegedokumente": {
       "main": [
         [
           {
-            "node": "Indexer",
+            "node": "Indizieren",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Session (jeton)": {
+    "Sitzung (Token)": {
       "main": [
         [
           {
-            "node": "Session (base)",
+            "node": "Sitzung (Datenbank)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Session (base)": {
+    "Sitzung (Datenbank)": {
       "main": [
         [
           {
-            "node": "Session",
+            "node": "Sitzung",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Session": {
+    "Sitzung": {
       "main": [
         [
           {
-            "node": "Session valide ?",
+            "node": "Sitzung gültig?",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Session valide ?": {
+    "Sitzung gültig?": {
       "main": [
         [
           {
-            "node": "Requête",
+            "node": "Anfrage",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Refus (session)",
+            "node": "Ablehnung (Sitzung)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Requête": {
+    "Anfrage": {
       "main": [
         [
           {
-            "node": "Notes récentes",
+            "node": "Aktuelle Notizen",
             "type": "main",
             "index": 0
           }

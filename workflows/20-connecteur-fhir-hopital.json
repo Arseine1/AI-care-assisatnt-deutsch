@@ -1,6 +1,6 @@
 {
   "id": "aicareimpfhir0001",
-  "name": "AI-Care – Connecteur base de l'hôpital (FHIR)",
+  "name": "AI-Care – Anbindung Krankenhausdatenbank (FHIR)",
   "active": false,
   "nodes": [
     {
@@ -15,7 +15,7 @@
         }
       },
       "id": "a1c3e000-0019-4000-8000-000000000019",
-      "name": "Planification",
+      "name": "Zeitplan",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
       "position": [
@@ -26,7 +26,7 @@
     {
       "parameters": {},
       "id": "a1c3e000-0020-4000-8000-000000000020",
-      "name": "Démarrage manuel",
+      "name": "Manueller Start",
       "type": "n8n-nodes-base.manualTrigger",
       "typeVersion": 1,
       "position": [
@@ -67,7 +67,7 @@
         "options": {}
       },
       "id": "a1c3e000-0022-4000-8000-000000000022",
-      "name": "Correspondance",
+      "name": "Zuordnung",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
@@ -83,10 +83,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Connecteur « base de l'hôpital (FHIR) » : une requête par type de ressource.\n// _lastUpdated sert de date aux documents (voir fhir-docs.js) ; on relit toujours la liste complète\n// d'un type pour reconstruire le document entier d'un résident (jamais un morceau partiel).\nconst BASE = 'http://hapi-fhir:8080/fhir';\nconst types = ['Condition', 'AllergyIntolerance', 'MedicationStatement', 'Observation'];\nreturn types.map((type) => ({ json: { type, url: `${BASE}/${type}?_count=500&_sort=_lastUpdated` } }));\n"
+        "jsCode": "// Konnektor « Krankenhausdatenbank (FHIR) »: eine Abfrage je Ressourcentyp.\n// _lastUpdated dient als Datum der Dokumente (siehe fhir-docs.js); die vollständige Liste eines Typs wird immer neu gelesen,\n// um das gesamte Dokument eines Bewohners neu aufzubauen (nie nur ein Teilstück).\nconst BASE = 'http://hapi-fhir:8080/fhir';\nconst types = ['Condition', 'AllergyIntolerance', 'MedicationStatement', 'Observation'];\nreturn types.map((type) => ({ json: { type, url: `${BASE}/${type}?_count=500&_sort=_lastUpdated` } }));\n"
       },
       "id": "a1c3e000-0023-4000-8000-000000000023",
-      "name": "Requêtes FHIR",
+      "name": "FHIR-Anfragen",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -116,7 +116,7 @@
         }
       },
       "id": "a1c3e000-0024-4000-8000-000000000024",
-      "name": "Lire FHIR",
+      "name": "FHIR lesen",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
@@ -126,10 +126,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Connecteur « base de l'hôpital (FHIR) » : ressources FHIR -> texte, un document par résident et par type.\n// Le résident est retrouvé par son identifiant FHIR grâce à la table de correspondance (patient_id unique).\nconst parFhir = {};\nfor (const { json: r } of $('Correspondance').all()) parFhir[r.fhir_id] = r;\n\nconst etiquette = (r) => `${r.civilite} ${r.prenom} ${r.nom} (chambre ${r.chambre})`;\nconst jour = (d) => new Date(d).toLocaleDateString('fr-FR', { timeZone: 'Europe/Berlin' });\n\nconst TYPES = {\n  Condition: {\n    type: 'diagnostic', titre: \"Diagnostics (base de l'hôpital FHIR)\", intro: 'Diagnostics notés par l\\'hôpital',\n    ligne: (r) => `- ${r.code?.text ?? 'diagnostic'}${r.code?.coding?.[0]?.code ? ` (CIM-10 ${r.code.coding[0].code})` : ''}, statut ${r.clinicalStatus?.coding?.[0]?.code ?? 'inconnu'}`,\n  },\n  AllergyIntolerance: {\n    type: 'allergie', titre: \"Allergies (base de l'hôpital FHIR)\", intro: 'Allergies connues de l\\'hôpital',\n    ligne: (r) => `- ${r.code?.text ?? 'allergie'} : réaction ${r.reaction?.[0]?.description ?? 'non précisée'}`,\n  },\n  MedicationStatement: {\n    type: 'medication', titre: \"Médication (base de l'hôpital FHIR)\", intro: 'Médication déclarée par l\\'hôpital',\n    ligne: (r) => `- ${r.medicationCodeableConcept?.text ?? 'médicament'} : ${r.dosage?.[0]?.text ?? 'posologie non précisée'}`,\n  },\n  Observation: {\n    type: 'analyse', titre: \"Analyses (base de l'hôpital FHIR)\", intro: 'Résultats d\\'analyses de l\\'hôpital',\n    ligne: (r) => `- ${r.code?.text ?? 'analyse'} : ${r.valueQuantity?.value ?? '?'} ${r.valueQuantity?.unit ?? ''} (${jour(r.effectiveDateTime)})`.replace(/ +\\(/, ' ('),\n  },\n};\n\nconst groupes = {}; // clé = fhirId|ResourceType\nfor (const { json: bundle } of $input.all()) {\n  for (const e of bundle.entry ?? []) {\n    const r = e.resource;\n    const def = TYPES[r.resourceType];\n    if (!def) continue;\n    const fhirId = (r.subject ?? r.patient)?.reference?.replace('Patient/', '');\n    if (!parFhir[fhirId]) continue; // patient inconnu de la maison : ignoré\n    const cle = `${fhirId}|${r.resourceType}`;\n    (groupes[cle] ??= []).push(r);\n  }\n}\n\nconst docs = [];\nfor (const [cle, ressources] of Object.entries(groupes)) {\n  const [fhirId, resourceType] = cle.split('|');\n  const def = TYPES[resourceType];\n  const patient = parFhir[fhirId];\n  const maj = ressources.map((r) => r.meta?.lastUpdated).filter(Boolean).sort().pop();\n  docs.push({\n    collection: 'patients',\n    source: 'fhir',\n    source_label: \"Base hôpital (FHIR)\",\n    type: def.type,\n    titre: def.titre,\n    texte: `${def.intro} pour ${etiquette(patient)} :\\n${ressources.map(def.ligne).sort().join('\\n')}`,\n    source_ref: `${fhirId}/${resourceType}`,\n    patient_id: patient.patient_id,\n    chambre: patient.chambre,\n    patient_label: etiquette(patient),\n    date: new Date(maj ?? Date.now()).toISOString(), // _lastUpdated : change seulement si la ressource change\n  });\n}\nreturn docs.map((json) => ({ json }));\n"
+        "jsCode": "// Konnektor « Krankenhausdatenbank (FHIR) »: FHIR-Ressourcen -> Text, ein Dokument je Bewohner und Typ.\n// Der Bewohner wird über seine FHIR-Kennung anhand der Zuordnungstabelle gefunden (eindeutige patient_id).\nconst parFhir = {};\nfor (const { json: r } of $('Zuordnung').all()) parFhir[r.fhir_id] = r;\n\nconst etiquette = (r) => `${r.civilite} ${r.prenom} ${r.nom} (Zimmer ${r.chambre})`;\nconst jour = (d) => new Date(d).toLocaleDateString('de-DE', { timeZone: 'Europe/Berlin' });\n\nconst TYPES = {\n  Condition: {\n    type: 'diagnostic', titre: 'Diagnosen (Krankenhausdatenbank FHIR)', intro: 'Vom Krankenhaus erfasste Diagnosen',\n    ligne: (r) => `- ${r.code?.text ?? 'Diagnose'}${r.code?.coding?.[0]?.code ? ` (ICD-10 ${r.code.coding[0].code})` : ''}, Status ${r.clinicalStatus?.coding?.[0]?.code ?? 'unbekannt'}`,\n  },\n  AllergyIntolerance: {\n    type: 'allergie', titre: 'Allergien (Krankenhausdatenbank FHIR)', intro: 'Dem Krankenhaus bekannte Allergien',\n    ligne: (r) => `- ${r.code?.text ?? 'Allergie'}: Reaktion ${r.reaction?.[0]?.description ?? 'nicht angegeben'}`,\n  },\n  MedicationStatement: {\n    type: 'medication', titre: 'Medikation (Krankenhausdatenbank FHIR)', intro: 'Vom Krankenhaus gemeldete Medikation',\n    ligne: (r) => `- ${r.medicationCodeableConcept?.text ?? 'Medikament'}: ${r.dosage?.[0]?.text ?? 'Dosierung nicht angegeben'}`,\n  },\n  Observation: {\n    type: 'analyse', titre: 'Laborwerte (Krankenhausdatenbank FHIR)', intro: 'Laborergebnisse des Krankenhauses',\n    ligne: (r) => `- ${r.code?.text ?? 'Laborwert'}: ${r.valueQuantity?.value ?? '?'} ${r.valueQuantity?.unit ?? ''} (${jour(r.effectiveDateTime)})`.replace(/ +\\(/, ' ('),\n  },\n};\n\nconst groupes = {}; // Schlüssel = fhirId|ResourceType\nfor (const { json: bundle } of $input.all()) {\n  for (const e of bundle.entry ?? []) {\n    const r = e.resource;\n    const def = TYPES[r.resourceType];\n    if (!def) continue;\n    const fhirId = (r.subject ?? r.patient)?.reference?.replace('Patient/', '');\n    if (!parFhir[fhirId]) continue; // der Einrichtung unbekannter Patient: ignoriert\n    const cle = `${fhirId}|${r.resourceType}`;\n    (groupes[cle] ??= []).push(r);\n  }\n}\n\nconst docs = [];\nfor (const [cle, ressources] of Object.entries(groupes)) {\n  const [fhirId, resourceType] = cle.split('|');\n  const def = TYPES[resourceType];\n  const patient = parFhir[fhirId];\n  const maj = ressources.map((r) => r.meta?.lastUpdated).filter(Boolean).sort().pop();\n  docs.push({\n    collection: 'patients',\n    source: 'fhir',\n    source_label: 'Krankenhausdatenbank (FHIR)',\n    type: def.type,\n    titre: def.titre,\n    texte: `${def.intro} für ${etiquette(patient)}:\\n${ressources.map(def.ligne).sort().join('\\n')}`,\n    source_ref: `${fhirId}/${resourceType}`,\n    patient_id: patient.patient_id,\n    chambre: patient.chambre,\n    patient_label: etiquette(patient),\n    date: new Date(maj ?? Date.now()).toISOString(), // _lastUpdated: ändert sich nur, wenn sich die Ressource ändert\n  });\n}\nreturn docs.map((json) => ({ json }));\n"
       },
       "id": "a1c3e000-0025-4000-8000-000000000025",
-      "name": "Documents FHIR",
+      "name": "FHIR-Dokumente",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -151,7 +151,7 @@
         }
       },
       "id": "a1c3e000-0026-4000-8000-000000000026",
-      "name": "Indexer",
+      "name": "Indizieren",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.2,
       "position": [
@@ -161,10 +161,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Contrôle de session – le jeton « Bearer » de l'en-tête Authorization (43 caractères URL-safe) est haché (SHA-256) : seul le haché est en base.\nconst entetes = $input.first().json?.headers ?? {};\nconst m = String(entetes.authorization ?? '').match(/^Bearer ([A-Za-z0-9_-]{43})$/);\nif (!m) return [{ json: { hash: '' } }];\nreturn [{ json: { hash: require('crypto').createHash('sha256').update(m[1]).digest('hex') } }];\n"
+        "jsCode": "// Sitzungsprüfung – das « Bearer »-Token im Authorization-Header (43 URL-sichere Zeichen) wird gehasht (SHA-256): Nur der Hash steht in der Datenbank.\nconst entetes = $input.first().json?.headers ?? {};\nconst m = String(entetes.authorization ?? '').match(/^Bearer ([A-Za-z0-9_-]{43})$/);\nif (!m) return [{ json: { hash: '' } }];\nreturn [{ json: { hash: require('crypto').createHash('sha256').update(m[1]).digest('hex') } }];\n"
       },
       "id": "a1c3e000-0339-4000-8000-000000000339",
-      "name": "Session (jeton)",
+      "name": "Sitzung (Token)",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -181,7 +181,7 @@
         }
       },
       "id": "a1c3e000-0340-4000-8000-000000000340",
-      "name": "Session (base)",
+      "name": "Sitzung (Datenbank)",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
@@ -199,10 +199,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Contrôle de session – résultat : un soignant identifié (session ouverte, non expirée, compte actif) ou rien.\nconst r = $input.first().json ?? {};\nif (!r.identifiant) return [{ json: { ok: false } }];\nreturn [{ json: { ok: true, soignant: { identifiant: r.identifiant, nom: r.nom }, jeton_hash: r.jeton_hash } }];\n"
+        "jsCode": "// Sitzungsprüfung – Ergebnis: eine identifizierte Pflegekraft (Sitzung offen, nicht abgelaufen, Konto aktiv) oder nichts.\nconst r = $input.first().json ?? {};\nif (!r.identifiant) return [{ json: { ok: false } }];\nreturn [{ json: { ok: true, soignant: { identifiant: r.identifiant, nom: r.nom }, jeton_hash: r.jeton_hash } }];\n"
       },
       "id": "a1c3e000-0341-4000-8000-000000000341",
-      "name": "Session",
+      "name": "Sitzung",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -221,7 +221,7 @@
           },
           "conditions": [
             {
-              "id": "Session valide ?",
+              "id": "Sitzung gültig?",
               "leftValue": "={{ $json.ok === true }}",
               "rightValue": "",
               "operator": {
@@ -236,7 +236,7 @@
         "options": {}
       },
       "id": "a1c3e000-0342-4000-8000-000000000342",
-      "name": "Session valide ?",
+      "name": "Sitzung gültig?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
@@ -246,10 +246,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Contrôle de session – la session est valide : on rend aux nœuds suivants la requête d'origine (en-têtes, corps) telle que reçue.\nreturn [{ json: $('Webhook').first().json }];\n"
+        "jsCode": "// Sitzungsprüfung – die Sitzung ist gültig: Die ursprüngliche Anfrage (Header, Body) wird unverändert an die folgenden Knoten zurückgegeben.\nreturn [{ json: $('Webhook').first().json }];\n"
       },
       "id": "a1c3e000-0343-4000-8000-000000000343",
-      "name": "Requête",
+      "name": "Anfrage",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -259,10 +259,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Contrôle de session – refus : aucune donnée, seulement le motif. L'interface rouvre alors la page de connexion.\nreturn [{ json: { erreur: 'session' } }];\n"
+        "jsCode": "// Sitzungsprüfung – Ablehnung: keine Daten, nur der Grund. Die Oberfläche öffnet dann wieder die Anmeldeseite.\nreturn [{ json: { erreur: 'session' } }];\n"
       },
       "id": "a1c3e000-0344-4000-8000-000000000344",
-      "name": "Refus (session)",
+      "name": "Ablehnung (Sitzung)",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -272,22 +272,22 @@
     }
   ],
   "connections": {
-    "Planification": {
+    "Zeitplan": {
       "main": [
         [
           {
-            "node": "Correspondance",
+            "node": "Zuordnung",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Démarrage manuel": {
+    "Manueller Start": {
       "main": [
         [
           {
-            "node": "Correspondance",
+            "node": "Zuordnung",
             "type": "main",
             "index": 0
           }
@@ -298,113 +298,113 @@
       "main": [
         [
           {
-            "node": "Session (jeton)",
+            "node": "Sitzung (Token)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Correspondance": {
+    "Zuordnung": {
       "main": [
         [
           {
-            "node": "Requêtes FHIR",
+            "node": "FHIR-Anfragen",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Requêtes FHIR": {
+    "FHIR-Anfragen": {
       "main": [
         [
           {
-            "node": "Lire FHIR",
+            "node": "FHIR lesen",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Lire FHIR": {
+    "FHIR lesen": {
       "main": [
         [
           {
-            "node": "Documents FHIR",
+            "node": "FHIR-Dokumente",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Documents FHIR": {
+    "FHIR-Dokumente": {
       "main": [
         [
           {
-            "node": "Indexer",
+            "node": "Indizieren",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Session (jeton)": {
+    "Sitzung (Token)": {
       "main": [
         [
           {
-            "node": "Session (base)",
+            "node": "Sitzung (Datenbank)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Session (base)": {
+    "Sitzung (Datenbank)": {
       "main": [
         [
           {
-            "node": "Session",
+            "node": "Sitzung",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Session": {
+    "Sitzung": {
       "main": [
         [
           {
-            "node": "Session valide ?",
+            "node": "Sitzung gültig?",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Session valide ?": {
+    "Sitzung gültig?": {
       "main": [
         [
           {
-            "node": "Requête",
+            "node": "Anfrage",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Refus (session)",
+            "node": "Ablehnung (Sitzung)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Requête": {
+    "Anfrage": {
       "main": [
         [
           {
-            "node": "Correspondance",
+            "node": "Zuordnung",
             "type": "main",
             "index": 0
           }

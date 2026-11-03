@@ -1,38 +1,38 @@
-// Connecteur « base de l'hôpital (FHIR) » : ressources FHIR -> texte, un document par résident et par type.
-// Le résident est retrouvé par son identifiant FHIR grâce à la table de correspondance (patient_id unique).
+// Konnektor « Krankenhausdatenbank (FHIR) »: FHIR-Ressourcen -> Text, ein Dokument je Bewohner und Typ.
+// Der Bewohner wird über seine FHIR-Kennung anhand der Zuordnungstabelle gefunden (eindeutige patient_id).
 const parFhir = {};
-for (const { json: r } of $('Correspondance').all()) parFhir[r.fhir_id] = r;
+for (const { json: r } of $('Zuordnung').all()) parFhir[r.fhir_id] = r;
 
-const etiquette = (r) => `${r.civilite} ${r.prenom} ${r.nom} (chambre ${r.chambre})`;
-const jour = (d) => new Date(d).toLocaleDateString('fr-FR', { timeZone: 'Europe/Berlin' });
+const etiquette = (r) => `${r.civilite} ${r.prenom} ${r.nom} (Zimmer ${r.chambre})`;
+const jour = (d) => new Date(d).toLocaleDateString('de-DE', { timeZone: 'Europe/Berlin' });
 
 const TYPES = {
   Condition: {
-    type: 'diagnostic', titre: "Diagnostics (base de l'hôpital FHIR)", intro: 'Diagnostics notés par l\'hôpital',
-    ligne: (r) => `- ${r.code?.text ?? 'diagnostic'}${r.code?.coding?.[0]?.code ? ` (CIM-10 ${r.code.coding[0].code})` : ''}, statut ${r.clinicalStatus?.coding?.[0]?.code ?? 'inconnu'}`,
+    type: 'diagnostic', titre: 'Diagnosen (Krankenhausdatenbank FHIR)', intro: 'Vom Krankenhaus erfasste Diagnosen',
+    ligne: (r) => `- ${r.code?.text ?? 'Diagnose'}${r.code?.coding?.[0]?.code ? ` (ICD-10 ${r.code.coding[0].code})` : ''}, Status ${r.clinicalStatus?.coding?.[0]?.code ?? 'unbekannt'}`,
   },
   AllergyIntolerance: {
-    type: 'allergie', titre: "Allergies (base de l'hôpital FHIR)", intro: 'Allergies connues de l\'hôpital',
-    ligne: (r) => `- ${r.code?.text ?? 'allergie'} : réaction ${r.reaction?.[0]?.description ?? 'non précisée'}`,
+    type: 'allergie', titre: 'Allergien (Krankenhausdatenbank FHIR)', intro: 'Dem Krankenhaus bekannte Allergien',
+    ligne: (r) => `- ${r.code?.text ?? 'Allergie'}: Reaktion ${r.reaction?.[0]?.description ?? 'nicht angegeben'}`,
   },
   MedicationStatement: {
-    type: 'medication', titre: "Médication (base de l'hôpital FHIR)", intro: 'Médication déclarée par l\'hôpital',
-    ligne: (r) => `- ${r.medicationCodeableConcept?.text ?? 'médicament'} : ${r.dosage?.[0]?.text ?? 'posologie non précisée'}`,
+    type: 'medication', titre: 'Medikation (Krankenhausdatenbank FHIR)', intro: 'Vom Krankenhaus gemeldete Medikation',
+    ligne: (r) => `- ${r.medicationCodeableConcept?.text ?? 'Medikament'}: ${r.dosage?.[0]?.text ?? 'Dosierung nicht angegeben'}`,
   },
   Observation: {
-    type: 'analyse', titre: "Analyses (base de l'hôpital FHIR)", intro: 'Résultats d\'analyses de l\'hôpital',
-    ligne: (r) => `- ${r.code?.text ?? 'analyse'} : ${r.valueQuantity?.value ?? '?'} ${r.valueQuantity?.unit ?? ''} (${jour(r.effectiveDateTime)})`.replace(/ +\(/, ' ('),
+    type: 'analyse', titre: 'Laborwerte (Krankenhausdatenbank FHIR)', intro: 'Laborergebnisse des Krankenhauses',
+    ligne: (r) => `- ${r.code?.text ?? 'Laborwert'}: ${r.valueQuantity?.value ?? '?'} ${r.valueQuantity?.unit ?? ''} (${jour(r.effectiveDateTime)})`.replace(/ +\(/, ' ('),
   },
 };
 
-const groupes = {}; // clé = fhirId|ResourceType
+const groupes = {}; // Schlüssel = fhirId|ResourceType
 for (const { json: bundle } of $input.all()) {
   for (const e of bundle.entry ?? []) {
     const r = e.resource;
     const def = TYPES[r.resourceType];
     if (!def) continue;
     const fhirId = (r.subject ?? r.patient)?.reference?.replace('Patient/', '');
-    if (!parFhir[fhirId]) continue; // patient inconnu de la maison : ignoré
+    if (!parFhir[fhirId]) continue; // der Einrichtung unbekannter Patient: ignoriert
     const cle = `${fhirId}|${r.resourceType}`;
     (groupes[cle] ??= []).push(r);
   }
@@ -47,15 +47,15 @@ for (const [cle, ressources] of Object.entries(groupes)) {
   docs.push({
     collection: 'patients',
     source: 'fhir',
-    source_label: "Base hôpital (FHIR)",
+    source_label: 'Krankenhausdatenbank (FHIR)',
     type: def.type,
     titre: def.titre,
-    texte: `${def.intro} pour ${etiquette(patient)} :\n${ressources.map(def.ligne).sort().join('\n')}`,
+    texte: `${def.intro} für ${etiquette(patient)}:\n${ressources.map(def.ligne).sort().join('\n')}`,
     source_ref: `${fhirId}/${resourceType}`,
     patient_id: patient.patient_id,
     chambre: patient.chambre,
     patient_label: etiquette(patient),
-    date: new Date(maj ?? Date.now()).toISOString(), // _lastUpdated : change seulement si la ressource change
+    date: new Date(maj ?? Date.now()).toISOString(), // _lastUpdated: ändert sich nur, wenn sich die Ressource ändert
   });
 }
 return docs.map((json) => ({ json }));

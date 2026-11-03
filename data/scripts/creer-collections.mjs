@@ -1,22 +1,22 @@
-// Crée les 3 collections Qdrant du RAG (768 dimensions = nomic-embed-text, distance Cosine)
-// et leurs index de payload. Rejouable : ne supprime jamais de données.
+// Erstellt die 3 Qdrant-Collections des RAG (768 Dimensionen = nomic-embed-text, Distanz Cosine)
+// und ihre Payload-Indizes. Wiederholbar: löscht nie Daten.
 //
-//   patients      morceaux de texte rattachés à un résident (notes, FHIR, ePA, lettres, scans)
-//   connaissances protocoles et documents généraux de la maison (sans patient)
-//   a_verifier    documents entrants à contrôler avant d'être considérés comme fiables
-//                 (lettres de médecin, identité ambiguë ou contradiction détectée)
+//   patients      Textabschnitte, die einem Bewohner zugeordnet sind (Notizen, FHIR, ePA, Briefe, Scans)
+//   connaissances Protokolle und allgemeine Dokumente des Hauses (ohne Patient)
+//   a_verifier    eingehende Dokumente, die zu prüfen sind, bevor sie als verlässlich gelten
+//                 (Arztbriefe, mehrdeutige Identität oder erkannter Widerspruch)
 //
-// Usage : node scripts/creer-collections.mjs [url]   (défaut : http://localhost:6335)
+// Aufruf: node scripts/creer-collections.mjs [url]   (Standard: http://localhost:6335)
 const QDRANT = (process.argv[2] || 'http://localhost:6335').replace(/\/$/, '');
 const DIMENSION = 768;
 const DISTANCE = 'Cosine';
 
-// Champs du payload sur lesquels on filtre (voir docs/ pour le schéma complet).
+// Payload-Felder, nach denen gefiltert wird (vollständiges Schema siehe docs/).
 const INDEX_COMMUNS = {
   source: 'keyword',      // logiciel_soins | fhir | epa | fichier | kim
   type: 'keyword',        // note | diagnostic | allergie | medication | analyse | lettre | protocole …
-  empreinte: 'keyword',   // SHA-256 du morceau (anti-doublon)
-  date: 'datetime',       // date de l'information (filtre « 12 dernières heures »)
+  empreinte: 'keyword',   // SHA-256 des Abschnitts (gegen Duplikate)
+  date: 'datetime',       // Datum der Information (Filter „letzte 12 Stunden“)
 };
 const COLLECTIONS = {
   patients: { ...INDEX_COMMUNS, patient_id: 'keyword', chambre: 'keyword' },
@@ -37,7 +37,7 @@ try {
   const r = await api('/collections');
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
 } catch (e) {
-  console.error(`Qdrant injoignable sur ${QDRANT} (${e.message}). Lancez « docker compose up -d » dans compose/.`);
+  console.error(`Qdrant nicht erreichbar unter ${QDRANT} (${e.message}). Starten Sie „docker compose up -d“ in compose/.`);
   process.exit(1);
 }
 
@@ -48,15 +48,15 @@ for (const [nom, index] of Object.entries(COLLECTIONS)) {
       method: 'PUT',
       body: JSON.stringify({ vectors: { size: DIMENSION, distance: DISTANCE }, on_disk_payload: true }),
     });
-    if (!c.ok) throw new Error(`création de ${nom} : ${JSON.stringify(c.json)}`);
-    console.log(`créée      ${nom}`);
+    if (!c.ok) throw new Error(`Erstellung von ${nom}: ${JSON.stringify(c.json)}`);
+    console.log(`erstellt     ${nom}`);
   } else {
     const v = existante.json.result.config.params.vectors;
     if (v.size !== DIMENSION || v.distance !== DISTANCE) {
-      console.error(`${nom} existe avec une autre configuration (${v.size}, ${v.distance}) : à supprimer à la main si c'est voulu.`);
+      console.error(`${nom} existiert mit einer anderen Konfiguration (${v.size}, ${v.distance}): bei Bedarf von Hand löschen.`);
       process.exit(1);
     }
-    console.log(`existe déjà ${nom} (${existante.json.result.points_count} points)`);
+    console.log(`existiert bereits ${nom} (${existante.json.result.points_count} Punkte)`);
   }
   for (const [champ, schema] of Object.entries(index)) {
     const i = await api(`/collections/${nom}/index?wait=true`, {
@@ -66,4 +66,4 @@ for (const [nom, index] of Object.entries(COLLECTIONS)) {
     if (!i.ok) throw new Error(`index ${nom}.${champ} : ${JSON.stringify(i.json)}`);
   }
 }
-console.log(`Collections prêtes : ${Object.keys(COLLECTIONS).join(', ')} (${DIMENSION} dimensions, ${DISTANCE}).`);
+console.log(`Collections bereit: ${Object.keys(COLLECTIONS).join(', ')} (${DIMENSION} Dimensionen, ${DISTANCE}).`);

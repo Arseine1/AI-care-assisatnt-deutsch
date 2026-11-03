@@ -1,6 +1,6 @@
 {
   "id": "aicaresgb6lancer01",
-  "name": "AI-Care – Cotisations : lancer l'agent (tâche de fond)",
+  "name": "AI-Care – Rentenbeiträge: Agent starten (Hintergrundaufgabe)",
   "active": false,
   "nodes": [
     {
@@ -31,10 +31,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Cotisations retraite – lancer l'agent : { id, lecture_ia, pilote, modele }. Aucun texte libre : un identifiant de dossier, un booléen, et le pilote\n// (« modele » = piloté par un modèle local ; « guidee » = mission guidée par le code, défaut).\nconst e = $input.first().json?.body ?? {};\nconst id = String(e.id ?? '');\nif (!/^[a-z0-9][a-z0-9-]{2,63}$/.test(id)) throw new Error('id de dossier invalide');\nconst pilote = e.pilote === undefined ? 'guidee' : String(e.pilote);\nif (!['modele', 'guidee'].includes(pilote)) throw new Error('pilote invalide');\n// modele : le modèle local qui pilote l'agent, choisi dans la page. Liste FERMÉE (jamais un nom libre : il part dans une requête vers Ollama).\nconst PERMIS = [\"qwen2.5:7b\",\"qwen3:8b\",\"llama3.1:8b\",\"llama3.2\"];\nconst modele = e.modele === undefined || e.modele === '' ? \"qwen2.5:7b\" : String(e.modele);\nif (!PERMIS.includes(modele)) throw new Error(`modèle non permis : ${modele.slice(0, 40)}`);\nreturn [{ json: { id, lecture_ia: e.lecture_ia === true, pilote, modele } }];\n"
+        "jsCode": "// Rentenbeiträge – den Agenten starten: { id, lecture_ia, pilote, modele }. Kein freier Text: eine Aktenkennung, ein Boolean und der Steuerer\n// (« modele » = von einem lokalen Modell gesteuert; « guidee » = vom Code geführte Mission, Standard).\nconst e = $input.first().json?.body ?? {};\nconst id = String(e.id ?? '');\nif (!/^[a-z0-9][a-z0-9-]{2,63}$/.test(id)) throw new Error('Ungültige Akten-ID');\nconst pilote = e.pilote === undefined ? 'guidee' : String(e.pilote);\nif (!['modele', 'guidee'].includes(pilote)) throw new Error('Ungültige Steuerung');\n// modele : das lokale Modell, das den Agenten steuert, auf der Seite gewählt. GESCHLOSSENE Liste (nie ein freier Name: Er geht in eine Anfrage an Ollama).\nconst PERMIS = [\"qwen2.5:7b\",\"qwen3:8b\",\"llama3.1:8b\",\"llama3.2\"];\nconst modele = e.modele === undefined || e.modele === '' ? \"qwen2.5:7b\" : String(e.modele);\nif (!PERMIS.includes(modele)) throw new Error(`Modell nicht zulässig: ${modele.slice(0, 40)}`);\nreturn [{ json: { id, lecture_ia: e.lecture_ia === true, pilote, modele } }];\n"
       },
       "id": "a1c3e000-9126-4000-8000-000000009126",
-      "name": "Contrôler le lancement",
+      "name": "Start prüfen",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -51,7 +51,7 @@
         }
       },
       "id": "a1c3e000-9127-4000-8000-000000009127",
-      "name": "Dossier",
+      "name": "Akte",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
@@ -69,10 +69,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Cotisations retraite – lancer l'agent : le dossier existe-t-il, n'est-il pas déjà décidé, un traitement n'est-il pas déjà en cours ?\nconst d = $('Contrôler le lancement').first().json;\nconst r = $input.first().json ?? {};\nconst refus = (reponse) => [{ json: { ok: false, reponse } }];\nif (!r.id) return refus({ ok: false, erreur: 'inconnu', message: 'Dossier inconnu.' });\nif (['valide', 'refuse'].includes(r.statut)) return refus({ ok: false, erreur: 'decide', message: 'Ce dossier est déjà décidé : il ne peut plus être traité.' });\nif (r.tache_en_cours) return refus({ ok: true, tache_id: r.tache_en_cours, id: r.id, deja: true, etapes: ['lire', 'extraire', 'controler', 'caisse', 'regles', 'calculer', 'declaration'] });\nreturn [{ json: { ok: true, id: r.id, lecture_ia: d.lecture_ia, pilote: d.pilote, modele: d.modele, soignant: $('Session').first().json.soignant.identifiant } }];\n"
+        "jsCode": "// Rentenbeiträge – den Agenten starten: Existiert die Akte, ist sie nicht schon entschieden, läuft nicht schon eine Bearbeitung?\nconst d = $('Start prüfen').first().json;\nconst r = $input.first().json ?? {};\nconst refus = (reponse) => [{ json: { ok: false, reponse } }];\nif (!r.id) return refus({ ok: false, erreur: 'inconnu', message: 'Unbekannte Akte.' });\nif (['valide', 'refuse'].includes(r.statut)) return refus({ ok: false, erreur: 'decide', message: 'Diese Akte ist bereits entschieden: Sie kann nicht mehr bearbeitet werden.' });\nif (r.tache_en_cours) return refus({ ok: true, tache_id: r.tache_en_cours, id: r.id, deja: true, etapes: ['lire', 'extraire', 'controler', 'caisse', 'regles', 'calculer', 'declaration'] });\nreturn [{ json: { ok: true, id: r.id, lecture_ia: d.lecture_ia, pilote: d.pilote, modele: d.modele, soignant: $('Sitzung').first().json.soignant.identifiant } }];\n"
       },
       "id": "a1c3e000-9128-4000-8000-000000009128",
-      "name": "Vérifier le lancement",
+      "name": "Start überprüfen",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -91,7 +91,7 @@
           },
           "conditions": [
             {
-              "id": "Lancement possible ?",
+              "id": "Start möglich?",
               "leftValue": "={{ $json.ok === true && !$json.reponse }}",
               "rightValue": "",
               "operator": {
@@ -106,7 +106,7 @@
         "options": {}
       },
       "id": "a1c3e000-9129-4000-8000-000000009129",
-      "name": "Lancement possible ?",
+      "name": "Start möglich?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
@@ -123,7 +123,7 @@
         }
       },
       "id": "a1c3e000-9130-4000-8000-000000009130",
-      "name": "Créer la tâche",
+      "name": "Aufgabe erstellen",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
@@ -141,10 +141,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Cotisations retraite – réponse immédiate : l'agent travaille ensuite en tâche de fond.\nconst t = $input.first().json ?? {};\nconst v = $('Vérifier le lancement').first().json;\nreturn [{ json: { ok: true, tache_id: t.id, id: v.id, pilote: v.pilote, etapes: ['lire', 'extraire', 'controler', 'caisse', 'regles', 'calculer', 'declaration'] } }];\n"
+        "jsCode": "// Rentenbeiträge – sofortige Antwort: Der Agent arbeitet danach als Hintergrundaufgabe weiter.\nconst t = $input.first().json ?? {};\nconst v = $('Start überprüfen').first().json;\nreturn [{ json: { ok: true, tache_id: t.id, id: v.id, pilote: v.pilote, etapes: ['lire', 'extraire', 'controler', 'caisse', 'regles', 'calculer', 'declaration'] } }];\n"
       },
       "id": "a1c3e000-9131-4000-8000-000000009131",
-      "name": "Réponse (tâche)",
+      "name": "Antwort (Aufgabe)",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -159,7 +159,7 @@
         "options": {}
       },
       "id": "a1c3e000-9132-4000-8000-000000009132",
-      "name": "Répondre tout de suite",
+      "name": "Sofort antworten",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
       "position": [
@@ -169,10 +169,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Cotisations retraite – ce qui part vers le sous-workflow de l'agent : la tâche, le dossier, le pilote, la lecture par l'IA, le soignant de la session.\nconst v = $('Vérifier le lancement').first().json;\nreturn [{ json: { task_id: $('Créer la tâche').first().json.id, dossier_id: v.id, lecture_ia: v.lecture_ia, pilote: v.pilote, modele: v.modele, soignant: v.soignant } }];\n"
+        "jsCode": "// Rentenbeiträge – was an den Unterworkflow des Agenten geht: die Aufgabe, die Akte, der Steuerer, das Lesen durch die KI, die Pflegekraft der Sitzung.\nconst v = $('Start überprüfen').first().json;\nreturn [{ json: { task_id: $('Aufgabe erstellen').first().json.id, dossier_id: v.id, lecture_ia: v.lecture_ia, pilote: v.pilote, modele: v.modele, soignant: v.soignant } }];\n"
       },
       "id": "a1c3e000-9133-4000-8000-000000009133",
-      "name": "Vers l'agent",
+      "name": "Zum Agenten",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -194,7 +194,7 @@
         }
       },
       "id": "a1c3e000-9134-4000-8000-000000009134",
-      "name": "L'agent",
+      "name": "Der Agent",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.2,
       "position": [
@@ -208,11 +208,11 @@
         "operation": "executeQuery",
         "query": "UPDATE soins.taches SET statut = 'termine_avec_erreurs', termine_le = now() WHERE id = $1::uuid AND statut = 'en_cours' RETURNING id",
         "options": {
-          "queryReplacement": "={{ [ $('Créer la tâche').first().json.id ] }}"
+          "queryReplacement": "={{ [ $('Aufgabe erstellen').first().json.id ] }}"
         }
       },
       "id": "a1c3e000-9135-4000-8000-000000009135",
-      "name": "Terminer en erreur",
+      "name": "Mit Fehler beenden",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
@@ -235,7 +235,7 @@
         "options": {}
       },
       "id": "a1c3e000-9136-4000-8000-000000009136",
-      "name": "Répondre (refus)",
+      "name": "Antworten (Ablehnung)",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
       "position": [
@@ -245,10 +245,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Contrôle de session – le jeton « Bearer » de l'en-tête Authorization (43 caractères URL-safe) est haché (SHA-256) : seul le haché est en base.\nconst entetes = $input.first().json?.headers ?? {};\nconst m = String(entetes.authorization ?? '').match(/^Bearer ([A-Za-z0-9_-]{43})$/);\nif (!m) return [{ json: { hash: '' } }];\nreturn [{ json: { hash: require('crypto').createHash('sha256').update(m[1]).digest('hex') } }];\n"
+        "jsCode": "// Sitzungsprüfung – das « Bearer »-Token im Authorization-Header (43 URL-sichere Zeichen) wird gehasht (SHA-256): Nur der Hash steht in der Datenbank.\nconst entetes = $input.first().json?.headers ?? {};\nconst m = String(entetes.authorization ?? '').match(/^Bearer ([A-Za-z0-9_-]{43})$/);\nif (!m) return [{ json: { hash: '' } }];\nreturn [{ json: { hash: require('crypto').createHash('sha256').update(m[1]).digest('hex') } }];\n"
       },
       "id": "a1c3e000-0461-4000-8000-000000000461",
-      "name": "Session (jeton)",
+      "name": "Sitzung (Token)",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -265,7 +265,7 @@
         }
       },
       "id": "a1c3e000-0462-4000-8000-000000000462",
-      "name": "Session (base)",
+      "name": "Sitzung (Datenbank)",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
@@ -283,10 +283,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Contrôle de session – résultat : un soignant identifié (session ouverte, non expirée, compte actif) ou rien.\nconst r = $input.first().json ?? {};\nif (!r.identifiant) return [{ json: { ok: false } }];\nreturn [{ json: { ok: true, soignant: { identifiant: r.identifiant, nom: r.nom }, jeton_hash: r.jeton_hash } }];\n"
+        "jsCode": "// Sitzungsprüfung – Ergebnis: eine identifizierte Pflegekraft (Sitzung offen, nicht abgelaufen, Konto aktiv) oder nichts.\nconst r = $input.first().json ?? {};\nif (!r.identifiant) return [{ json: { ok: false } }];\nreturn [{ json: { ok: true, soignant: { identifiant: r.identifiant, nom: r.nom }, jeton_hash: r.jeton_hash } }];\n"
       },
       "id": "a1c3e000-0463-4000-8000-000000000463",
-      "name": "Session",
+      "name": "Sitzung",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -305,7 +305,7 @@
           },
           "conditions": [
             {
-              "id": "Session valide ?",
+              "id": "Sitzung gültig?",
               "leftValue": "={{ $json.ok === true }}",
               "rightValue": "",
               "operator": {
@@ -320,7 +320,7 @@
         "options": {}
       },
       "id": "a1c3e000-0464-4000-8000-000000000464",
-      "name": "Session valide ?",
+      "name": "Sitzung gültig?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
@@ -330,10 +330,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Contrôle de session – la session est valide : on rend aux nœuds suivants la requête d'origine (en-têtes, corps) telle que reçue.\nreturn [{ json: $('Webhook').first().json }];\n"
+        "jsCode": "// Sitzungsprüfung – die Sitzung ist gültig: Die ursprüngliche Anfrage (Header, Body) wird unverändert an die folgenden Knoten zurückgegeben.\nreturn [{ json: $('Webhook').first().json }];\n"
       },
       "id": "a1c3e000-0465-4000-8000-000000000465",
-      "name": "Requête",
+      "name": "Anfrage",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -343,10 +343,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Contrôle de session – refus : aucune donnée, seulement le motif. L'interface rouvre alors la page de connexion.\nreturn [{ json: { erreur: 'session' } }];\n"
+        "jsCode": "// Sitzungsprüfung – Ablehnung: keine Daten, nur der Grund. Die Oberfläche öffnet dann wieder die Anmeldeseite.\nreturn [{ json: { erreur: 'session' } }];\n"
       },
       "id": "a1c3e000-0466-4000-8000-000000000466",
-      "name": "Refus (session)",
+      "name": "Ablehnung (Sitzung)",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -361,7 +361,7 @@
         "options": {}
       },
       "id": "a1c3e000-0467-4000-8000-000000000467",
-      "name": "Répondre (session)",
+      "name": "Antworten (Sitzung)",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
       "position": [
@@ -375,186 +375,186 @@
       "main": [
         [
           {
-            "node": "Session (jeton)",
+            "node": "Sitzung (Token)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Contrôler le lancement": {
+    "Start prüfen": {
       "main": [
         [
           {
-            "node": "Dossier",
+            "node": "Akte",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Dossier": {
+    "Akte": {
       "main": [
         [
           {
-            "node": "Vérifier le lancement",
+            "node": "Start überprüfen",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Vérifier le lancement": {
+    "Start überprüfen": {
       "main": [
         [
           {
-            "node": "Lancement possible ?",
+            "node": "Start möglich?",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Lancement possible ?": {
+    "Start möglich?": {
       "main": [
         [
           {
-            "node": "Créer la tâche",
+            "node": "Aufgabe erstellen",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Répondre (refus)",
+            "node": "Antworten (Ablehnung)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Créer la tâche": {
+    "Aufgabe erstellen": {
       "main": [
         [
           {
-            "node": "Réponse (tâche)",
+            "node": "Antwort (Aufgabe)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Réponse (tâche)": {
+    "Antwort (Aufgabe)": {
       "main": [
         [
           {
-            "node": "Répondre tout de suite",
+            "node": "Sofort antworten",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Répondre tout de suite": {
+    "Sofort antworten": {
       "main": [
         [
           {
-            "node": "Vers l'agent",
+            "node": "Zum Agenten",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Vers l'agent": {
+    "Zum Agenten": {
       "main": [
         [
           {
-            "node": "L'agent",
+            "node": "Der Agent",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "L'agent": {
+    "Der Agent": {
       "main": [
         [
           {
-            "node": "Terminer en erreur",
+            "node": "Mit Fehler beenden",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Session (jeton)": {
+    "Sitzung (Token)": {
       "main": [
         [
           {
-            "node": "Session (base)",
+            "node": "Sitzung (Datenbank)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Session (base)": {
+    "Sitzung (Datenbank)": {
       "main": [
         [
           {
-            "node": "Session",
+            "node": "Sitzung",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Session": {
+    "Sitzung": {
       "main": [
         [
           {
-            "node": "Session valide ?",
+            "node": "Sitzung gültig?",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Session valide ?": {
+    "Sitzung gültig?": {
       "main": [
         [
           {
-            "node": "Requête",
+            "node": "Anfrage",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Refus (session)",
+            "node": "Ablehnung (Sitzung)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Requête": {
+    "Anfrage": {
       "main": [
         [
           {
-            "node": "Contrôler le lancement",
+            "node": "Start prüfen",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Refus (session)": {
+    "Ablehnung (Sitzung)": {
       "main": [
         [
           {
-            "node": "Répondre (session)",
+            "node": "Antworten (Sitzung)",
             "type": "main",
             "index": 0
           }

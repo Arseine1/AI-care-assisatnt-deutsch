@@ -1,7 +1,7 @@
 import { t } from '../i18n';
 
-// Phrases de l'assistant IA retirées du texte parce qu'aucun fait ne les appuie. Repliées par défaut :
-// le soignant voit tout ce qui a été écarté, mais rien de cela n'entre dans le rapport.
+// Sätze des KI-Assistenten, die aus dem Text entfernt wurden, weil keine Tatsache sie stützt. Standardmäßig eingeklappt:
+// Die Pflegekraft sieht alles, was ausgesondert wurde, aber nichts davon gelangt in den Bericht.
 export default function PhrasesRetirees({ liste }) {
   if (!liste?.length) return null;
   return (

@@ -1,11 +1,11 @@
-/* Police Outfit hébergée localement (aucun appel à un service externe) */
+/* Schrift Outfit lokal gehostet (kein Aufruf eines externen Dienstes) */
 @import '@fontsource-variable/outfit';
 
 :root {
-  /* Couleurs du logo Team Global Solutions (bleu, vert, orange), adoucies : teintes pastel pour les fonds, tons posés pour le texte
-     et les boutons. Le rouge reste réservé aux alarmes et aux refus, distinct de l'orange du logo. */
+  /* Farben des Logos Team Global Solutions (Blau, Grün, Orange), abgemildert: Pastelltöne für Hintergründe, gedeckte Töne für Text
+     und Schaltflächen. Rot bleibt Alarmen und Ablehnungen vorbehalten, abgesetzt vom Orange des Logos. */
 
-  /* Bleu = couleur principale */
+  /* Blau = Hauptfarbe */
   --marque-900: #2a4565;
   --marque-700: #3f78b5;
   --marque-600: #356aa3;
@@ -13,26 +13,26 @@
   --marque-100: #e8f0f8;
   --marque-50: #f4f8fc;
 
-  /* Vert = validation, succès */
+  /* Grün = Bestätigung, Erfolg */
   --vert-700: #3d8654;
   --vert-600: #347548;
   --vert-500: #6bb37d;
   --vert-100: #e8f4ec;
 
-  /* Orange = points d'attention */
+  /* Orange = Aufmerksamkeitspunkte */
   --orange-700: #a8601d;
   --orange-500: #e98a4a;
   --orange-100: #fdf3e8;
   --orange-bord: #f4dcc2;
 
-  /* Neutres */
+  /* Neutrale Töne */
   --encre: #27333f;
   --encre-douce: #6b7a88;
   --bord: #e7ecf1;
   --fond: #f6f8fb;
   --carte: #ffffff;
 
-  /* Alarmes et refus */
+  /* Alarme und Ablehnungen */
   --alerte: #c94b45;
   --alerte-fort: #9a2f2a;
   --alerte-fond: #fdf1f0;
@@ -59,7 +59,7 @@ body {
     radial-gradient(700px 300px at 100% 0%, rgba(107, 179, 125, 0.08), transparent 70%),
     var(--fond);
   background-attachment: fixed;
-  font-size: 17px; /* lisible sur tablette */
+  font-size: 17px; /* lesbar auf dem Tablet */
   font-weight: 400;
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
@@ -78,7 +78,7 @@ button { cursor: pointer; }
   padding: 28px 28px 56px;
 }
 
-/* ---------- En-tête ---------- */
+/* ---------- Kopfzeile ---------- */
 .entete {
   display: flex;
   align-items: center;
@@ -94,7 +94,7 @@ button { cursor: pointer; }
   width: 76px;
   height: auto;
   display: block;
-  /* le logo (JPEG sur fond blanc) se fond dans le fond clair de la page */
+  /* das Logo (JPEG auf weißem Grund) geht im hellen Seitenhintergrund auf */
   mix-blend-mode: multiply;
 }
 
@@ -122,7 +122,7 @@ button { cursor: pointer; }
   opacity: 0.8;
 }
 
-/* ---------- Onglets (contrôle segmenté, doux) ---------- */
+/* ---------- Reiter (segmentierte Auswahl, sanft) ---------- */
 .modes {
   display: flex;
   gap: 4px;
@@ -137,7 +137,7 @@ button { cursor: pointer; }
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 48px; /* cible tactile confortable */
+  min-height: 48px; /* komfortable Touch-Zielgröße */
   border: 0;
   border-radius: 999px;
   background: transparent;
@@ -155,7 +155,7 @@ button { cursor: pointer; }
   box-shadow: var(--ombre-douce);
 }
 
-/* ---------- Contenu ---------- */
+/* ---------- Inhalt ---------- */
 .contenu {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -176,7 +176,7 @@ button { cursor: pointer; }
 .panneau h2 { font-size: 1.2rem; font-weight: 500; color: var(--marque-900); }
 .panneau-aide { color: var(--encre-douce); margin-top: 4px; font-size: 0.93rem; font-weight: 300; }
 
-/* État vide du panneau de réponse */
+/* Leerzustand des Antwortbereichs */
 .vide {
   display: grid;
   place-items: center;
@@ -191,7 +191,7 @@ button { cursor: pointer; }
 }
 .vide svg { width: 34px; height: 34px; color: var(--marque-500); opacity: 0.7; }
 
-/* ---------- Formulaires ---------- */
+/* ---------- Formulare ---------- */
 .champ { display: block; margin-bottom: 20px; }
 .champ-label {
   display: block;
@@ -215,7 +215,7 @@ select {
 select:hover { background: var(--carte); }
 select:focus { border-color: var(--marque-500); background: var(--carte); }
 
-/* ---------- Mode A : boutons d'action ---------- */
+/* ---------- Modus A: Aktionsschaltflächen ---------- */
 .boutons-actions {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -253,7 +253,7 @@ select:focus { border-color: var(--marque-500); background: var(--carte); }
 
 .astuce { margin-top: 14px; color: var(--encre-douce); font-size: 0.9rem; font-weight: 300; }
 
-/* ---------- Mode B : consigne guidée ---------- */
+/* ---------- Modus B: geführte Anweisung ---------- */
 .obligatoire { color: var(--orange-700); font-weight: 400; font-size: 0.85rem; text-transform: none; letter-spacing: 0; }
 
 textarea {
@@ -313,7 +313,7 @@ textarea::placeholder { color: #9aa7b3; }
 .bouton-principal:disabled { opacity: 0.4; cursor: not-allowed; box-shadow: none; }
 .controle { text-align: center; }
 
-/* ---------- Réponse, sources, validation ---------- */
+/* ---------- Antwort, Quellen, Bestätigung ---------- */
 .contexte-demande {
   padding: 12px 16px;
   margin-bottom: 20px;
@@ -349,7 +349,7 @@ textarea::placeholder { color: #9aa7b3; }
   font-weight: 500;
 }
 
-/* ---------- Alertes de contradiction (rouge réservé aux alertes) ---------- */
+/* ---------- Widerspruchsmeldungen (Rot ist Meldungen vorbehalten) ---------- */
 .alertes {
   display: flex;
   align-items: flex-start;
@@ -373,7 +373,7 @@ textarea::placeholder { color: #9aa7b3; }
 .chargement { background: var(--marque-50); color: var(--marque-700); }
 .erreur { margin-top: 14px; background: var(--alerte-fond); color: var(--alerte-fort); }
 
-/* ---------- Points à vérifier (contrôles automatiques) et consigne refusée ---------- */
+/* ---------- Zu prüfende Punkte (automatische Kontrollen) und abgelehnte Anweisung ---------- */
 .avertissements {
   margin: 16px 0;
   padding: 14px 18px;
@@ -411,14 +411,14 @@ textarea::placeholder { color: #9aa7b3; }
 .refus h3 { margin: 0 0 6px; color: var(--alerte-fort); font-size: 1.02rem; }
 .refus p { margin: 0 0 6px; }
 
-/* Tablette en portrait : une seule colonne */
+/* Tablet im Hochformat: nur eine Spalte */
 @media (max-width: 860px) {
   .app { padding: 18px; }
   .contenu { grid-template-columns: 1fr; }
   .panneau { min-height: 0; padding: 22px; }
 }
 
-/* ---- Rapport de garde d'un étage ---- */
+/* ---- Übergabebericht eines Stockwerks ---- */
 .bloc-etage { margin-top: 28px; padding-top: 24px; border-top: 1px solid var(--bord); display: grid; gap: 12px; }
 .bloc-etage h3 { margin: 0; font-size: 1.02rem; font-weight: 500; color: var(--marque-900); }
 .carte-rapport { border: 1px solid var(--bord); border-radius: 18px; padding: 18px 20px; margin-top: 14px; background: var(--carte); box-shadow: 0 1px 2px rgba(42, 69, 101, 0.03); }
@@ -429,7 +429,7 @@ textarea::placeholder { color: #9aa7b3; }
 .apres-validation { margin: 12px 0 0; padding-left: 20px; color: var(--encre); }
 .apres-validation .alerte-texte { color: var(--alerte); }
 
-/* ---- Phrases retirées par le filtre anti-invention ---- */
+/* ---- Vom Filter gegen Erfundenes entfernte Sätze ---- */
 .retirees { margin-top: 14px; border: 1px dashed #d5dde5; border-radius: var(--rayon-petit); padding: 10px 14px; background: var(--fond); }
 .retirees summary { cursor: pointer; font-weight: 500; color: var(--encre-douce); font-size: 0.92rem; }
 .retirees ul { margin: 8px 0 0; padding-left: 20px; }
@@ -437,7 +437,7 @@ textarea::placeholder { color: #9aa7b3; }
 .retirees .phrase-retiree { text-decoration: line-through; color: var(--encre-douce); }
 .retirees .detail { color: var(--encre-douce); font-size: 0.83rem; }
 
-/* ---- Analyse complémentaire (Vérifier le document) et réglage ---- */
+/* ---- Ergänzende Analyse (Dokument prüfen) und Einstellung ---- */
 .analyse { margin-top: 16px; padding: 14px 16px; border-radius: var(--rayon-petit); background: var(--marque-50); border: 1px solid var(--marque-100); }
 .analyse h3 { margin: 0 0 6px; font-size: 0.98rem; font-weight: 500; }
 .analyse ul { margin: 6px 0 0; padding-left: 20px; }
@@ -447,7 +447,7 @@ textarea::placeholder { color: #9aa7b3; }
 .reglage { display: flex; gap: 10px; align-items: flex-start; margin-top: 18px; font-size: 0.88rem; font-weight: 300; color: var(--encre-douce); }
 .reglage input { margin-top: 4px; accent-color: var(--marque-700); }
 
-/* ---- Alarmes de capteurs : carte douce, sans bandeau ni barre de couleur ---- */
+/* ---- Sensoralarme: sanfte Karte, ohne Banner und ohne Farbbalken ---- */
 .alarmes-capteurs { display: grid; gap: 12px; margin: 0 0 22px; }
 .alarme-capteur {
   position: relative;
@@ -495,7 +495,7 @@ textarea::placeholder { color: #9aa7b3; }
 .alarme-texte { white-space: pre-line; }
 .alarme-capteur .retirees { background: rgba(255, 255, 255, 0.6); }
 
-/* ---- Page Alertes ---- */
+/* ---- Seite Meldungen ---- */
 .compteur-alertes { display: inline-block; min-width: 22px; margin-left: 8px; padding: 0 7px; border-radius: 999px; background: var(--alerte); color: #fff; font-size: 0.78rem; font-weight: 500; line-height: 22px; text-align: center; }
 .contenu-alertes { grid-template-columns: 1fr; }
 .page-alertes h3 { margin: 24px 0 10px; font-size: 1rem; font-weight: 500; color: var(--marque-900); }
@@ -506,12 +506,12 @@ textarea::placeholder { color: #9aa7b3; }
 .historique-alarmes .detail { color: var(--encre-douce); }
 .alarmes-voir-tout { color: var(--alerte-fort); justify-self: start; }
 
-/* Respect des préférences de mouvement réduit */
+/* Rücksicht auf die Einstellung für reduzierte Bewegung */
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }
 }
 
-/* ---- Alertes de documents (courriers, ePA) : gravité douce ---- */
+/* ---- Dokumentmeldungen (Schreiben, ePA): sanfte Gewichtung ---- */
 .alarme-capteur.alarme-attention { background: var(--orange-100); border-color: var(--orange-bord); }
 .alarme-capteur.alarme-attention h2 { color: var(--orange-700); }
 .alarme-capteur.alarme-attention h2::before { background: var(--orange-500); animation: none; box-shadow: none; }
@@ -525,7 +525,7 @@ textarea::placeholder { color: #9aa7b3; }
 
 .compteur-alertes.compteur-doux { background: var(--orange-500); }
 
-/* ---- Une page par processus métier ---- */
+/* ---- Eine Seite pro Fachprozess ---- */
 .section-page { margin: 26px 0 12px; padding-top: 22px; border-top: 1px solid var(--bord); font-size: 1.02rem; font-weight: 500; color: var(--marque-900); }
 .page-garde .panneau-entete + .champ { margin-top: 0; }
 .bloc-etage h4 { margin: 0; font-size: 0.98rem; font-weight: 500; color: var(--marque-900); }
@@ -533,7 +533,7 @@ textarea::placeholder { color: #9aa7b3; }
 .colonne { display: grid; gap: 24px; align-items: start; }
 .verifier-document .bouton-principal { margin-top: 4px; }
 
-/* ---- Deux modes dans la première page (actions rapides / consigne guidée) ---- */
+/* ---- Zwei Modi auf der ersten Seite (Schnellaktionen / geführte Anweisung) ---- */
 .sous-modes { display: flex; gap: 4px; padding: 4px; margin: 26px 0 18px; background: rgba(42, 69, 101, 0.06); border-radius: 999px; }
 .sous-onglet { flex: 1; min-height: 44px; border: 0; border-radius: 999px; background: transparent; color: var(--encre-douce); font-weight: 400; transition: background 0.2s, color 0.2s, box-shadow 0.2s; }
 .sous-onglet:hover { color: var(--marque-900); }
@@ -544,9 +544,9 @@ textarea::placeholder { color: #9aa7b3; }
 
 @media (max-width: 560px) { .onglet { font-size: 0.9rem; padding: 0 8px; } .modes { gap: 2px; } }
 
-/* ---------- Connexion du soignant (jour 4, étape 7) ---------- */
+/* ---------- Anmeldung der Pflegekraft (Tag 4, Schritt 7) ---------- */
 .entete-droite { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
-/* Carte du soignant connecté (en-tête) : pastille d'initiales, nom, état, bouton de déconnexion */
+/* Karte der angemeldeten Pflegekraft (Kopfzeile): Initialen-Avatar, Name, Status, Abmelde-Schaltfläche */
 .soignant-carte {
   display: flex;
   align-items: center;
@@ -590,10 +590,10 @@ textarea::placeholder { color: #9aa7b3; }
   transition: background 0.2s, border-color 0.2s, color 0.2s;
 }
 .bouton-deconnexion svg { width: 18px; height: 18px; }
-.bouton-deconnexion:hover { background: var(--alerte-fond); border-color: var(--alerte-bord); color: var(--alerte-fort); }/* Page de connexion : une vitrine douce à gauche, le formulaire à droite (empilés sur tablette et téléphone) */
+.bouton-deconnexion:hover { background: var(--alerte-fond); border-color: var(--alerte-bord); color: var(--alerte-fort); }/* Anmeldeseite: links eine sanfte Vitrine, rechts das Formular (auf Tablet und Telefon untereinander) */
 .connexion-page {
   height: 100vh;
-  height: 100dvh; /* tout tient dans l'écran, sans défilement */
+  height: 100dvh; /* alles passt auf den Bildschirm, ohne Scrollen */
   overflow: hidden;
   display: grid;
   grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
@@ -683,7 +683,7 @@ textarea::placeholder { color: #9aa7b3; }
 .connexion-note { margin-top: 16px; text-align: center; color: var(--encre-douce); font-size: 0.82rem; font-weight: 300; }
 .connexion-simulee { margin-top: 10px; padding: 10px 14px; text-align: center; border-radius: var(--rayon-petit); background: var(--marque-50); color: var(--marque-900); font-size: 0.85rem; font-weight: 300; }
 
-/* Tout doit tenir dans l'écran : on resserre selon la hauteur, puis on empile la vitrine en simple en-tête sur écran étroit */
+/* Alles muss auf den Bildschirm passen: Je nach Höhe wird enger gesetzt, dann wird die Vitrine auf schmalen Bildschirmen als einfache Kopfzeile gestapelt */
 @media (max-height: 760px) {
   .connexion-vitrine { padding-top: 28px; padding-bottom: 28px; }
   .connexion-logo { width: 140px; margin-bottom: 16px; }
@@ -720,23 +720,23 @@ textarea::placeholder { color: #9aa7b3; }
 }
 
 /* =====================================================================================================
-   ADAPTATION À TOUS LES ÉCRANS (grand écran, portable, tablette portrait et paysage, téléphone, écran tactile)
-   Règles de lecture : jamais de défilement horizontal, texte lisible sans zoom, cibles tactiles d'au moins 44 px.
+   ANPASSUNG AN ALLE BILDSCHIRME (großer Bildschirm, Laptop, Tablet hoch und quer, Telefon, Touchscreen)
+   Leseregeln: nie horizontales Scrollen, Text ohne Zoom lesbar, Touch-Ziele von mindestens 44 px.
    ===================================================================================================== */
 html { -webkit-text-size-adjust: 100%; }
 img, svg, video { max-width: 100%; }
 .app { padding-left: max(28px, env(safe-area-inset-left)); padding-right: max(28px, env(safe-area-inset-right)); }
-.contenu > *, .colonne > * { min-width: 0; } /* une colonne de grille ne doit jamais élargir la page */
+.contenu > *, .colonne > * { min-width: 0; } /* eine Rasterspalte darf die Seite nie verbreitern */
 .panneau, .carte-rapport, .alarme-capteur, .analyse { overflow-wrap: anywhere; }
 textarea { max-width: 100%; resize: vertical; }
 
-/* grand écran (bureau, mur d'écrans du poste de soins) : on élargit sans étirer le texte */
+/* großer Bildschirm (Schreibtisch, Bildschirmwand des Pflegestützpunkts): breiter, ohne den Text zu dehnen */
 @media (min-width: 1500px) {
   .app { max-width: 1320px; }
   body { font-size: 18px; }
 }
 
-/* portable et tablette en paysage */
+/* Laptop und Tablet im Querformat */
 @media (max-width: 1100px) {
   .app { padding-top: 22px; padding-bottom: 44px; padding-left: max(22px, env(safe-area-inset-left)); padding-right: max(22px, env(safe-area-inset-right)); }
   .panneau { padding: 24px; }
@@ -744,16 +744,16 @@ textarea { max-width: 100%; resize: vertical; }
   .bouton-action { min-height: 100px; padding: 16px; }
 }
 
-/* tablette en portrait et petits écrans : tout en une colonne (règle de base à 860 px, complétée ici) */
+/* Tablet im Hochformat und kleine Bildschirme: alles in einer Spalte (Grundregel bei 860 px, hier ergänzt) */
 @media (max-width: 860px) {
   .entete { margin-bottom: 18px; }
   .modes { margin-bottom: 18px; }
-  .boutons-actions { grid-template-columns: repeat(3, minmax(0, 1fr)); } /* 3 actions : une ligne sur tablette */
+  .boutons-actions { grid-template-columns: repeat(3, minmax(0, 1fr)); } /* 3 Aktionen: eine Zeile auf dem Tablet */
   .bouton-action { min-height: 112px; }
   .alarme-capteur { padding: 16px 18px; }
 }
 
-/* téléphone */
+/* Telefon */
 @media (max-width: 640px) {
   body { font-size: 16px; }
   .app { padding: 12px max(14px, env(safe-area-inset-right)) 36px max(14px, env(safe-area-inset-left)); }
@@ -789,12 +789,12 @@ textarea { max-width: 100%; resize: vertical; }
   .reglages-alertes { gap: 6px 12px; }
   .liste-sources { gap: 6px; }
   .vide { min-height: 130px; padding: 18px; }
-  /* 16 px minimum dans les champs : le téléphone ne zoome pas tout seul à la saisie */
+  /* mindestens 16 px in den Feldern: Das Telefon zoomt bei der Eingabe nicht von selbst */
   select, textarea, input { font-size: 16px; }
   textarea { min-height: 120px; }
 }
 
-/* petit téléphone */
+/* kleines Telefon */
 @media (max-width: 380px) {
   .app { padding-left: 10px; padding-right: 10px; }
   .panneau { padding: 16px 12px; }
@@ -803,8 +803,8 @@ textarea { max-width: 100%; resize: vertical; }
 }
 
 /* =====================================================================================================
-   MENU LATÉRAL : les pages (Rapport de garde, Alarmes, Documents…) sont alignées à gauche, le contenu est à droite.
-   Sous 960 px (tablette en portrait, téléphone), le menu repasse en haut, en rangée, comme avant.
+   SEITENMENÜ: Die Seiten (Übergabebericht, Alarme, Dokumente …) stehen links, der Inhalt rechts.
+   Unter 960 px (Tablet im Hochformat, Telefon) rückt das Menü wie zuvor nach oben, in einer Reihe.
    ===================================================================================================== */
 .app { max-width: 1400px; }
 .disposition { display: grid; grid-template-columns: 236px minmax(0, 1fr); gap: 28px; align-items: start; }
@@ -857,19 +857,19 @@ textarea { max-width: 100%; resize: vertical; }
   .disposition .modes::-webkit-scrollbar { display: none; }
 }
 @media (max-width: 640px) {
-  /* 4 entrées sur 390 px : libellés sur 2 lignes, compteur sous le texte, rien ne déborde */
+  /* 4 Einträge auf 390 px: Beschriftungen in 2 Zeilen, Zähler unter dem Text, nichts läuft über */
   .disposition .onglet { flex: 1 1 0; min-width: 0; flex-wrap: wrap; gap: 2px; padding: 4px; font-size: 0.78rem; line-height: 1.15; white-space: normal; }
   .disposition .onglet .compteur-alertes { margin-left: 0; min-width: 18px; padding: 0 5px; font-size: 0.7rem; line-height: 18px; }
 }
 
-/* écran tactile : cibles confortables, pas d'effet « survol » qui reste collé après un appui */
+/* Touchscreen: komfortable Ziele, kein „Hover“-Effekt, der nach dem Tippen kleben bleibt */
 @media (pointer: coarse) {
   button, select, .onglet, .sous-onglet, .bouton-action, .lien-bouton { min-height: 46px; }
   .bouton-action:hover:not(:disabled), .bouton-principal:hover:not(:disabled) { transform: none; }
   .reglage input[type='checkbox'] { width: 22px; height: 22px; }
 }
 
-/* téléphone en paysage ou fenêtre basse : l'en-tête ne doit pas manger l'écran */
+/* Telefon im Querformat oder niedriges Fenster: Die Kopfzeile darf den Bildschirm nicht auffressen */
 @media (max-height: 480px) and (orientation: landscape) {
   .app { padding-top: 8px; }
   .entete { margin-bottom: 8px; }
@@ -878,7 +878,7 @@ textarea { max-width: 100%; resize: vertical; }
   .modes { margin-bottom: 10px; }
 }
 
-/* ---------- Page Cotisations retraite (agent IA, donnees fictives) ---------- */
+/* ---------- Seite Rentenbeiträge (KI-Agent, fiktive Daten) ---------- */
 .dossiers-cot { list-style: none; margin: 0 0 18px; padding: 0; display: grid; gap: 10px; }
 .dossier-cot { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; align-items: center; padding: 12px 14px; border: 1px solid var(--bord); border-radius: var(--rayon-petit); background: var(--carte); }
 .dossier-cot.choisi { border-color: var(--marque-500); background: var(--marque-50); }
@@ -926,7 +926,7 @@ textarea { max-width: 100%; resize: vertical; }
 @media (max-width: 640px) { .tableau-cot { display: block; overflow-x: auto; } }
 .bouton-deposer { width: 100%; margin-top: 12px; }
 
-/* ---------- Cotisations : pilote de l'agent, tours du modèle, compte rendu ---------- */
+/* ---------- Beiträge: Steuerung des Agenten, Runden des Modells, Bericht ---------- */
 .choix-pilote { margin: 18px 0 0; padding: 12px 14px; border: 1px solid var(--bord); border-radius: var(--rayon-petit); display: grid; gap: 8px; }
 .choix-pilote legend { padding: 0 6px; font-size: 0.85rem; color: var(--encre-douce); }
 .choix-pilote label { display: flex; gap: 10px; align-items: center; font-size: 0.92rem; }

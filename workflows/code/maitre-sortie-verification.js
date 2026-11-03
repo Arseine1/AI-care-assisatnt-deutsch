@@ -1,3 +1,3 @@
-// Vérifier le document – sortie : la réponse au front, sans l'événement de journal.
+// Dokument prüfen – Ausgabe: die Antwort an die Oberfläche, ohne das Protokollereignis.
 const { evenement_journal, ...reponse } = $('Réponse vérification').first().json;
 return [{ json: reponse }];

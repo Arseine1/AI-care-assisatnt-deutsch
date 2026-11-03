@@ -1,44 +1,44 @@
-# Sécurité minimale (jour 4, étape 7)
+# Minimale Sicherheit (Tag 4, Schritt 7)
 
-Cette page décrit ce qui protège l'interface et n8n, **et ce qui ne les protège pas**. Toutes les données sont fictives ; les comptes ci-dessous sont des comptes de démonstration.
+Diese Seite beschreibt, was die Oberfläche und n8n schützt, **und was sie nicht schützt**. Alle Daten sind fiktiv; die unten genannten Konten sind Demonstrationskonten.
 
-## Ce qui est en place
+## Was vorhanden ist
 
-| Protection | Où | Ce qu'elle empêche |
+| Schutz | Wo | Was er verhindert |
 |---|---|---|
-| **Connexion du soignant** (identifiant + code PIN) | workflow `88-connexion` | d'utiliser l'assistant IA pour les équipes soignantes sans compte |
-| **Session** : jeton aléatoire de 12 heures, contrôlé par n8n AVANT tout traitement | nœuds « Session » de chaque point d'entrée | d'appeler n8n sans être connecté, même en connaissant la clé |
-| **Nom du soignant enregistré à chaque validation**, pris dans la session | workflows 72 et 73, table `soins.validations` (colonne `soignant_id`), journal d'audit | de valider « au nom de » quelqu'un d'autre |
-| **Origines autorisées** (CORS) : seulement l'adresse de l'interface | option `allowedOrigins` des webhooks | qu'une autre page web dans le navigateur appelle n8n |
-| **Clé secrète** en en-tête `X-AICare-Cle` | credential « AI-Care clé des webhooks » | les appels qui ne viennent pas de l'interface ou des scripts du projet |
-| **Clé interne** distincte pour le chemin `aicare-verifier-interne` | credential « AI-Care clé interne » | qu'un courrier soit vérifié sans passer par la session d'un soignant |
-| **Broker MQTT fermé** (voir `docs/alarmes.md`) | `compose/mosquitto/` | de fausses alarmes envoyées par n'importe qui sur le réseau |
+| **Anmeldung der Pflegekraft** (Kennung + PIN-Code) | Workflow `88-connexion` | den KI-Assistenten für die Pflegeteams ohne Konto zu nutzen |
+| **Sitzung**: zufälliges Token mit 12 Stunden Gültigkeit, von n8n VOR jeder Verarbeitung geprüft | Knoten « Sitzung » jedes Einstiegspunkts | n8n aufzurufen, ohne angemeldet zu sein, selbst wenn man den Schlüssel kennt |
+| **Name der Pflegekraft bei jeder Validierung gespeichert**, aus der Sitzung entnommen | Workflows 72 und 73, Tabelle `soins.validations` (Spalte `soignant_id`), Audit-Journal | « im Namen » einer anderen Person zu validieren |
+| **Zugelassene Ursprünge** (CORS): nur die Adresse der Oberfläche | Option `allowedOrigins` der Webhooks | dass eine andere Webseite im Browser n8n aufruft |
+| **Geheimer Schlüssel** im Header `X-AICare-Cle` | Credential « AI-Care clé des webhooks » | Aufrufe, die nicht aus der Oberfläche oder den Skripten des Projekts stammen |
+| **Eigener interner Schlüssel** für den Pfad `aicare-verifier-interne` | Credential « AI-Care clé interne » | dass ein Brief geprüft wird, ohne die Sitzung einer Pflegekraft zu durchlaufen |
+| **Geschlossener MQTT-Broker** (siehe `docs/alarmes.md`) | `compose/mosquitto/` | falsche Alarme, die jemand im Netzwerk sendet |
 
-## Les comptes de démonstration
+## Die Demonstrationskonten
 
-`node scripts/creer-soignants.mjs` crée trois comptes fictifs : `martin`, `keller`, `roth`. Leurs codes PIN (6 chiffres tirés au hasard) sont dans le fichier `.env` (`DEMO_PIN_MARTIN`, `DEMO_PIN_KELLER`, `DEMO_PIN_ROTH`), jamais dans le dépôt. Pour en changer un : modifier la ligne dans `.env`, puis relancer le script.
+`node scripts/creer-soignants.mjs` legt drei fiktive Konten an: `martin`, `keller`, `roth`. Ihre PIN-Codes (6 zufällig gezogene Ziffern) stehen in der Datei `.env` (`DEMO_PIN_MARTIN`, `DEMO_PIN_KELLER`, `DEMO_PIN_ROTH`), niemals im Repository. Um einen zu ändern: die Zeile in `.env` ändern und das Skript erneut starten.
 
-Mise en route complète : `node scripts/generer-secrets.mjs` (crée les secrets manquants), `node scripts/creer-soignants.mjs`, `node workflows/importer.mjs`, puis démarrer l'interface avec `VITE_MOCK=false` (voir `.env.exemple`). En mode simulé (par défaut), la page de connexion accepte seulement le compte fictif `demo` / `123456` et n'appelle aucun serveur.
+Vollständige Inbetriebnahme: `node scripts/generer-secrets.mjs` (legt die fehlenden Secrets an), `node scripts/creer-soignants.mjs`, `node workflows/importer.mjs`, dann die Oberfläche mit `VITE_MOCK=false` starten (siehe `.env.exemple`). Im simulierten Modus (Standard) akzeptiert die Anmeldeseite nur das fiktive Konto `demo` / `123456` und ruft keinen Server auf.
 
-## Créer et gérer les comptes
+## Konten anlegen und verwalten
 
-Une seule commande, dans un terminal ouvert à la racine du projet (`C:\xampp\htdocs\IA CARE assistant`), Docker démarré.
+Ein einziger Befehl, in einem im Projektstamm (`C:\xampp\htdocs\IA CARE assistant`) geöffneten Terminal, Docker gestartet.
 
-**Créer un compte (mode guidé : le script pose les questions)** :
+**Ein Konto anlegen (geführter Modus: das Skript stellt die Fragen)**:
 
 ```bash
 node scripts/creer-compte.mjs
 ```
 
-Il demande l'identifiant (ex. `anna`, sans accent ni espace), le nom affiché (ex. `Mme Anna Weiss`) et le code PIN (4 à 8 chiffres ; vide = tiré au hasard et affiché une seule fois).
+Es fragt nach der Kennung (z. B. `anna`, ohne Akzent und Leerzeichen), dem angezeigten Namen (z. B. `Frau Anna Weiss`) und dem PIN-Code (4 bis 8 Ziffern; leer = zufällig gezogen und nur einmal angezeigt).
 
-**Créer un compte en une ligne** :
+**Ein Konto in einer Zeile anlegen**:
 
 ```bash
-node scripts/creer-compte.mjs anna "Mme Anna Weiss" 482913
+node scripts/creer-compte.mjs anna "Frau Anna Weiss" 482913
 ```
 
-**Autres actions** :
+**Weitere Aktionen**:
 
 ```bash
 node scripts/creer-compte.mjs --liste
@@ -53,32 +53,32 @@ node scripts/creer-compte.mjs --desactiver anna
 node scripts/creer-compte.mjs --activer anna
 ```
 
-- `--liste` : comptes, état (actif / désactivé), date de création, nombre de sessions ouvertes.
-- `--pin anna [PIN]` : change le PIN (tiré au hasard s'il est omis) et ferme les sessions ouvertes du compte.
-- `--desactiver anna` : le compte ne peut plus se connecter, ses sessions sont fermées ; son historique de validations est conservé (on ne supprime pas un compte qui a validé des rapports : la traçabilité resterait sans nom).
+- `--liste`: Konten, Zustand (aktiv / deaktiviert), Erstellungsdatum, Anzahl offener Sitzungen.
+- `--pin anna [PIN]`: ändert die PIN (zufällig gezogen, wenn weggelassen) und schließt die offenen Sitzungen des Kontos.
+- `--desactiver anna`: Das Konto kann sich nicht mehr anmelden, seine Sitzungen werden geschlossen; sein Verlauf an Validierungen bleibt erhalten (ein Konto, das Berichte validiert hat, wird nicht gelöscht: Die Nachvollziehbarkeit bliebe ohne Namen).
 
-Le nouveau compte fonctionne tout de suite, sans redémarrer n8n ni l'interface. **Pourquoi pas un formulaire dans l'interface ?** Il n'y a pas encore de rôles : n'importe quel soignant connecté pourrait alors créer des comptes. Tant que les rôles n'existent pas, la création reste une opération faite depuis le poste, par la personne qui gère l'installation.
-## Comment ça marche
+Das neue Konto funktioniert sofort, ohne n8n oder die Oberfläche neu zu starten. **Warum kein Formular in der Oberfläche?** Es gibt noch keine Rollen: Jede angemeldete Pflegekraft könnte dann Konten anlegen. Solange es keine Rollen gibt, bleibt das Anlegen ein Vorgang, der am Rechner von der Person durchgeführt wird, die die Installation verwaltet.
+## Wie es funktioniert
 
-1. **Connexion** : l'interface envoie `{identifiant, pin}`. n8n lit l'empreinte du PIN en base (`scrypt`, sel propre à chaque compte, comparaison à temps constant) et répond par un jeton de 32 octets aléatoires. **Seule l'empreinte SHA-256 du jeton est gardée en base** ; le jeton lui-même n'existe que dans l'onglet du soignant (`sessionStorage`, effacé à la fermeture de l'onglet).
-2. **Chaque appel** porte `Authorization: Bearer <jeton>`. Le premier nœud après le webhook calcule l'empreinte, cherche une session non expirée d'un compte actif. Sinon la réponse est `{ "erreur": "session" }`, aucun autre nœud n'est exécuté, et l'interface rouvre la page de connexion (message « votre session a expiré »).
-3. **Validation** : le nom et l'identifiant du soignant qui valide viennent de la session (nœud « Session »), jamais du corps de la requête. Ils sont écrits dans `soins.validations` et dans le journal d'audit.
-4. **Verrouillage** : 5 échecs en 5 minutes sur un même compte verrouillent ce compte 5 minutes, même avec le bon PIN. Un identifiant inconnu reçoit exactement le même refus qu'un mauvais PIN et fait le même calcul : on ne peut pas deviner quels comptes existent. Seuls les comptes existants sont comptés (la table des échecs ne grossit pas avec des identifiants inventés).
+1. **Anmeldung**: Die Oberfläche sendet `{identifiant, pin}`. n8n liest den Fingerabdruck der PIN in der Datenbank (`scrypt`, kontospezifisches Salz, Vergleich in konstanter Zeit) und antwortet mit einem Token aus 32 zufälligen Bytes. **In der Datenbank wird nur der SHA-256-Fingerabdruck des Tokens gespeichert**; das Token selbst existiert nur im Tab der Pflegekraft (`sessionStorage`, beim Schließen des Tabs gelöscht).
+2. **Jeder Aufruf** trägt `Authorization: Bearer <jeton>`. Der erste Knoten nach dem Webhook berechnet den Fingerabdruck und sucht eine nicht abgelaufene Sitzung eines aktiven Kontos. Sonst lautet die Antwort `{ "erreur": "session" }`, kein weiterer Knoten wird ausgeführt, und die Oberfläche öffnet die Anmeldeseite erneut (Meldung « Ihre Sitzung ist abgelaufen »).
+3. **Validierung**: Name und Kennung der validierenden Pflegekraft stammen aus der Sitzung (Knoten « Sitzung »), niemals aus dem Body der Anfrage. Sie werden in `soins.validations` und ins Audit-Journal geschrieben.
+4. **Sperrung**: 5 Fehlversuche in 5 Minuten bei demselben Konto sperren dieses Konto für 5 Minuten, selbst mit der richtigen PIN. Eine unbekannte Kennung erhält genau dieselbe Ablehnung wie eine falsche PIN und führt dieselbe Berechnung durch: Man kann nicht erraten, welche Konten existieren. Nur bestehende Konten werden gezählt (die Tabelle der Fehlversuche wächst nicht mit erfundenen Kennungen).
 
-## Ce qui NE protège PAS (limites, dites franchement)
+## Was NICHT schützt (Grenzen, offen gesagt)
 
-- **La clé `X-AICare-Cle` n'est pas un secret.** L'interface l'envoie, donc n'importe qui qui ouvre l'interface dans un navigateur peut la lire dans le code. Elle filtre seulement le bruit (appels qui ne viennent pas de l'interface) ; **la vraie protection est la session**.
-- **Le webhook `courrier-recu` n'a aucune authentification.** Mailpit le déclenche et ne sait pas envoyer d'en-tête. N'importe qui sur le réseau peut donc le déclencher, mais il ne fait que **demander à n8n de relire la boîte Mailpit** : il ne transmet aucune donnée et ne permet de lire ni de modifier quoi que ce soit. En production, la boîte de réception serait lue par n8n (IMAP) avec ses propres identifiants.
-- **Pas de HTTPS** : tout circule en HTTP sur le poste (`localhost`). Le jeton et le PIN seraient lisibles sur un réseau partagé. À mettre derrière un proxy HTTPS avant tout usage hors du poste de test.
-- **Le jeton de session reste valable 12 heures** même si le soignant ferme l'onglet sans se déconnecter. Le bouton « Se déconnecter » le ferme tout de suite côté n8n.
-- **Pas de gestion des comptes dans l'interface** (création, changement de PIN) : elle se fait par script (voir ci-dessus), faute de rôles.
-- **Pas de rôles** : tous les soignants connectés peuvent tout faire dans l'interface. La traçabilité (qui a validé) existe, la séparation des droits non.
-- **Les PIN de démonstration** (6 chiffres) sont faibles par nature ; le verrouillage limite l'essai en masse, ce qui n'est pas équivalent à un mot de passe solide.
-- **Alarmes de capteurs affichées seulement dans leur page** (demande de l'utilisateur) : un soignant resté sur une autre page voit le compteur rouge de l'onglet et entend le bip, pas la carte.
+- **Der Schlüssel `X-AICare-Cle` ist kein Geheimnis.** Die Oberfläche sendet ihn, daher kann ihn jeder, der die Oberfläche in einem Browser öffnet, im Code lesen. Er filtert nur Rauschen (Aufrufe, die nicht aus der Oberfläche kommen); **der eigentliche Schutz ist die Sitzung**.
+- **Der Webhook `courrier-recu` hat keinerlei Authentifizierung.** Mailpit löst ihn aus und kann keinen Header senden. Jeder im Netzwerk kann ihn daher auslösen, aber er **bittet n8n nur, das Mailpit-Postfach erneut zu lesen**: Er übermittelt keine Daten und erlaubt weder, etwas zu lesen, noch etwas zu ändern. In der Produktion würde der Posteingang von n8n (IMAP) mit eigenen Zugangsdaten gelesen.
+- **Kein HTTPS**: Alles läuft über HTTP auf dem Rechner (`localhost`). Token und PIN wären in einem gemeinsam genutzten Netzwerk lesbar. Vor jeder Nutzung außerhalb des Testrechners hinter einen HTTPS-Proxy zu stellen.
+- **Das Sitzungstoken bleibt 12 Stunden gültig**, selbst wenn die Pflegekraft den Tab schließt, ohne sich abzumelden. Die Schaltfläche « Abmelden » schließt es sofort auf Seiten von n8n.
+- **Keine Kontenverwaltung in der Oberfläche** (Anlegen, PIN-Änderung): Sie erfolgt per Skript (siehe oben), mangels Rollen.
+- **Keine Rollen**: Alle angemeldeten Pflegekräfte können in der Oberfläche alles tun. Die Nachvollziehbarkeit (wer hat validiert) besteht, die Trennung der Rechte nicht.
+- **Die Demonstrations-PINs** (6 Ziffern) sind von Natur aus schwach; die Sperrung begrenzt massenhaftes Ausprobieren, was einem starken Passwort nicht gleichkommt.
+- **Sensoralarme werden nur auf ihrer Seite angezeigt** (Wunsch des Nutzers): Eine Pflegekraft, die auf einer anderen Seite geblieben ist, sieht den roten Zähler des Tabs und hört den Piepton, nicht die Karte.
 
-## Vérifier
+## Prüfen
 
 ```bash
-node tests/securite.test.mjs        # structure, session, PIN, signature, absence de secret dans le dépôt (hors n8n)
-node tests/securite-live.mjs        # contre n8n : refus sans clé, sans session, avec une fausse session, verrouillage, CORS, signature
+node tests/securite.test.mjs        # Struktur, Sitzung, PIN, Signatur, kein Secret im Repository (außerhalb von n8n)
+node tests/securite-live.mjs        # gegen n8n: Ablehnung ohne Schlüssel, ohne Sitzung, mit falscher Sitzung, Sperrung, CORS, Signatur
 ```

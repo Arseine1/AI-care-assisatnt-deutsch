@@ -1,10 +1,10 @@
-"""Service d'extraction de texte de PDF.
+"""Dienst zur Textextraktion aus PDFs.
 
-POST /texte   corps = PDF brut  ->  {"texte": "...", "methode": "texte" | "ocr", "pages": n}
+POST /texte   Körper = rohes PDF  ->  {"texte": "...", "methode": "texte" | "ocr", "pages": n}
 GET  /sante   ->  {"etat": "ok"}
 
-Un PDF qui contient déjà du texte est lu avec pdftotext (rapide, fidèle). Un PDF « scanné » (image seule)
-passe par OCRmyPDF (Tesseract, allemand + français + anglais). Aucune donnée n'est conservée sur disque.
+Ein PDF, das bereits Text enthält, wird mit pdftotext gelesen (schnell, originalgetreu). Ein „gescanntes“ PDF (nur Bild)
+läuft über OCRmyPDF (Tesseract, Deutsch + Französisch + Englisch). Es werden keine Daten auf der Festplatte aufbewahrt.
 """
 import json
 import os
@@ -12,7 +12,7 @@ import subprocess
 import tempfile
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-SEUIL_TEXTE = 40  # en dessous, on considère le PDF comme une image
+SEUIL_TEXTE = 40  # darunter gilt das PDF als Bild
 LANGUES = os.environ.get("OCR_LANGUES", "deu+fra+eng")
 
 
@@ -22,13 +22,13 @@ def pdf_vers_texte(contenu: bytes) -> dict:
         with open(source, "wb") as f:
             f.write(contenu)
 
-        # 1) texte natif
+        # 1) nativer Text
         natif = subprocess.run(["pdftotext", "-layout", source, "-"], capture_output=True, text=True)
         texte = natif.stdout.strip() if natif.returncode == 0 else ""
         if len(texte) >= SEUIL_TEXTE:
             return {"texte": texte, "methode": "texte"}
 
-        # 2) OCR : on ne garde que le texte reconnu (fichier « sidecar »)
+        # 2) OCR: Es wird nur der erkannte Text behalten (Datei „sidecar“)
         sortie = os.path.join(dossier, "sortie.pdf")
         sidecar = os.path.join(dossier, "texte.txt")
         ocr = subprocess.run(
@@ -36,7 +36,7 @@ def pdf_vers_texte(contenu: bytes) -> dict:
             capture_output=True, text=True,
         )
         if ocr.returncode != 0 or not os.path.exists(sidecar):
-            raise RuntimeError(f"OCRmyPDF a échoué (code {ocr.returncode}) : {ocr.stderr[-400:]}")
+            raise RuntimeError(f"OCRmyPDF ist fehlgeschlagen (Code {ocr.returncode}): {ocr.stderr[-400:]}")
         with open(sidecar, encoding="utf-8") as f:
             return {"texte": f.read().strip(), "methode": "ocr"}
 
@@ -61,7 +61,7 @@ class Gestionnaire(BaseHTTPRequestHandler):
             return self._repondre(404, {"erreur": "inconnu"})
         taille = int(self.headers.get("Content-Length", "0"))
         if taille <= 0:
-            return self._repondre(400, {"erreur": "corps vide : envoyer le PDF brut"})
+            return self._repondre(400, {"erreur": "leerer Körper: das rohe PDF senden"})
         try:
             self._repondre(200, pdf_vers_texte(self.rfile.read(taille)))
         except Exception as e:  # noqa: BLE001

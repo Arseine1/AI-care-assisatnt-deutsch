@@ -1,8 +1,8 @@
-// Boîte KIM simulée : envoie les 5 lettres de médecin (PDF en pièce jointe) dans Mailpit.
-// KIM (courrier sécurisé entre soignants, Allemagne) reste simulé par Mailpit.
-// Rejouable : supprime d'abord les anciens messages portant les mêmes objets (pas de doublons).
+// Simuliertes KIM-Postfach: sendet die 5 Arztbriefe (PDF als Anhang) an Mailpit.
+// KIM (sichere Kommunikation zwischen Leistungserbringern, Deutschland) wird weiterhin durch Mailpit simuliert.
+// Wiederholbar: löscht zuerst die älteren Nachrichten mit denselben Betreffs (keine Duplikate).
 //
-// Usage : node scripts/envoyer-kim.mjs [url]   (défaut : http://localhost:8025)
+// Aufruf: node scripts/envoyer-kim.mjs [url]   (Standard: http://localhost:8025)
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -21,13 +21,13 @@ async function api(chemin, options = {}) {
 try {
   await api('/api/v1/info');
 } catch (e) {
-  console.error(`Mailpit injoignable sur ${MAILPIT} (${e.message}). Lancez « docker compose up -d » dans compose/.`);
+  console.error(`Mailpit nicht erreichbar unter ${MAILPIT} (${e.message}). Starten Sie „docker compose up -d“ in compose/.`);
   process.exit(1);
 }
 
 let envoyees = 0;
 for (const l of [...LETTRES, LETTRE_SCAN]) {
-  // Nettoyage des envois précédents de la même lettre.
+  // Frühere Sendungen desselben Briefs bereinigen.
   const recherche = encodeURIComponent(`subject:"${l.objet}"`);
   await api(`/api/v1/search?query=${recherche}`, { method: 'DELETE' });
 
@@ -44,8 +44,8 @@ for (const l of [...LETTRES, LETTRE_SCAN]) {
     }),
   });
   envoyees++;
-  console.log(`envoyée : ${l.fichier}  (${l.attendu})`);
+  console.log(`gesendet: ${l.fichier}  (${l.attendu})`);
 }
 
 const { total } = await (await api('/api/v1/messages?limit=1')).json();
-console.log(`${envoyees} lettres envoyées. Messages dans la boîte KIM simulée : ${total}.`);
+console.log(`${envoyees} Briefe gesendet. Nachrichten im simulierten KIM-Postfach: ${total}.`);

@@ -1,6 +1,6 @@
-// Connecteur « base de l'hôpital (FHIR) » : une requête par type de ressource.
-// _lastUpdated sert de date aux documents (voir fhir-docs.js) ; on relit toujours la liste complète
-// d'un type pour reconstruire le document entier d'un résident (jamais un morceau partiel).
+// Konnektor « Krankenhausdatenbank (FHIR) »: eine Abfrage je Ressourcentyp.
+// _lastUpdated dient als Datum der Dokumente (siehe fhir-docs.js); die vollständige Liste eines Typs wird immer neu gelesen,
+// um das gesamte Dokument eines Bewohners neu aufzubauen (nie nur ein Teilstück).
 const BASE = 'http://hapi-fhir:8080/fhir';
 const types = ['Condition', 'AllergyIntolerance', 'MedicationStatement', 'Observation'];
 return types.map((type) => ({ json: { type, url: `${BASE}/${type}?_count=500&_sort=_lastUpdated` } }));

@@ -1,5 +1,5 @@
 {
-  "_note": "Valeurs légales par année. Une année absente de ce fichier est une ERREUR (workflows/code/sgb6/regles.js n'utilise jamais de valeur par défaut). Pourcentages : § 166 Abs. 2 Satz 1 SGB VI, clés = prestation (pflegegeld = § 37, kombination = § 38, sachleistung = § 36 SGB XI). À vérifier chaque année avec la Bezugsgröße publiée.",
+  "_note": "Gesetzliche Werte pro Jahr. Ein in dieser Datei fehlendes Jahr ist ein FEHLER (workflows/code/sgb6/regles.js verwendet nie einen Standardwert). Prozentsätze: § 166 Abs. 2 Satz 1 SGB VI, Schlüssel = Leistung (pflegegeld = § 37, kombination = § 38, sachleistung = § 36 SGB XI). Jedes Jahr mit der veröffentlichten Bezugsgröße zu prüfen.",
   "annees": {
     "2026": {
       "bezugsgroesse_mensuelle": 3955.0,

@@ -1,54 +1,54 @@
-# Vitesse : mesures avant / après (jour 4, étape 2)
+# Geschwindigkeit: Messungen vorher / nachher (Tag 4, Schritt 2)
 
-Poste de test : 8 Go de RAM, sans carte graphique, Llama 3.2 (3 milliards de paramètres) via Ollama. Mesure : `node tests/bench-vitesse.mjs 2 12 <étiquette>` (rapport de garde de M. Weber, chambre 12, par le webhook n8n réel ; le premier essai trouve le modèle déchargé ou non, le second est « à chaud »). Les résultats bruts sont dans `tests/resultats/vitesse.jsonl`.
+Testrechner: 8 GB RAM, ohne Grafikkarte, Llama 3.2 (3 Milliarden Parameter) über Ollama. Messung: `node tests/bench-vitesse.mjs 2 12 <Bezeichnung>` (Dienstbericht von Herrn Weber, Zimmer 12, über den echten n8n-Webhook; beim ersten Versuch ist das Modell entladen oder nicht, der zweite läuft « warm »). Die Rohergebnisse stehen in `tests/resultats/vitesse.jsonl`.
 
-## Résultats
+## Ergebnisse
 
-| Réglage | Essai | Total | Dont modèle | Jetons générés | Faits envoyés |
+| Einstellung | Versuch | Gesamt | Davon Modell | Erzeugte Token | Gesendete Fakten |
 |---|---|---|---|---|---|
-| **Avant** (jour 3 : jusqu'à 40 faits, 500 jetons max, modèle gardé 10 min) | 1 (à froid) | 139 s | 126 s | 202 | 11 |
-| | 2 (à chaud) | 57 s | 50 s | 167 | 11 |
-| 8 faits, 450 jetons max, modèle gardé 30 min | 1 | 167 s | 158 s | 194 | 8 |
+| **Vorher** (Tag 3: bis zu 40 Fakten, max. 500 Token, Modell 10 Min. gehalten) | 1 (kalt) | 139 s | 126 s | 202 | 11 |
+| | 2 (warm) | 57 s | 50 s | 167 | 11 |
+| 8 Fakten, max. 450 Token, Modell 30 Min. gehalten | 1 | 167 s | 158 s | 194 | 8 |
 | | 2 | 68 s | 57 s | 178 | 8 |
-| + clés JSON courtes (`r`, `t`, `f`) | 1 | 107 s | 99 s | 248 | 8 |
+| + kurze JSON-Schlüssel (`r`, `t`, `f`) | 1 | 107 s | 99 s | 248 | 8 |
 | | 2 | 76 s | 71 s | 223 | 8 |
-| **Final** : + 8 phrases de 220 caractères au plus (140 coupait des phrases en plein mot : « pour Diâ. »), modèle de recherche gardé 30 min | 1 | 82 s | 76 s | 222 | 8 |
+| **Endstand**: + 8 Sätze mit höchstens 220 Zeichen (140 schnitt Sätze mitten im Wort ab: « pour Diâ. »), Suchmodell 30 Min. gehalten | 1 | 82 s | 76 s | 222 | 8 |
 | | 2 | 73 s | 68 s | 222 | 8 |
 
-Une première mesure « avant » de 160 s (16 faits) a été gardée pour mémoire dans le fichier ; une autre, faussée par une mise en veille du poste (19 heures), a été retirée.
+Eine erste « Vorher »-Messung von 160 s (16 Fakten) wurde der Erinnerung halber in der Datei behalten; eine andere, durch einen Ruhezustand des Rechners (19 Stunden) verfälschte, wurde entfernt.
 
-## Ce que montrent les mesures (franchement)
+## Was die Messungen zeigen (offen gesagt)
 
-- **Le temps d'un rapport ne baisse pas de façon nette** : entre 57 s et 73 s à chaud, avec un écart de 15 s dû surtout au nombre de mots générés (167 à 248 jetons selon les essais). Les réglages n'ont pas changé l'ordre de grandeur.
-- **Le temps est proportionnel aux jetons générés** : environ 3 jetons (morceaux de mots) par seconde sur ce poste. La longueur du prompt compte peu : passer de 11 à 8 faits n'a rien accéléré de mesurable. Réduire le prompt ne sert donc pas ; **limiter la longueur de la réponse** peut servir, mais un modèle de 3 milliards de paramètres obligé d'écrire quatre phrases au moins en produit autant qu'avant.
-- **Le premier rapport après une pause coûte plus cher** (jusqu'à 80 à 100 s de plus à froid) : chargement du modèle en mémoire. `keep_alive` à 30 minutes l'évite tant que les rapports se suivent.
-- **La mémoire est le vrai plafond** : après les essais, 0,75 Go libre sur 8 Go. Llama 3.2 occupe 2,4 Go et le modèle de recherche (`nomic-embed-text`) 0,4 Go.
+- **Die Zeit eines Berichts sinkt nicht deutlich**: zwischen 57 s und 73 s warm, mit einer Abweichung von 15 s, die vor allem von der Zahl der erzeugten Wörter herrührt (167 bis 248 Token je nach Versuch). Die Einstellungen haben die Größenordnung nicht verändert.
+- **Die Zeit ist proportional zu den erzeugten Token**: etwa 3 Token (Wortstücke) pro Sekunde auf diesem Rechner. Die Länge des Prompts spielt kaum eine Rolle: Von 11 auf 8 Fakten zu gehen, hat nichts messbar beschleunigt. Den Prompt zu verkürzen bringt also nichts; **die Länge der Antwort zu begrenzen** kann helfen, aber ein Modell mit 3 Milliarden Parametern, das mindestens vier Sätze schreiben muss, erzeugt ebenso viel wie zuvor.
+- **Der erste Bericht nach einer Pause kostet mehr** (bis zu 80 bis 100 s mehr bei kaltem Start): Laden des Modells in den Speicher. `keep_alive` mit 30 Minuten vermeidet das, solange die Berichte aufeinanderfolgen.
+- **Der Speicher ist die eigentliche Obergrenze**: Nach den Versuchen 0,75 GB frei von 8 GB. Llama 3.2 belegt 2,4 GB und das Suchmodell (`nomic-embed-text`) 0,4 GB.
 
-## Réglages retenus
+## Gewählte Einstellungen
 
-| Réglage | Valeur | Raison |
+| Einstellung | Wert | Grund |
 |---|---|---|
-| `num_ctx` | 4096 | suffit pour 8 faits et les règles ; plus grand = plus de mémoire |
-| `num_predict` (en jetons) | 450 (texte en phrases JSON) | borne la durée ; un JSON coupé est récupéré phrase par phrase |
-| `keep_alive` | 30 minutes (génération et recherche) | pas de rechargement entre deux rapports d'un même étage |
-| Faits par résident | 8 au plus, choisis par importance (alarme de capteur, incident, allergie, risques, médication, constantes, observations récentes…) | prompt plus court, moins de matière à confondre |
-| Phrases | 8 au plus, 220 caractères au plus, clés JSON d'une lettre | borne la longueur de la réponse |
-| `OLLAMA_MAX_LOADED_MODELS` | **non appliqué** | voir ci-dessous |
+| `num_ctx` | 4096 | reicht für 8 Fakten und die Regeln; größer = mehr Speicher |
+| `num_predict` (in Token) | 450 (Text in JSON-Sätzen) | begrenzt die Dauer; ein abgeschnittenes JSON wird Satz für Satz gerettet |
+| `keep_alive` | 30 Minuten (Generierung und Suche) | kein erneutes Laden zwischen zwei Berichten derselben Etage |
+| Fakten je Bewohner | höchstens 8, nach Wichtigkeit gewählt (Sensoralarm, Vorfall, Allergie, Risiken, Medikation, Vitalwerte, jüngste Beobachtungen …) | kürzerer Prompt, weniger Verwechslungsstoff |
+| Sätze | höchstens 8, höchstens 220 Zeichen, JSON-Schlüssel mit einem Buchstaben | begrenzt die Länge der Antwort |
+| `OLLAMA_MAX_LOADED_MODELS` | **nicht angewendet** | siehe unten |
 
-### Pourquoi `OLLAMA_MAX_LOADED_MODELS=1` n'est pas appliqué
+### Warum `OLLAMA_MAX_LOADED_MODELS=1` nicht angewendet wird
 
-Chaque rapport utilise **deux** modèles : `nomic-embed-text` (recherche dans le RAG) puis Llama 3.2 (rédaction). Mesuré : les deux tiennent ensemble en mémoire (2,4 + 0,4 Go). Avec une limite à 1, Ollama déchargerait l'un pour charger l'autre à **chaque** rapport, ce qui ajoute un chargement à chaque fois. La limite à 1 reste conseillée **si on utilise Llama 3 en 8 milliards de paramètres** sur ce poste (deux gros modèles ne tiennent pas) : `setx OLLAMA_MAX_LOADED_MODELS 1` puis redémarrer Ollama. Elle n'est pas modifiée sur ce poste.
+Jeder Bericht verwendet **zwei** Modelle: `nomic-embed-text` (Suche im RAG), dann Llama 3.2 (Verfassen). Gemessen: Beide passen zusammen in den Speicher (2,4 + 0,4 GB). Mit einer Grenze von 1 würde Ollama bei **jedem** Bericht das eine entladen, um das andere zu laden, was jedes Mal einen Ladevorgang hinzufügt. Die Grenze von 1 bleibt empfohlen, **wenn man Llama 3 mit 8 Milliarden Parametern** auf diesem Rechner verwendet (zwei große Modelle passen nicht): `setx OLLAMA_MAX_LOADED_MODELS 1`, dann Ollama neu starten. Sie wird auf diesem Rechner nicht geändert.
 
-## Le vrai gain : le rapport est prêt avant qu'on le demande
+## Der eigentliche Gewinn: Der Bericht ist fertig, bevor man ihn anfordert
 
-Le temps de génération d'un rapport ne peut pas devenir court sur ce poste. Ce qu'on peut supprimer, c'est **l'attente du soignant** : le workflow `76-etage-automatique` prépare chaque matin à **5h30** (heure de Berlin) les rapports de tous les étages, un résident après l'autre. À la relève, le soignant ouvre « Ouvrir le rapport automatique de 05h30 », relit, corrige, valide.
+Die Generierungszeit eines Berichts kann auf diesem Rechner nicht kurz werden. Was sich beseitigen lässt, ist **das Warten der Pflegekraft**: Der Workflow `76-etage-automatique` bereitet jeden Morgen um **5:30 Uhr** (Berliner Zeit) die Berichte aller Etagen vor, eine Person nach der anderen. Bei der Ablösung öffnet die Pflegekraft « Automatischen Bericht von 05:30 Uhr öffnen », liest gegen, korrigiert, validiert.
 
-- Chaque étage est préparé une fois ; jamais deux fois en 3 heures (relance de n8n, déclenchement manuel).
-- Le même sous-workflow (`68-brique-etage-complet`) sert au clic du soignant et au déclenchement de 5h30 : mêmes règles, même filtre anti-invention.
-- **Essai réel** (déclenchement manuel du workflow, données fraîches) : étage 2 terminé en 9 minutes (4 rapports, 2 à 3 minutes chacun), étage 1 en 9 minutes de plus, soit 18 minutes pour 8 résidents, sans que personne attende. Les deux tâches sont ouvertes par l'interface via icare-tache {etage, recent: true}. Qualité : M. Weber, 4 phrases sourcées, 0 retirée ; Mme Schulz, 1 phrase gardée et 4 retirées ; M. Müller, 5 retirées ; M. Becker, 1 retirée (rubrique R vide : « information non disponible »). Le filtre fait son travail, mais Llama 3.2 reste peu complet : rapports courts, relecture indispensable.
+- Jede Etage wird einmal vorbereitet; niemals zweimal innerhalb von 3 Stunden (Neustart von n8n, manuelle Auslösung).
+- Derselbe Unter-Workflow (`68-brique-etage-complet`) dient dem Klick der Pflegekraft und der Auslösung um 5:30 Uhr: gleiche Regeln, gleicher Anti-Erfindungs-Filter.
+- **Praxisversuch** (manuelle Auslösung des Workflows, frische Daten): Etage 2 in 9 Minuten fertig (4 Berichte, je 2 bis 3 Minuten), Etage 1 in weiteren 9 Minuten, also 18 Minuten für 8 Bewohner, ohne dass jemand wartet. Die beiden Aufgaben werden von der Oberfläche über icare-tache {etage, recent: true} geöffnet. Qualität: Herr Weber, 4 Sätze mit Quelle, 0 entfernt; Frau Schulz, 1 Satz behalten und 4 entfernt; Herr Müller, 5 entfernt; Herr Becker, 1 entfernt (Rubrik R leer: « Information nicht verfügbar »). Der Filter leistet seine Arbeit, aber Llama 3.2 bleibt wenig vollständig: kurze Berichte, Gegenlesen unerlässlich.
 
-## Estimations pour le poste de déploiement (non mesurées)
+## Schätzungen für den Einsatzrechner (nicht gemessen)
 
-- 16 Go de RAM, sans carte graphique : plus de risque de mémoire saturée ; Llama 3 8B devient utilisable, sans doute 4 à 6 minutes par rapport (estimation).
-- Avec une carte graphique d'au moins 8 Go de mémoire vidéo : de l'ordre de la dizaine de secondes (estimation).
-- Le modèle se change par `AICARE_MODELE` (`node workflows/generer.mjs` puis réimport), rien d'autre à modifier.
+- 16 GB RAM, ohne Grafikkarte: größeres Risiko eines überlasteten Speichers; Llama 3 8B wird nutzbar, wohl 4 bis 6 Minuten pro Bericht (Schätzung).
+- Mit einer Grafikkarte mit mindestens 8 GB Videospeicher: in der Größenordnung von zehn Sekunden (Schätzung).
+- Das Modell wird über `AICARE_MODELE` gewechselt (`node workflows/generer.mjs`, dann erneuter Import), sonst ist nichts zu ändern.

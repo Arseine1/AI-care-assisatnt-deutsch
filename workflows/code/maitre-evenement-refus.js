@@ -1,4 +1,4 @@
-// Mode B – événement d'audit « consigne_refusee » : motif, longueur et empreinte, jamais le texte de la consigne.
+// Modus B – Prüfereignis « consigne_refusee »: Grund, Länge und Fingerabdruck, nie der Text der Anweisung.
 const c = $input.first().json;
 return [
   {

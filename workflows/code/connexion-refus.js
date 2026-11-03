@@ -1,3 +1,3 @@
-// Connexion – refus : un message identique pour un mauvais identifiant et un mauvais PIN ; seul le verrouillage est signalé.
-const v = $('Vérifier le PIN').first().json;
+// Anmeldung – Ablehnung: dieselbe Meldung bei falscher Kennung und falscher PIN; nur die Sperrung wird gemeldet.
+const v = $('PIN überprüfen').first().json;
 return [{ json: { erreur: v.motif === 'verrouille' ? 'verrouille' : 'identifiants' } }];

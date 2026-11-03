@@ -1,6 +1,6 @@
 {
   "id": "aicareimpfich0001",
-  "name": "AI-Care – Connecteur fichiers (OCR)",
+  "name": "AI-Care – Anbindung Dateien (OCR)",
   "active": false,
   "nodes": [
     {
@@ -15,7 +15,7 @@
         }
       },
       "id": "a1c3e000-0027-4000-8000-000000000027",
-      "name": "Planification",
+      "name": "Zeitplan",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
       "position": [
@@ -26,7 +26,7 @@
     {
       "parameters": {},
       "id": "a1c3e000-0028-4000-8000-000000000028",
-      "name": "Démarrage manuel",
+      "name": "Manueller Start",
       "type": "n8n-nodes-base.manualTrigger",
       "typeVersion": 1,
       "position": [
@@ -67,7 +67,7 @@
         "options": {}
       },
       "id": "a1c3e000-0030-4000-8000-000000000030",
-      "name": "Résidents",
+      "name": "Bewohnerliste",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
@@ -87,7 +87,7 @@
         "options": {}
       },
       "id": "a1c3e000-0031-4000-8000-000000000031",
-      "name": "Lire les fichiers",
+      "name": "Dateien lesen",
       "type": "n8n-nodes-base.readWriteFile",
       "typeVersion": 1,
       "position": [
@@ -122,7 +122,7 @@
         "options": {}
       },
       "id": "a1c3e000-0032-4000-8000-000000000032",
-      "name": "Est un PDF",
+      "name": "Ist ein PDF",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
@@ -161,10 +161,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Connecteur « fichiers » – branche PDF : le service OCR renvoie {texte, methode} ; on rattache le nom du fichier.\n// (Le texte natif des PDF est lu par pdftotext, seuls les PDF « image » passent par OCRmyPDF.)\nconst fichiers = $('Est un PDF').all(0);\nreturn $input.all().map((item, i) => ({\n  json: { nom: fichiers[i].binary.data.fileName, texte: item.json.texte ?? '', methode: item.json.methode ?? 'ocr' },\n}));\n"
+        "jsCode": "// Konnektor « Dateien » – PDF-Zweig: Der OCR-Dienst liefert {texte, methode}; der Dateiname wird zugeordnet.\n// (Der native Text der PDFs wird mit pdftotext gelesen, nur „Bild“-PDFs laufen über OCRmyPDF.)\nconst fichiers = $('Ist ein PDF').all(0);\nreturn $input.all().map((item, i) => ({\n  json: { nom: fichiers[i].binary.data.fileName, texte: item.json.texte ?? '', methode: item.json.methode ?? 'ocr' },\n}));\n"
       },
       "id": "a1c3e000-0034-4000-8000-000000000034",
-      "name": "Nom du fichier PDF",
+      "name": "PDF-Dateiname",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -174,10 +174,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Connecteur « fichiers » – branche texte (.md, .txt) : décoder le contenu du fichier lu sur disque.\nconst sortie = [];\nconst items = $input.all();\nfor (let i = 0; i < items.length; i++) {\n  const octets = await this.helpers.getBinaryDataBuffer(i, 'data');\n  sortie.push({ json: { nom: items[i].binary.data.fileName, texte: octets.toString('utf8'), methode: 'texte' } });\n}\nreturn sortie;\n"
+        "jsCode": "// Konnektor « Dateien » – Textzweig (.md, .txt): Inhalt der vom Datenträger gelesenen Datei dekodieren.\nconst sortie = [];\nconst items = $input.all();\nfor (let i = 0; i < items.length; i++) {\n  const octets = await this.helpers.getBinaryDataBuffer(i, 'data');\n  sortie.push({ json: { nom: items[i].binary.data.fileName, texte: octets.toString('utf8'), methode: 'texte' } });\n}\nreturn sortie;\n"
       },
       "id": "a1c3e000-0035-4000-8000-000000000035",
-      "name": "Décoder le texte",
+      "name": "Text dekodieren",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -190,7 +190,7 @@
         "mode": "append"
       },
       "id": "a1c3e000-0036-4000-8000-000000000036",
-      "name": "Réunir",
+      "name": "Zusammenführen",
       "type": "n8n-nodes-base.merge",
       "typeVersion": 3,
       "position": [
@@ -200,10 +200,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Connecteur « fichiers » : un fichier = un document.\n//  - protocole-*.md          -> collection « connaissances » (règles générales, sans patient)\n//  - autre document (scan)   -> rattaché à UN résident si le nom ET la date de naissance du texte correspondent\n//                               (les homonymes ne se distinguent que par la date de naissance) ;\n//                               sinon collection « a_verifier » : on ne devine jamais l'identité.\nconst residents = $('Résidents').all().map((i) => i.json);\nconst norm = (s) => String(s).normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').toLowerCase();\n\nconst docs = [];\nfor (const { json: f } of $input.all()) {\n  const nom = f.nom;\n  const texte = (f.texte ?? '').trim();\n  if (!texte) continue;\n\n  const base = {\n    source: 'fichier',\n    source_label: 'Fichiers',\n    source_ref: `fichiers/${nom}`,\n    titre: nom.replace(/\\.[a-z]+$/i, '').replace(/[-_]/g, ' '),\n  };\n\n  if (/^protocole-/i.test(nom)) {\n    docs.push({\n      ...base,\n      collection: 'connaissances',\n      type: 'protocole',\n      theme: nom.replace(/^protocole-/i, '').replace(/\\.[a-z]+$/i, ''),\n      texte,\n    });\n    continue;\n  }\n\n  // Document propre à un résident : identification par nom + date de naissance (jj.mm.aaaa).\n  const t = norm(texte);\n  const trouves = residents.filter((r) => t.includes(norm(r.nom)) && texte.includes(r.naissance));\n  const m = texte.match(/(\\d{2})[./](\\d{2})[./](20\\d{2})/); // « Date : jj/mm/aaaa » du document\n  const date = m ? new Date(Date.UTC(+m[3], +m[2] - 1, +m[1], 12)).toISOString() : new Date().toISOString();\n\n  if (trouves.length === 1) {\n    const r = trouves[0];\n    docs.push({\n      ...base,\n      collection: 'patients',\n      type: 'document',\n      texte,\n      patient_id: r.patient_id,\n      chambre: r.chambre,\n      patient_label: `${r.civilite} ${r.prenom} ${r.nom} (chambre ${r.chambre})`,\n      date,\n    });\n  } else {\n    docs.push({\n      ...base,\n      collection: 'a_verifier',\n      type: 'document',\n      statut: 'a_verifier',\n      motif: trouves.length === 0 ? 'identite_inconnue' : 'identite_ambigue',\n      texte,\n      date,\n    });\n  }\n}\nreturn docs.map((json) => ({ json }));\n"
+        "jsCode": "// Konnektor « Dateien »: eine Datei = ein Dokument.\n//  - protocole-*.md          -> Collection « connaissances » (allgemeine Regeln, ohne Patient)\n//  - anderes Dokument (Scan) -> EINEM Bewohner zugeordnet, wenn Name UND Geburtsdatum des Textes übereinstimmen\n//                               (Namensgleiche unterscheiden sich nur durch das Geburtsdatum);\n//                               sonst Collection « a_verifier »: Die Identität wird nie geraten.\nconst residents = $('Bewohnerliste').all().map((i) => i.json);\nconst norm = (s) => String(s).normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').toLowerCase();\n\nconst docs = [];\nfor (const { json: f } of $input.all()) {\n  const nom = f.nom;\n  const texte = (f.texte ?? '').trim();\n  if (!texte) continue;\n\n  const base = {\n    source: 'fichier',\n    source_label: 'Dateien',\n    source_ref: `fichiers/${nom}`,\n    titre: nom.replace(/\\.[a-z]+$/i, '').replace(/[-_]/g, ' '),\n  };\n\n  if (/^protocole-/i.test(nom)) {\n    docs.push({\n      ...base,\n      collection: 'connaissances',\n      type: 'protocole',\n      theme: nom.replace(/^protocole-/i, '').replace(/\\.[a-z]+$/i, ''),\n      texte,\n    });\n    continue;\n  }\n\n  // Dokument eines einzelnen Bewohners: Identifizierung über Name + Geburtsdatum (TT.MM.JJJJ).\n  const t = norm(texte);\n  const trouves = residents.filter((r) => t.includes(norm(r.nom)) && texte.includes(r.naissance));\n  const m = texte.match(/(\\d{2})[./](\\d{2})[./](20\\d{2})/); // „Datum: TT/MM/JJJJ“ des Dokuments\n  const date = m ? new Date(Date.UTC(+m[3], +m[2] - 1, +m[1], 12)).toISOString() : new Date().toISOString();\n\n  if (trouves.length === 1) {\n    const r = trouves[0];\n    docs.push({\n      ...base,\n      collection: 'patients',\n      type: 'document',\n      texte,\n      patient_id: r.patient_id,\n      chambre: r.chambre,\n      patient_label: `${r.civilite} ${r.prenom} ${r.nom} (Zimmer ${r.chambre})`,\n      date,\n    });\n  } else {\n    docs.push({\n      ...base,\n      collection: 'a_verifier',\n      type: 'document',\n      statut: 'a_verifier',\n      motif: trouves.length === 0 ? 'identite_inconnue' : 'identite_ambigue',\n      texte,\n      date,\n    });\n  }\n}\nreturn docs.map((json) => ({ json }));\n"
       },
       "id": "a1c3e000-0037-4000-8000-000000000037",
-      "name": "Documents fichiers",
+      "name": "Dateidokumente",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -225,7 +225,7 @@
         }
       },
       "id": "a1c3e000-0038-4000-8000-000000000038",
-      "name": "Indexer",
+      "name": "Indizieren",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.2,
       "position": [
@@ -235,10 +235,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Contrôle de session – le jeton « Bearer » de l'en-tête Authorization (43 caractères URL-safe) est haché (SHA-256) : seul le haché est en base.\nconst entetes = $input.first().json?.headers ?? {};\nconst m = String(entetes.authorization ?? '').match(/^Bearer ([A-Za-z0-9_-]{43})$/);\nif (!m) return [{ json: { hash: '' } }];\nreturn [{ json: { hash: require('crypto').createHash('sha256').update(m[1]).digest('hex') } }];\n"
+        "jsCode": "// Sitzungsprüfung – das « Bearer »-Token im Authorization-Header (43 URL-sichere Zeichen) wird gehasht (SHA-256): Nur der Hash steht in der Datenbank.\nconst entetes = $input.first().json?.headers ?? {};\nconst m = String(entetes.authorization ?? '').match(/^Bearer ([A-Za-z0-9_-]{43})$/);\nif (!m) return [{ json: { hash: '' } }];\nreturn [{ json: { hash: require('crypto').createHash('sha256').update(m[1]).digest('hex') } }];\n"
       },
       "id": "a1c3e000-0345-4000-8000-000000000345",
-      "name": "Session (jeton)",
+      "name": "Sitzung (Token)",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -255,7 +255,7 @@
         }
       },
       "id": "a1c3e000-0346-4000-8000-000000000346",
-      "name": "Session (base)",
+      "name": "Sitzung (Datenbank)",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
@@ -273,10 +273,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Contrôle de session – résultat : un soignant identifié (session ouverte, non expirée, compte actif) ou rien.\nconst r = $input.first().json ?? {};\nif (!r.identifiant) return [{ json: { ok: false } }];\nreturn [{ json: { ok: true, soignant: { identifiant: r.identifiant, nom: r.nom }, jeton_hash: r.jeton_hash } }];\n"
+        "jsCode": "// Sitzungsprüfung – Ergebnis: eine identifizierte Pflegekraft (Sitzung offen, nicht abgelaufen, Konto aktiv) oder nichts.\nconst r = $input.first().json ?? {};\nif (!r.identifiant) return [{ json: { ok: false } }];\nreturn [{ json: { ok: true, soignant: { identifiant: r.identifiant, nom: r.nom }, jeton_hash: r.jeton_hash } }];\n"
       },
       "id": "a1c3e000-0347-4000-8000-000000000347",
-      "name": "Session",
+      "name": "Sitzung",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -295,7 +295,7 @@
           },
           "conditions": [
             {
-              "id": "Session valide ?",
+              "id": "Sitzung gültig?",
               "leftValue": "={{ $json.ok === true }}",
               "rightValue": "",
               "operator": {
@@ -310,7 +310,7 @@
         "options": {}
       },
       "id": "a1c3e000-0348-4000-8000-000000000348",
-      "name": "Session valide ?",
+      "name": "Sitzung gültig?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
@@ -320,10 +320,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Contrôle de session – la session est valide : on rend aux nœuds suivants la requête d'origine (en-têtes, corps) telle que reçue.\nreturn [{ json: $('Webhook').first().json }];\n"
+        "jsCode": "// Sitzungsprüfung – die Sitzung ist gültig: Die ursprüngliche Anfrage (Header, Body) wird unverändert an die folgenden Knoten zurückgegeben.\nreturn [{ json: $('Webhook').first().json }];\n"
       },
       "id": "a1c3e000-0349-4000-8000-000000000349",
-      "name": "Requête",
+      "name": "Anfrage",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -333,10 +333,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Contrôle de session – refus : aucune donnée, seulement le motif. L'interface rouvre alors la page de connexion.\nreturn [{ json: { erreur: 'session' } }];\n"
+        "jsCode": "// Sitzungsprüfung – Ablehnung: keine Daten, nur der Grund. Die Oberfläche öffnet dann wieder die Anmeldeseite.\nreturn [{ json: { erreur: 'session' } }];\n"
       },
       "id": "a1c3e000-0350-4000-8000-000000000350",
-      "name": "Refus (session)",
+      "name": "Ablehnung (Sitzung)",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -346,22 +346,22 @@
     }
   ],
   "connections": {
-    "Planification": {
+    "Zeitplan": {
       "main": [
         [
           {
-            "node": "Résidents",
+            "node": "Bewohnerliste",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Démarrage manuel": {
+    "Manueller Start": {
       "main": [
         [
           {
-            "node": "Résidents",
+            "node": "Bewohnerliste",
             "type": "main",
             "index": 0
           }
@@ -372,36 +372,36 @@
       "main": [
         [
           {
-            "node": "Session (jeton)",
+            "node": "Sitzung (Token)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Résidents": {
+    "Bewohnerliste": {
       "main": [
         [
           {
-            "node": "Lire les fichiers",
+            "node": "Dateien lesen",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Lire les fichiers": {
+    "Dateien lesen": {
       "main": [
         [
           {
-            "node": "Est un PDF",
+            "node": "Ist ein PDF",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Est un PDF": {
+    "Ist ein PDF": {
       "main": [
         [
           {
@@ -412,7 +412,7 @@
         ],
         [
           {
-            "node": "Décoder le texte",
+            "node": "Text dekodieren",
             "type": "main",
             "index": 0
           }
@@ -423,113 +423,113 @@
       "main": [
         [
           {
-            "node": "Nom du fichier PDF",
+            "node": "PDF-Dateiname",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Nom du fichier PDF": {
+    "PDF-Dateiname": {
       "main": [
         [
           {
-            "node": "Réunir",
+            "node": "Zusammenführen",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Décoder le texte": {
+    "Text dekodieren": {
       "main": [
         [
           {
-            "node": "Réunir",
+            "node": "Zusammenführen",
             "type": "main",
             "index": 1
           }
         ]
       ]
     },
-    "Réunir": {
+    "Zusammenführen": {
       "main": [
         [
           {
-            "node": "Documents fichiers",
+            "node": "Dateidokumente",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Documents fichiers": {
+    "Dateidokumente": {
       "main": [
         [
           {
-            "node": "Indexer",
+            "node": "Indizieren",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Session (jeton)": {
+    "Sitzung (Token)": {
       "main": [
         [
           {
-            "node": "Session (base)",
+            "node": "Sitzung (Datenbank)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Session (base)": {
+    "Sitzung (Datenbank)": {
       "main": [
         [
           {
-            "node": "Session",
+            "node": "Sitzung",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Session": {
+    "Sitzung": {
       "main": [
         [
           {
-            "node": "Session valide ?",
+            "node": "Sitzung gültig?",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Session valide ?": {
+    "Sitzung gültig?": {
       "main": [
         [
           {
-            "node": "Requête",
+            "node": "Anfrage",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Refus (session)",
+            "node": "Ablehnung (Sitzung)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Requête": {
+    "Anfrage": {
       "main": [
         [
           {
-            "node": "Résidents",
+            "node": "Bewohnerliste",
             "type": "main",
             "index": 0
           }

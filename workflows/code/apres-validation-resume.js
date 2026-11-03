@@ -1,8 +1,8 @@
-// Après validation – résultat : combien de rapports ajoutés au RAG, et la transmission (envoyée ou en échec).
-const m = $('Message de transmission').first().json;
-const envoi = $('Envoyer (Mailpit)').first().json;
-const note = $('Noter la transmission').first().json;
-const rag = $('Indexer (RAG)').first().json ?? {};
+// Nach der Bestätigung – Ergebnis: wie viele Berichte dem RAG hinzugefügt wurden und die Weitergabe (gesendet oder fehlgeschlagen).
+const m = $('Übergabenachricht').first().json;
+const envoi = $('Senden (Mailpit)').first().json;
+const note = $('Übergabe vermerken').first().json;
+const rag = $('Indizieren (RAG)').first().json ?? {};
 const echec = Boolean(envoi?.error);
 return [
   {

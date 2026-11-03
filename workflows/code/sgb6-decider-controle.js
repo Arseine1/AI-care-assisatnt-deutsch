@@ -1,8 +1,8 @@
-// Cotisations retraite – décision humaine : { id, decision: valider | revue | refuser, motif }.
-// Le soignant n'est PAS lu ici : il vient de la session (nœud « Session »), jamais du corps de la requête.
+// Rentenbeiträge – Entscheidung einer Person: { id, decision: valider | revue | refuser, motif }.
+// Die Pflegekraft wird hier NICHT gelesen: Sie stammt aus der Sitzung (Knoten « Sitzung »), nie aus dem Inhalt der Anfrage.
 const e = $input.first().json?.body ?? {};
 const id = String(e.id ?? '');
-if (!/^[a-z0-9][a-z0-9-]{2,63}$/.test(id)) throw new Error('id de dossier invalide');
+if (!/^[a-z0-9][a-z0-9-]{2,63}$/.test(id)) throw new Error('Ungültige Akten-ID');
 const decision = String(e.decision ?? '');
-if (!['valider', 'revue', 'refuser'].includes(decision)) throw new Error('décision inconnue');
+if (!['valider', 'revue', 'refuser'].includes(decision)) throw new Error('Unbekannte Entscheidung');
 return [{ json: { id, decision, motif: String(e.motif ?? '').trim().slice(0, 500) } }];

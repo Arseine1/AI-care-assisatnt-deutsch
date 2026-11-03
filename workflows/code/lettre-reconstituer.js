@@ -1,19 +1,19 @@
-// Lettre validée – reconstitue la lettre à partir de ses morceaux (collection « a_verifier ») pour l'ajouter à « patients ».
-// Type « lettre_validee » : distinct de « lettre » (l'empreinte du journal d'imports ne se confond pas avec celle de la version à vérifier).
-const d = $('Décider').first().json;
+// Bestätigter Arztbrief – setzt den Brief aus seinen Abschnitten (Collection « a_verifier ») wieder zusammen, um ihn zu « patients » hinzuzufügen.
+// Typ « lettre_validee »: unterscheidet sich von « lettre » (der Fingerabdruck im Importprotokoll wird nicht mit dem der zu prüfenden Version verwechselt).
+const d = $('Entscheiden').first().json;
 const points = ($input.first().json?.result?.points ?? []).map((p) => p.payload).sort((a, b) => a.chunk_index - b.chunk_index);
-if (!points.length) throw new Error('lettre introuvable dans « a_verifier »');
+if (!points.length) throw new Error('Schreiben in « a_verifier » nicht gefunden');
 const p0 = points[0];
-if (p0.patient_id !== d.patient_id) throw new Error('le résident de la lettre ne correspond pas à celui de la validation');
+if (p0.patient_id !== d.patient_id) throw new Error('Der Bewohner des Schreibens stimmt nicht mit dem der Bestätigung überein');
 return [
   {
     json: {
       collection: 'patients',
       source: 'kim',
-      source_label: 'KIM (lettre de médecin)',
+      source_label: 'KIM (Arztbrief)',
       source_ref: p0.source_ref,
       type: 'lettre_validee',
-      titre: `${p0.titre} (validée)`,
+      titre: `${p0.titre} (bestätigt)`,
       expediteur: p0.expediteur,
       patient_id: p0.patient_id,
       chambre: p0.chambre,

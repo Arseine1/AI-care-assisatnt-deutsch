@@ -1,7 +1,7 @@
-// Mesure de vitesse du rapport de garde (n8n + Ollama réels), pour comparer avant / après un réglage.
-// Lancer : node tests/bench-vitesse.mjs [nombre d'essais] [chambre] [étiquette]
-// Chaque essai appelle le webhook (Mode A, rapport de garde), puis lit au journal d'audit la durée du modèle, le nombre
-// de faits envoyés et les mots générés. Le premier essai est « à froid » si le modèle n'est pas chargé.
+// Geschwindigkeitsmessung des Dienstberichts (echtes n8n + Ollama), um vor / nach einer Einstellung zu vergleichen.
+// Aufruf: node tests/bench-vitesse.mjs [Anzahl Versuche] [Zimmer] [Bezeichnung]
+// Jeder Versuch ruft den Webhook auf (Modus A, Dienstbericht) und liest dann im Prüfprotokoll die Dauer des Modells, die Anzahl
+// gesendeter Fakten und die erzeugten Wörter. Der erste Versuch ist « kalt », wenn das Modell nicht geladen ist.
 import { spawnSync } from 'node:child_process';
 import { appendFileSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -11,7 +11,7 @@ import { appelN8n } from './lib/n8n.mjs';
 const racine = join(dirname(fileURLToPath(import.meta.url)), '..');
 const essais = Number(process.argv[2] ?? 2);
 const chambre = process.argv[3] ?? '12';
-const etiquette = process.argv[4] ?? 'essai';
+const etiquette = process.argv[4] ?? 'Versuch';
 
 const sql = (requete) => {
   const r = spawnSync('docker', ['compose', 'exec', '-T', 'postgres', 'sh', '-c', 'psql -t -A -F "|" -U "$POSTGRES_USER" -d "$POSTGRES_DB"'], { cwd: join(racine, 'compose'), input: requete, encoding: 'utf8' });

@@ -1,6 +1,6 @@
 {
   "id": "aicaresgb6decider1",
-  "name": "AI-Care – Cotisations : décider (valider, revue, refuser)",
+  "name": "AI-Care – Rentenbeiträge: entscheiden (bestätigen, Prüfaufgabe, ablehnen)",
   "active": false,
   "nodes": [
     {
@@ -31,10 +31,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Cotisations retraite – décision humaine : { id, decision: valider | revue | refuser, motif }.\n// Le soignant n'est PAS lu ici : il vient de la session (nœud « Session »), jamais du corps de la requête.\nconst e = $input.first().json?.body ?? {};\nconst id = String(e.id ?? '');\nif (!/^[a-z0-9][a-z0-9-]{2,63}$/.test(id)) throw new Error('id de dossier invalide');\nconst decision = String(e.decision ?? '');\nif (!['valider', 'revue', 'refuser'].includes(decision)) throw new Error('décision inconnue');\nreturn [{ json: { id, decision, motif: String(e.motif ?? '').trim().slice(0, 500) } }];\n"
+        "jsCode": "// Rentenbeiträge – Entscheidung einer Person: { id, decision: valider | revue | refuser, motif }.\n// Die Pflegekraft wird hier NICHT gelesen: Sie stammt aus der Sitzung (Knoten « Sitzung »), nie aus dem Inhalt der Anfrage.\nconst e = $input.first().json?.body ?? {};\nconst id = String(e.id ?? '');\nif (!/^[a-z0-9][a-z0-9-]{2,63}$/.test(id)) throw new Error('Ungültige Akten-ID');\nconst decision = String(e.decision ?? '');\nif (!['valider', 'revue', 'refuser'].includes(decision)) throw new Error('Unbekannte Entscheidung');\nreturn [{ json: { id, decision, motif: String(e.motif ?? '').trim().slice(0, 500) } }];\n"
       },
       "id": "a1c3e000-9146-4000-8000-000000009146",
-      "name": "Contrôler la décision",
+      "name": "Entscheidung prüfen",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -51,7 +51,7 @@
         }
       },
       "id": "a1c3e000-9147-4000-8000-000000009147",
-      "name": "Dossier",
+      "name": "Akte",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
@@ -69,10 +69,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Cotisations retraite – la décision est-elle permise ? Les règles se lisent dans le résultat ENREGISTRÉ, jamais dans la requête.\n//   valider : seulement si le dossier est « prêt à valider » ET si toutes les règles (et écarts) sont « ok »\n//   refuser : seulement après une exception, avec un motif\n//   revue   : une tâche de revue, une seule fois\nconst d = $('Contrôler la décision').first().json;\nconst r = $input.first().json ?? {};\nconst refus = (erreur, message) => [{ json: { ok: false, reponse: { ok: false, erreur, message } } }];\nif (!r.id) return refus('inconnu', 'Dossier inconnu.');\nif (r.traite !== true || !['pret_a_valider', 'exception'].includes(r.statut)) return refus('pas_en_attente', \"Le dossier n'est pas en attente de décision (traité par l'agent, ni validé ni refusé).\");\nif (d.decision === 'valider' && (r.statut !== 'pret_a_valider' || r.regles_ok !== true)) return refus('regle_non_ok', \"Validation refusée : une règle n'est pas « ok ».\");\nif (d.decision === 'refuser' && d.motif === '') return refus('motif_obligatoire', 'Le motif du refus est obligatoire.');\nif (d.decision === 'refuser' && r.statut !== 'exception') return refus('refus_hors_exception', 'Le refus ne se fait qu\\'après une exception.');\nif (d.decision === 'revue' && r.revue === true) return refus('revue_deja_creee', 'Une tâche de revue existe déjà pour ce dossier.');\nreturn [{ json: { ok: true, id: d.id, decision: d.decision, motif: d.motif, soignant: $('Session').first().json.soignant.identifiant } }];\n"
+        "jsCode": "// Rentenbeiträge – ist die Entscheidung zulässig? Die Regeln werden im GESPEICHERTEN Ergebnis gelesen, nie in der Anfrage.\n//   valider : nur wenn die Akte « bereit zur Bestätigung » ist (pret_a_valider) UND alle Regeln (und Abweichungen) « ok » sind\n//   refuser : nur nach einer Ausnahme und mit einem Grund\n//   revue   : eine Prüfaufgabe, nur einmal\nconst d = $('Entscheidung prüfen').first().json;\nconst r = $input.first().json ?? {};\nconst refus = (erreur, message) => [{ json: { ok: false, reponse: { ok: false, erreur, message } } }];\nif (!r.id) return refus('inconnu', 'Unbekannte Akte.');\nif (r.traite !== true || !['pret_a_valider', 'exception'].includes(r.statut)) return refus('pas_en_attente', 'Die Akte wartet nicht auf eine Entscheidung (vom Agenten bearbeitet, weder bestätigt noch abgelehnt).');\nif (d.decision === 'valider' && (r.statut !== 'pret_a_valider' || r.regles_ok !== true)) return refus('regle_non_ok', 'Bestätigung abgelehnt: Eine Regel ist nicht « ok ».');\nif (d.decision === 'refuser' && d.motif === '') return refus('motif_obligatoire', 'Der Ablehnungsgrund ist ein Pflichtfeld.');\nif (d.decision === 'refuser' && r.statut !== 'exception') return refus('refus_hors_exception', 'Eine Ablehnung ist nur nach einer Ausnahme möglich.');\nif (d.decision === 'revue' && r.revue === true) return refus('revue_deja_creee', 'Für diese Akte besteht bereits eine Prüfaufgabe.');\nreturn [{ json: { ok: true, id: d.id, decision: d.decision, motif: d.motif, soignant: $('Sitzung').first().json.soignant.identifiant } }];\n"
       },
       "id": "a1c3e000-9148-4000-8000-000000009148",
-      "name": "Vérifier la décision",
+      "name": "Entscheidung überprüfen",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -91,7 +91,7 @@
           },
           "conditions": [
             {
-              "id": "Décision permise ?",
+              "id": "Entscheidung zulässig?",
               "leftValue": "={{ $json.ok === true && !$json.reponse }}",
               "rightValue": "",
               "operator": {
@@ -106,7 +106,7 @@
         "options": {}
       },
       "id": "a1c3e000-9149-4000-8000-000000009149",
-      "name": "Décision permise ?",
+      "name": "Entscheidung zulässig?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
@@ -117,13 +117,13 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "WITH u AS (UPDATE soins.sgb6_dossiers SET statut = CASE $2 WHEN 'valider' THEN 'valide' WHEN 'refuser' THEN 'refuse' ELSE statut END, revue = revue OR $2 = 'revue', mis_a_jour_le = now() WHERE id = $1 AND statut IN ('pret_a_valider', 'exception') RETURNING statut, revue), d AS (INSERT INTO soins.sgb6_decisions (dossier_id, decision, motif, soignant) SELECT $1, $2, NULLIF($3, ''), $4 FROM u), j AS (INSERT INTO soins.sgb6_journal (dossier_id, etape, outil, resultat, choisi_par, soignant) SELECT $1, 'decision', 'decider', 'décision humaine : ' || $2, 'humain', $4 FROM u) SELECT statut, revue FROM u",
+        "query": "WITH u AS (UPDATE soins.sgb6_dossiers SET statut = CASE $2 WHEN 'valider' THEN 'valide' WHEN 'refuser' THEN 'refuse' ELSE statut END, revue = revue OR $2 = 'revue', mis_a_jour_le = now() WHERE id = $1 AND statut IN ('pret_a_valider', 'exception') RETURNING statut, revue), d AS (INSERT INTO soins.sgb6_decisions (dossier_id, decision, motif, soignant) SELECT $1, $2, NULLIF($3, ''), $4 FROM u), j AS (INSERT INTO soins.sgb6_journal (dossier_id, etape, outil, resultat, choisi_par, soignant) SELECT $1, 'decision', 'decider', 'Entscheidung eines Menschen: ' || $2, 'humain', $4 FROM u) SELECT statut, revue FROM u",
         "options": {
           "queryReplacement": "={{ [ $json.id, $json.decision, $json.motif, $json.soignant ] }}"
         }
       },
       "id": "a1c3e000-9150-4000-8000-000000009150",
-      "name": "Appliquer la décision",
+      "name": "Entscheidung anwenden",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
@@ -141,10 +141,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Cotisations retraite – réponse à la décision.\nconst r = $input.first().json ?? {};\nif (!r.statut) return [{ json: { ok: false, erreur: 'conflit', message: \"Le dossier n'est plus en attente de décision.\" } }];\nreturn [{ json: { ok: true, statut: r.statut, revue: r.revue === true } }];\n"
+        "jsCode": "// Rentenbeiträge – Antwort auf die Entscheidung.\nconst r = $input.first().json ?? {};\nif (!r.statut) return [{ json: { ok: false, erreur: 'conflit', message: 'Die Akte wartet nicht mehr auf eine Entscheidung.' } }];\nreturn [{ json: { ok: true, statut: r.statut, revue: r.revue === true } }];\n"
       },
       "id": "a1c3e000-9151-4000-8000-000000009151",
-      "name": "Réponse",
+      "name": "Antwort",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -157,7 +157,7 @@
         "jsCode": "return [{ json: $input.first().json.reponse }];\n"
       },
       "id": "a1c3e000-9152-4000-8000-000000009152",
-      "name": "Réponse (refus)",
+      "name": "Antwort (Ablehnung)",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -167,10 +167,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Contrôle de session – le jeton « Bearer » de l'en-tête Authorization (43 caractères URL-safe) est haché (SHA-256) : seul le haché est en base.\nconst entetes = $input.first().json?.headers ?? {};\nconst m = String(entetes.authorization ?? '').match(/^Bearer ([A-Za-z0-9_-]{43})$/);\nif (!m) return [{ json: { hash: '' } }];\nreturn [{ json: { hash: require('crypto').createHash('sha256').update(m[1]).digest('hex') } }];\n"
+        "jsCode": "// Sitzungsprüfung – das « Bearer »-Token im Authorization-Header (43 URL-sichere Zeichen) wird gehasht (SHA-256): Nur der Hash steht in der Datenbank.\nconst entetes = $input.first().json?.headers ?? {};\nconst m = String(entetes.authorization ?? '').match(/^Bearer ([A-Za-z0-9_-]{43})$/);\nif (!m) return [{ json: { hash: '' } }];\nreturn [{ json: { hash: require('crypto').createHash('sha256').update(m[1]).digest('hex') } }];\n"
       },
       "id": "a1c3e000-0480-4000-8000-000000000480",
-      "name": "Session (jeton)",
+      "name": "Sitzung (Token)",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -187,7 +187,7 @@
         }
       },
       "id": "a1c3e000-0481-4000-8000-000000000481",
-      "name": "Session (base)",
+      "name": "Sitzung (Datenbank)",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
@@ -205,10 +205,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Contrôle de session – résultat : un soignant identifié (session ouverte, non expirée, compte actif) ou rien.\nconst r = $input.first().json ?? {};\nif (!r.identifiant) return [{ json: { ok: false } }];\nreturn [{ json: { ok: true, soignant: { identifiant: r.identifiant, nom: r.nom }, jeton_hash: r.jeton_hash } }];\n"
+        "jsCode": "// Sitzungsprüfung – Ergebnis: eine identifizierte Pflegekraft (Sitzung offen, nicht abgelaufen, Konto aktiv) oder nichts.\nconst r = $input.first().json ?? {};\nif (!r.identifiant) return [{ json: { ok: false } }];\nreturn [{ json: { ok: true, soignant: { identifiant: r.identifiant, nom: r.nom }, jeton_hash: r.jeton_hash } }];\n"
       },
       "id": "a1c3e000-0482-4000-8000-000000000482",
-      "name": "Session",
+      "name": "Sitzung",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -227,7 +227,7 @@
           },
           "conditions": [
             {
-              "id": "Session valide ?",
+              "id": "Sitzung gültig?",
               "leftValue": "={{ $json.ok === true }}",
               "rightValue": "",
               "operator": {
@@ -242,7 +242,7 @@
         "options": {}
       },
       "id": "a1c3e000-0483-4000-8000-000000000483",
-      "name": "Session valide ?",
+      "name": "Sitzung gültig?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
@@ -252,10 +252,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Contrôle de session – la session est valide : on rend aux nœuds suivants la requête d'origine (en-têtes, corps) telle que reçue.\nreturn [{ json: $('Webhook').first().json }];\n"
+        "jsCode": "// Sitzungsprüfung – die Sitzung ist gültig: Die ursprüngliche Anfrage (Header, Body) wird unverändert an die folgenden Knoten zurückgegeben.\nreturn [{ json: $('Webhook').first().json }];\n"
       },
       "id": "a1c3e000-0484-4000-8000-000000000484",
-      "name": "Requête",
+      "name": "Anfrage",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -265,10 +265,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Contrôle de session – refus : aucune donnée, seulement le motif. L'interface rouvre alors la page de connexion.\nreturn [{ json: { erreur: 'session' } }];\n"
+        "jsCode": "// Sitzungsprüfung – Ablehnung: keine Daten, nur der Grund. Die Oberfläche öffnet dann wieder die Anmeldeseite.\nreturn [{ json: { erreur: 'session' } }];\n"
       },
       "id": "a1c3e000-0485-4000-8000-000000000485",
-      "name": "Refus (session)",
+      "name": "Ablehnung (Sitzung)",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -282,131 +282,131 @@
       "main": [
         [
           {
-            "node": "Session (jeton)",
+            "node": "Sitzung (Token)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Contrôler la décision": {
+    "Entscheidung prüfen": {
       "main": [
         [
           {
-            "node": "Dossier",
+            "node": "Akte",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Dossier": {
+    "Akte": {
       "main": [
         [
           {
-            "node": "Vérifier la décision",
+            "node": "Entscheidung überprüfen",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Vérifier la décision": {
+    "Entscheidung überprüfen": {
       "main": [
         [
           {
-            "node": "Décision permise ?",
+            "node": "Entscheidung zulässig?",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Décision permise ?": {
+    "Entscheidung zulässig?": {
       "main": [
         [
           {
-            "node": "Appliquer la décision",
+            "node": "Entscheidung anwenden",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Réponse (refus)",
+            "node": "Antwort (Ablehnung)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Appliquer la décision": {
+    "Entscheidung anwenden": {
       "main": [
         [
           {
-            "node": "Réponse",
+            "node": "Antwort",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Session (jeton)": {
+    "Sitzung (Token)": {
       "main": [
         [
           {
-            "node": "Session (base)",
+            "node": "Sitzung (Datenbank)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Session (base)": {
+    "Sitzung (Datenbank)": {
       "main": [
         [
           {
-            "node": "Session",
+            "node": "Sitzung",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Session": {
+    "Sitzung": {
       "main": [
         [
           {
-            "node": "Session valide ?",
+            "node": "Sitzung gültig?",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Session valide ?": {
+    "Sitzung gültig?": {
       "main": [
         [
           {
-            "node": "Requête",
+            "node": "Anfrage",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Refus (session)",
+            "node": "Ablehnung (Sitzung)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Requête": {
+    "Anfrage": {
       "main": [
         [
           {
-            "node": "Contrôler la décision",
+            "node": "Entscheidung prüfen",
             "type": "main",
             "index": 0
           }

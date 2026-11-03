@@ -1,4 +1,4 @@
-# Secrets
+# Geheimnisse
 .env
 *.env.local
 
@@ -7,20 +7,20 @@ node_modules/
 dist/
 *.log
 
-# Données locales des conteneurs
+# Lokale Daten der Container
 compose/volumes/
 
-# Système / éditeurs
+# System / Editoren
 .DS_Store
 Thumbs.db
 .vscode/
 .idea/
 
-# Mocks ePA de gematik (dépôt tiers, à cloner ou télécharger : voir README)
+# ePA-Mocks von gematik (Drittanbieter-Repository, klonen oder herunterladen: siehe README)
 compose/epa-deployment/
 
-# mots de passe hachés de Mosquitto (créés par scripts/generer-secrets.mjs)
+# gehashte Mosquitto-Passwörter (erstellt von scripts/generer-secrets.mjs)
 compose/mosquitto/passwd
 
-# R�glages locaux de l'assistant de code (permissions, serveurs de pr�visualisation)
+# Lokale Einstellungen des Code-Assistenten (Berechtigungen, Vorschau-Server)
 .claude/

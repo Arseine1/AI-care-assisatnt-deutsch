@@ -1,4 +1,4 @@
-// Cotisations retraite – réponse à la décision.
+// Rentenbeiträge – Antwort auf die Entscheidung.
 const r = $input.first().json ?? {};
-if (!r.statut) return [{ json: { ok: false, erreur: 'conflit', message: "Le dossier n'est plus en attente de décision." } }];
+if (!r.statut) return [{ json: { ok: false, erreur: 'conflit', message: 'Die Akte wartet nicht mehr auf eine Entscheidung.' } }];
 return [{ json: { ok: true, statut: r.statut, revue: r.revue === true } }];

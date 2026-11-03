@@ -1,6 +1,6 @@
-// Fabrique un PDF « scanné » : le texte est dessiné dans une IMAGE (aucun texte sélectionnable),
-// avec fond légèrement grisé et bruit, pour tester l'OCR (OCRmyPDF, étape 4).
-// Pur JavaScript (pas de binaire natif) : pureimage + pdfkit.
+// Erzeugt ein „gescanntes“ PDF: Der Text wird in ein BILD gezeichnet (kein auswählbarer Text),
+// mit leicht grauem Hintergrund und Rauschen, um die OCR zu testen (OCRmyPDF, Schritt 4).
+// Reines JavaScript (keine native Binärdatei): pureimage + pdfkit.
 import { createWriteStream, existsSync, readFileSync, writeFileSync, unlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -13,7 +13,7 @@ const POLICES = [
   '/System/Library/Fonts/Supplemental/Arial.ttf',
 ];
 
-// Générateur pseudo-aléatoire déterministe : le scan est identique à chaque exécution.
+// Deterministischer Pseudozufallsgenerator: Der Scan ist bei jeder Ausführung identisch.
 function aleatoire(graine) {
   let s = graine;
   return () => ((s = (s * 1664525 + 1013904223) % 4294967296) / 4294967296);
@@ -21,11 +21,11 @@ function aleatoire(graine) {
 
 export async function creerScan(lignes, cheminPdf, { graine = 7, cheminPng = null } = {}) {
   const chemin = POLICES.find((p) => existsSync(p));
-  if (!chemin) throw new Error('Aucune police TrueType trouvée pour dessiner le scan.');
+  if (!chemin) throw new Error('Keine TrueType-Schrift zum Zeichnen des Scans gefunden.');
   const police = PImage.registerFont(chemin, 'Scan');
   await police.load();
 
-  // A4 à 150 dpi
+  // A4 mit 150 dpi
   const L = 1240, H = 1754;
   const img = PImage.make(L, H);
   const ctx = img.getContext('2d');
@@ -43,7 +43,7 @@ export async function creerScan(lignes, cheminPdf, { graine = 7, cheminPng = nul
   let y = 150;
   for (const { texte, taille = 30, gras = false } of lignes) {
     ctx.font = `${taille}pt Scan`;
-    const dx = Math.floor(rnd() * 3) - 1; // léger décalage de ligne
+    const dx = Math.floor(rnd() * 3) - 1; // leichter Zeilenversatz
     const dy = Math.floor(rnd() * 3) - 1;
     ctx.fillText(texte, 110 + dx, y + dy);
     if (gras) ctx.fillText(texte, 111 + dx, y + dy);
@@ -63,6 +63,6 @@ export async function creerScan(lignes, cheminPdf, { graine = 7, cheminPng = nul
     doc.image(readFileSync(png), 0, 0, { width: doc.page.width, height: doc.page.height });
     doc.end();
   });
-  if (cheminPng) writeFileSync(cheminPng, readFileSync(png)); // aperçu optionnel pour contrôle visuel
+  if (cheminPng) writeFileSync(cheminPng, readFileSync(png)); // optionale Vorschau zur Sichtkontrolle
   unlinkSync(png);
 }

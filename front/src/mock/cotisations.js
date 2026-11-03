@@ -1,5 +1,5 @@
-// Mode simulé de la page « Cotisations retraite » : le VRAI moteur de règles (workflows/code/sgb6/regles.js) lit les
-// questionnaires fictifs (data/sgb6/questionnaires/*.txt) et les compare à la caisse simulée (data/sgb6/caisse.json).
+// Simulierter Modus der Seite „Rentenbeiträge“: Die ECHTE Regel-Engine (workflows/code/sgb6/regles.js) liest die
+// fiktiven Fragebögen (data/sgb6/questionnaires/*.txt) und vergleicht sie mit der simulierten Pflegekasse (data/sgb6/caisse.json).
 import caisse from '../../../data/sgb6/caisse.json';
 import { extraireChamps, traiterQuestionnaire } from '../../../workflows/code/sgb6/regles.js';
 import { modeleSimule, piloterOuReplier } from '../../../workflows/code/sgb6/agent.js';
@@ -11,7 +11,7 @@ const questionnaires = Object.entries(textes)
   .map(([chemin, texte]) => ({ id: chemin.split('/').pop().replace(/\.txt$/, ''), texte }))
   .sort((a, b) => a.id.localeCompare(b.id));
 
-// Liste affichée avant tout traitement : on ne lit que le nom, la personne soignée et la date de réception.
+// Vor jeder Bearbeitung angezeigte Liste: Es werden nur Name, pflegebedürftige Person und Eingangsdatum gelesen.
 export function dossiersSimules() {
   return questionnaires.map(({ id, texte }) => {
     const { donnees, recu_le } = extraireChamps(texte);
@@ -26,41 +26,41 @@ export function dossiersSimules() {
 
 export function traiterSimule(id) {
   const q = questionnaires.find((x) => x.id === id);
-  if (!q) throw new Error(`Dossier inconnu : ${id}`);
+  if (!q) throw new Error(`Unbekannte Akte: ${id}`);
   return traiterQuestionnaire(q.texte, { caisse, annee: ANNEE_COTISATIONS, id });
 }
 
-// Dépôt simulé : mêmes refus que n8n (format, taille, document qui n'est pas un questionnaire) ; pas de PDF en mode simulé.
+// Simulierte Ablage: dieselben Ablehnungen wie bei n8n (Format, Größe, Dokument, das kein Fragebogen ist); im simulierten Modus keine PDFs.
 export function deposerSimule(nom, contenuBase64) {
   const refus = (erreur, message) => ({ ok: false, erreur, message });
-  if (!/^[^\\/]{1,120}\.(txt|pdf)$/i.test(nom)) return refus('format', 'Seuls les fichiers .txt et .pdf (avec du texte, pas un scan) sont acceptés.');
-  if (/\.pdf$/i.test(nom)) return refus('format', 'Le dépôt de PDF demande n8n : en mode simulé, déposez un fichier .txt.');
+  if (!/^[^\\/]{1,120}\.(txt|pdf)$/i.test(nom)) return refus('format', 'Es werden nur .txt- und .pdf-Dateien akzeptiert (mit Text, kein Scan).');
+  if (/\.pdf$/i.test(nom)) return refus('format', 'Das Hochladen von PDFs erfordert n8n: Laden Sie im simulierten Modus eine .txt-Datei hoch.');
   let octets;
   try {
     octets = Uint8Array.from(atob(contenuBase64 ?? ''), (c) => c.charCodeAt(0));
   } catch {
-    return refus('format', 'Fichier illisible.');
+    return refus('format', 'Datei nicht lesbar.');
   }
-  if (octets.length === 0) return refus('vide', 'Fichier vide.');
-  if (octets.length > 1048576) return refus('taille', 'Fichier trop gros : 1 Mo au maximum.');
+  if (octets.length === 0) return refus('vide', 'Leere Datei.');
+  if (octets.length > 1048576) return refus('taille', 'Datei zu groß: höchstens 1 MB.');
   let texte;
   try {
     texte = new TextDecoder('utf-8', { fatal: true }).decode(octets).replace(/\r\n/g, '\n').trim();
   } catch {
-    return refus('format', 'Le fichier texte doit être enregistré en UTF-8.');
+    return refus('format', 'Die Textdatei muss in UTF-8 gespeichert sein.');
   }
   const { donnees } = extraireChamps(texte);
-  if (!donnees.ref_caisse || !donnees.aidant_nom) return refus('pas_un_questionnaire', "Ce document ne ressemble pas à un questionnaire de la caisse : référence du dossier ou nom de l'aidant introuvable.");
+  if (!donnees.ref_caisse || !donnees.aidant_nom) return refus('pas_un_questionnaire', 'Dieses Dokument sieht nicht wie ein Fragebogen der Pflegekasse aus: Aktenzeichen oder Name der Pflegeperson nicht gefunden.');
   const id = `dep-${Math.random().toString(16).slice(2, 12)}`;
   questionnaires.push({ id, texte });
   return { ok: true, id };
 }
 
-// Agent piloté par un modèle SIMULÉ (aucun réseau) : la même boucle, la même garde et les mêmes outils que n8n ; le modèle suit l'ordre habituel.
-// -> { resultat, tours } ; le statut et les montants viennent du code (regles.js).
+// Von einem SIMULIERTEN Modell gesteuerter Agent (kein Netzwerk): dieselbe Schleife, dieselbe Schutzprüfung und dieselben Werkzeuge wie bei n8n; das Modell folgt der üblichen Reihenfolge.
+// -> { resultat, tours }; Status und Beträge stammen aus dem Code (regles.js).
 export async function traiterSimulePilote(id) {
   const q = questionnaires.find((x) => x.id === id);
-  if (!q) throw new Error(`Dossier inconnu : ${id}`);
-  const sortie = await piloterOuReplier({ texte: q.texte, caisse, annee: ANNEE_COTISATIONS, dossier_id: id, modele: 'modèle simulé', chat: modeleSimule() });
+  if (!q) throw new Error(`Unbekannte Akte: ${id}`);
+  const sortie = await piloterOuReplier({ texte: q.texte, caisse, annee: ANNEE_COTISATIONS, dossier_id: id, modele: 'simuliertes Modell', chat: modeleSimule() });
   return { resultat: sortie.resultat, tours: sortie.session.journal };
 }

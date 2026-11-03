@@ -1,42 +1,42 @@
-# Schéma du RAG : collections Qdrant et payloads
+# Schema des RAG: Qdrant-Collections und Payloads
 
-Le RAG est **une source d'intelligence parmi d'autres** : il rassemble, sous forme de morceaux de texte vectorisés, ce que les connecteurs lisent dans le logiciel de soins, la base de l'hôpital (FHIR), les fichiers, l'ePA de test et la boîte KIM. Toutes les données sont fictives.
+Das RAG ist **eine Intelligenzquelle unter mehreren**: Es sammelt, in Form vektorisierter Textabschnitte, was die Konnektoren aus der Pflegesoftware, der Krankenhausdatenbank (FHIR), den Dateien, der Test-ePA und dem KIM-Postfach lesen. Alle Daten sind fiktiv.
 
-## Vue d'ensemble
+## Überblick
 
 ```mermaid
 flowchart LR
-  A[Logiciel de soins<br/>PostgreSQL] --> C1[Connecteur soins]
-  B[Base de l'hôpital<br/>HAPI FHIR] --> C2[Connecteur FHIR]
-  C[data/fichiers<br/>protocoles, scans] --> C3[Connecteur fichiers]
-  D[ePA de test<br/>mocks gematik] --> C4[Connecteur ePA]
-  E[Boîte KIM<br/>Mailpit] --> C5[Connecteur KIM]
-  C3 -. PDF .-> O[Service OCR<br/>OCRmyPDF]
+  A[Pflegesoftware<br/>PostgreSQL] --> C1[Konnektor Pflege]
+  B[Krankenhausdatenbank<br/>HAPI FHIR] --> C2[Konnektor FHIR]
+  C[data/fichiers<br/>Protokolle, Scans] --> C3[Konnektor Dateien]
+  D[Test-ePA<br/>gematik-Mocks] --> C4[Konnektor ePA]
+  E[KIM-Postfach<br/>Mailpit] --> C5[Konnektor KIM]
+  C3 -. PDF .-> O[OCR-Dienst<br/>OCRmyPDF]
   C5 -. PDF .-> O
-  C1 & C2 & C3 & C4 & C5 --> I[Indexeur<br/>découpage 300-500 mots<br/>empreinte SHA-256<br/>nomic-embed-text]
+  C1 & C2 & C3 & C4 & C5 --> I[Indexierer<br/>Aufteilung 300-500 Wörter<br/>SHA-256-Fingerabdruck<br/>nomic-embed-text]
   I --> J[(journal_imports)]
   I --> P[(patients)]
   I --> K[(connaissances)]
   I --> V[(a_verifier)]
 ```
 
-Chaque connecteur ne fait que produire des **documents** ; l'Indexeur (`workflows/00-indexeur.json`) les découpe, les vectorise et les écrit. Planification : 4 fois par jour (00:00, 06:00, 12:00, 18:00, heure de Berlin), connecteurs décalés de 10 minutes.
+Jeder Konnektor erzeugt nur **Dokumente**; der Indexeur (`workflows/00-indexeur.json`) teilt sie auf, vektorisiert sie und schreibt sie. Planung: 4-mal täglich (00:00, 06:00, 12:00, 18:00, Berliner Zeit), Konnektoren um 10 Minuten versetzt.
 
-## Les trois collections
+## Die drei Collections
 
-Toutes : **768 dimensions** (`nomic-embed-text`), distance **Cosine**, `on_disk_payload`.
+Alle: **768 Dimensionen** (`nomic-embed-text`), Distanz **Cosine**, `on_disk_payload`.
 
-| Collection | Contenu | Rattachée à un résident ? |
+| Collection | Inhalt | Einer Person zugeordnet? |
 |---|---|---|
-| `patients` | morceaux d'information sur un résident : notes de soins, fiche, diagnostics, allergies, médication, analyses, documents scannés identifiés | oui (`patient_id`) |
-| `connaissances` | protocoles de la maison (chutes, hypoglycémie, escarres, anticoagulants, AINS et rein) | non |
-| `a_verifier` | documents entrants à **contrôler avant d'être considérés comme fiables** : lettres de médecin (KIM) et tout document dont l'identité du résident n'est pas certaine | oui si l'identité est certaine, sinon non |
+| `patients` | Informationsabschnitte zu einer Person: Pflegenotizen, Akte, Diagnosen, Allergien, Medikation, Analysen, identifizierte gescannte Dokumente | ja (`patient_id`) |
+| `connaissances` | Protokolle des Hauses (Stürze, Hypoglykämie, Dekubitus, Antikoagulanzien, NSAR und Niere) | nein |
+| `a_verifier` | eingehende Dokumente, die **vor ihrer Behandlung als verlässlich zu prüfen sind**: Arztbriefe (KIM) und jedes Dokument, dessen Identität der Person nicht sicher ist | ja, wenn die Identität sicher ist, sonst nein |
 
-Une seule collection `patients` filtrée par `patient_id` (plutôt qu'une collection par résident) : plus simple à interroger et à planifier.
+Eine einzige Collection `patients`, nach `patient_id` gefiltert (statt einer Collection pro Person): einfacher abzufragen und zu planen.
 
-### Index de payload
+### Payload-Indizes
 
-| Champ | Type | `patients` | `connaissances` | `a_verifier` |
+| Feld | Typ | `patients` | `connaissances` | `a_verifier` |
 |---|---|:-:|:-:|:-:|
 | `source` | keyword | ✔ | ✔ | ✔ |
 | `type` | keyword | ✔ | ✔ | ✔ |
@@ -48,85 +48,85 @@ Une seule collection `patients` filtrée par `patient_id` (plutôt qu'une collec
 | `statut` | keyword | | | ✔ |
 | `motif` | keyword | | | ✔ |
 
-Créés par `data/scripts/creer-collections.mjs` (`npm run qdrant`, rejouable, ne supprime rien).
+Angelegt von `data/scripts/creer-collections.mjs` (`npm run qdrant`, wiederholbar, löscht nichts).
 
-## Le payload d'un point
+## Der Payload eines Punktes
 
-| Champ | Type | Présent | Rôle |
+| Feld | Typ | Vorhanden | Aufgabe |
 |---|---|---|---|
-| `patient_id` | texte (`PAT-003`) | si résident connu | **identifiant unique** du résident, commun à tous les systèmes (voir « Correspondance ») |
-| `chambre` | texte (`"12"`) | si résident connu | chambre du résident |
-| `source` | texte | toujours | origine technique : `logiciel_soins`, `fhir`, `epa`, `fichier`, `kim` |
-| `source_label` | texte | toujours | **libellé affiché entre crochets** dans les réponses : `[Logiciel de soins]`, `[Base hôpital (FHIR)]`, `[ePA]`, `[Fichiers]`, `[KIM (lettre de médecin)]` |
-| `source_ref` | texte | toujours | référence stable du document d'origine (voir tableau ci-dessous) |
-| `type` | texte | toujours | nature : `note`, `fiche`, `diagnostic`, `allergie`, `medication`, `analyse`, `document`, `protocole`, `lettre` |
-| `titre` | texte | toujours | titre court du document |
-| `date` | date ISO 8601 (UTC) | sauf protocoles | date **de l'information** (pas de l'import) : sert au filtre « 12 dernières heures » |
-| `texte` | texte | toujours | le morceau, tel qu'il sera cité |
-| `chunk_index` / `chunk_total` | entiers | toujours | rang du morceau et nombre de morceaux du document |
-| `mots` | entier | toujours | longueur du morceau |
-| `empreinte` | SHA-256 (hex) | toujours | empreinte du contenu, pour l'anti-doublon |
-| `theme` | texte | protocoles | ex. `chutes`, `escarres` |
-| `statut` | texte | `a_verifier` | `a_verifier` (le contrôle viendra au jour 3 : `confirme` ou `rejete`) |
-| `motif` | texte | `a_verifier` | `lettre_a_verifier`, `identite_inconnue`, `identite_ambigue` |
-| `expediteur` | texte | lettres KIM | nom de l'expéditeur du courrier |
+| `patient_id` | Text (`PAT-003`) | wenn die Person bekannt ist | **eindeutige Kennung** der Person, allen Systemen gemeinsam (siehe « Zuordnung ») |
+| `chambre` | Text (`"12"`) | wenn die Person bekannt ist | Zimmer der Person |
+| `source` | Text | immer | technische Herkunft: `logiciel_soins`, `fhir`, `epa`, `fichier`, `kim` |
+| `source_label` | Text | immer | **in den Antworten in eckigen Klammern angezeigte Bezeichnung**: `[Pflegesoftware]`, `[Krankenhausdatenbank (FHIR)]`, `[ePA]`, `[Dateien]`, `[KIM (Arztbrief)]` |
+| `source_ref` | Text | immer | stabile Referenz des Ursprungsdokuments (siehe Tabelle unten) |
+| `type` | Text | immer | Art: `note`, `fiche`, `diagnostic`, `allergie`, `medication`, `analyse`, `document`, `protocole`, `lettre` |
+| `titre` | Text | immer | kurzer Titel des Dokuments |
+| `date` | ISO-8601-Datum (UTC) | außer Protokolle | Datum **der Information** (nicht des Imports): dient dem Filter « letzte 12 Stunden » |
+| `texte` | Text | immer | der Abschnitt, so wie er zitiert wird |
+| `chunk_index` / `chunk_total` | ganze Zahlen | immer | Rang des Abschnitts und Anzahl der Abschnitte des Dokuments |
+| `mots` | ganze Zahl | immer | Länge des Abschnitts |
+| `empreinte` | SHA-256 (hex) | immer | Fingerabdruck des Inhalts für die Duplikatsperre |
+| `theme` | Text | Protokolle | z. B. `chutes`, `escarres` |
+| `statut` | Text | `a_verifier` | `a_verifier` (die Prüfung folgt an Tag 3: `confirme` oder `rejete`) |
+| `motif` | Text | `a_verifier` | `lettre_a_verifier`, `identite_inconnue`, `identite_ambigue` |
+| `expediteur` | Text | KIM-Briefe | Name des Absenders des Briefs |
 
-### Identifiant du point et empreinte
+### Kennung des Punktes und Fingerabdruck
 
-- **`id` (UUID stable)** = hash SHA-256 de `source|source_ref|chunk_index`, mis en forme d'UUID. Importer deux fois le même document **écrase le même point** : jamais de doublon, même si le journal était vidé.
-- **`empreinte`** = SHA-256 de `id|texte|date|patient_id|type`. Si le contenu change, l'empreinte change : le morceau est ré-importé et remplace l'ancien point.
+- **`id` (stabile UUID)** = SHA-256-Hash von `source|source_ref|chunk_index`, in UUID-Form gebracht. Dasselbe Dokument zweimal zu importieren **überschreibt denselben Punkt**: nie ein Duplikat, selbst wenn das Journal geleert wurde.
+- **`empreinte`** = SHA-256 von `id|texte|date|patient_id|type`. Ändert sich der Inhalt, ändert sich der Fingerabdruck: Der Abschnitt wird erneut importiert und ersetzt den alten Punkt.
 
-### Texte vectorisé
+### Vektorisierter Text
 
-Le vecteur n'est pas calculé sur `texte` seul mais sur :
+Der Vektor wird nicht allein auf `texte` berechnet, sondern auf:
 
 ```
 search_document: <patient_label> – <titre>
 <morceau>
 ```
 
-Le préfixe `search_document:` est celui attendu par `nomic-embed-text` (la requête, elle, commence par `search_query:`). Le nom et la chambre du résident sont ajoutés pour que « M. Weber chute » retrouve les morceaux de M. Weber. `patient_label` n'est **pas** stocké dans le payload.
+Das Präfix `search_document:` ist das von `nomic-embed-text` erwartete (die Anfrage beginnt dagegen mit `search_query:`). Name und Zimmer der Person werden hinzugefügt, damit « Herr Weber Sturz » die Abschnitte von Herrn Weber wiederfindet. `patient_label` wird **nicht** im Payload gespeichert.
 
-### Découpage
+### Aufteilung
 
-- Un document de **500 mots ou moins reste un seul morceau** : une note de soins garde donc sa date exacte.
-- Au-delà : morceaux de **300 à 500 mots** (cible 400), coupés sur les phrases ; un dernier morceau trop court est rattaché au précédent si la limite le permet ; une phrase de plus de 500 mots est coupée de force.
+- Ein Dokument mit **500 Wörtern oder weniger bleibt ein einziger Abschnitt**: Eine Pflegenotiz behält also ihr genaues Datum.
+- Darüber: Abschnitte von **300 bis 500 Wörtern** (Ziel 400), an Satzgrenzen geschnitten; ein zu kurzer letzter Abschnitt wird an den vorigen angehängt, wenn die Grenze es erlaubt; ein Satz von mehr als 500 Wörtern wird zwangsweise getrennt.
 
-## Ce que produit chaque connecteur
+## Was jeder Konnektor erzeugt
 
-| Connecteur | Collection | `source` | `type` | `source_ref` | `date` | Un document = |
+| Konnektor | Collection | `source` | `type` | `source_ref` | `date` | Ein Dokument = |
 |---|---|---|---|---|---|---|
-| Logiciel de soins | `patients` | `logiciel_soins` | `note` | `note-<id>` | horodatage de la note | une note de soins |
-| | `patients` | `logiciel_soins` | `fiche` | `fiche-<patient_id>` | dernière constante vitale | la fiche du résident (diagnostics, allergies, régime, risques, médication, constantes) |
-| Base de l'hôpital (FHIR) | `patients` | `fhir` | `diagnostic`, `allergie`, `medication`, `analyse` | `<id FHIR>/<Condition\|AllergyIntolerance\|MedicationStatement\|Observation>` | plus récent `meta.lastUpdated` | toutes les ressources d'un type pour un résident |
-| ePA de test | `patients` | `epa` | `diagnostic`, `medication` | `epa/<KVNR>/diagnostics` ou `epa/<KVNR>/eml` | `lastUpdated` / dernière ordonnance | diagnostics, ou liste de médication (eML), d'un résident |
-| Fichiers | `connaissances` | `fichier` | `protocole` | `fichiers/<nom>` | — | un protocole (`protocole-*.md`) |
-| | `patients` | `fichier` | `document` | `fichiers/<nom>` | date lue dans le document | un document scanné (OCR) dont le résident est identifié |
-| | `a_verifier` | `fichier` | `document` | `fichiers/<nom>` | idem | un document dont l'identité est inconnue ou ambiguë |
-| KIM | `a_verifier` | `kim` | `lettre` | `kim/<expéditeur>/<fichier>` | date du courrier | une lettre de médecin (PDF, texte ou OCR) |
-| Après validation (jour 3) | `patients` | `validation` | `rapport_valide` | `validation-<id>` | date de validation | un rapport de garde relu et validé par un soignant. **Pas un fait source** : « chercher » l'ignore pour écrire un nouveau rapport, seul le Mode B le relit (source « Rapport validé ») |
+| Pflegesoftware | `patients` | `logiciel_soins` | `note` | `note-<id>` | Zeitstempel der Notiz | eine Pflegenotiz |
+| | `patients` | `logiciel_soins` | `fiche` | `fiche-<patient_id>` | letzter Vitalwert | die Akte der Person (Diagnosen, Allergien, Kost, Risiken, Medikation, Vitalwerte) |
+| Krankenhausdatenbank (FHIR) | `patients` | `fhir` | `diagnostic`, `allergie`, `medication`, `analyse` | `<id FHIR>/<Condition\|AllergyIntolerance\|MedicationStatement\|Observation>` | jüngstes `meta.lastUpdated` | alle Ressourcen eines Typs für eine Person |
+| Test-ePA | `patients` | `epa` | `diagnostic`, `medication` | `epa/<KVNR>/diagnostics` oder `epa/<KVNR>/eml` | `lastUpdated` / letzte Verordnung | Diagnosen oder Medikationsliste (eML) einer Person |
+| Dateien | `connaissances` | `fichier` | `protocole` | `fichiers/<nom>` | — | ein Protokoll (`protocole-*.md`) |
+| | `patients` | `fichier` | `document` | `fichiers/<nom>` | im Dokument gelesenes Datum | ein gescanntes Dokument (OCR), dessen Person identifiziert ist |
+| | `a_verifier` | `fichier` | `document` | `fichiers/<nom>` | dito | ein Dokument mit unbekannter oder mehrdeutiger Identität |
+| KIM | `a_verifier` | `kim` | `lettre` | `kim/<from>/<fileName>` | Datum des Briefs | ein Arztbrief (PDF, Text oder OCR) |
+| Nach der Validierung (Tag 3) | `patients` | `validation` | `rapport_valide` | `validation-<id>` | Datum der Validierung | ein von einer Pflegekraft gegengelesener und validierter Dienstbericht. **Kein Quellfakt**: « Suchen » ignoriert ihn beim Schreiben eines neuen Berichts, nur Modus B liest ihn erneut (Quelle « Bestätigter Bericht ») |
 
-### Règle d'identification des documents (scans et lettres)
+### Identifizierungsregel für Dokumente (Scans und Briefe)
 
-Un document n'est rattaché à un résident que si **le nom ET la date de naissance** (`jj.mm.aaaa`) qu'il contient correspondent à **un seul** résident. Les deux « Heinz Müller » ne se distinguent que par la date. Sinon le document n'est **jamais deviné** : il est rangé dans `a_verifier` avec le motif `identite_inconnue` ou `identite_ambigue`.
+Ein Dokument wird einer Person nur zugeordnet, wenn **Name UND Geburtsdatum** (`tt.mm.jjjj`), die es enthält, **genau einer** Person entsprechen. Die beiden « Heinz Müller » unterscheiden sich nur durch das Datum. Sonst wird das Dokument **nie erraten**: Es wird mit dem Grund `identite_inconnue` oder `identite_ambigue` in `a_verifier` abgelegt.
 
-Les lettres KIM vont **toujours** dans `a_verifier` (statut `a_verifier`, motif `lettre_a_verifier` quand l'identité est certaine), même sans contradiction : leur contenu n'est pas présenté comme fiable avant contrôle (jour 3).
+KIM-Briefe kommen **immer** in `a_verifier` (Status `a_verifier`, Grund `lettre_a_verifier`, wenn die Identität sicher ist), auch ohne Widerspruch: Ihr Inhalt wird vor der Prüfung nicht als verlässlich dargestellt (Tag 3).
 
-## Exemples de payloads
+## Beispiele für Payloads
 
-Note de soins (`patients`) :
+Pflegenotiz (`patients`):
 
 ```json
 {
   "patient_id": "PAT-002",
   "chambre": "11",
   "source": "logiciel_soins",
-  "source_label": "Logiciel de soins",
+  "source_label": "Pflegesoftware",
   "source_ref": "note-7",
   "type": "note",
-  "titre": "Note de soins (observation) par AS Braun",
+  "titre": "Pflegenotiz (observation) von PH Braun",
   "date": "2026-10-22T23:02:08.960Z",
-  "texte": "Nuit : toux, installé en position semi-assise, SpO2 93 %.",
+  "texte": "Nacht: Husten, in halbsitzender Position gelagert, SpO2 93 %.",
   "chunk_index": 0,
   "chunk_total": 1,
   "mots": 10,
@@ -134,7 +134,7 @@ Note de soins (`patients`) :
 }
 ```
 
-Liste de médication de l'ePA (`patients`) :
+Medikationsliste der ePA (`patients`):
 
 ```json
 {
@@ -144,9 +144,9 @@ Liste de médication de l'ePA (`patients`) :
   "source_label": "ePA",
   "source_ref": "epa/Z000000010/eml",
   "type": "medication",
-  "titre": "Liste de médication eML (ePA)",
+  "titre": "Medikationsliste eML (ePA)",
   "date": "2026-09-23T10:37:47.108Z",
-  "texte": "Liste de médication (eML) du dossier ePA de Mme Greta Schulz (chambre 10) :\n- Bisoprolol : 2,5 mg, 1-0-0 …\n- Marcumar (phenprocoumon) : 3 mg, le soir, selon INR …",
+  "texte": "Medikationsliste (eML) aus der ePA-Akte von Frau Greta Schulz (Zimmer 10):\n- Bisoprolol: 2,5 mg, 1-0-0 …\n- Marcumar (phenprocoumon): 3 mg, abends, nach INR …",
   "chunk_index": 0,
   "chunk_total": 1,
   "mots": 64,
@@ -154,17 +154,17 @@ Liste de médication de l'ePA (`patients`) :
 }
 ```
 
-Protocole (`connaissances`) : pas de `patient_id`, ni de `date`.
+Protokoll (`connaissances`): kein `patient_id` und kein `date`.
 
 ```json
 {
   "theme": "escarres",
   "source": "fichier",
-  "source_label": "Fichiers",
+  "source_label": "Dateien",
   "source_ref": "fichiers/protocole-escarres.md",
   "type": "protocole",
-  "titre": "protocole escarres",
-  "texte": "# Protocole : prévention et prise en charge des escarres …",
+  "titre": "Protokoll Dekubitus",
+  "texte": "# Protokoll: Vorbeugung und Versorgung von Dekubitus …",
   "chunk_index": 0,
   "chunk_total": 1,
   "mots": 192,
@@ -172,14 +172,14 @@ Protocole (`connaissances`) : pas de `patient_id`, ni de `date`.
 }
 ```
 
-Lettre de médecin (`a_verifier`) :
+Arztbrief (`a_verifier`):
 
 ```json
 {
   "patient_id": "PAT-003",
   "chambre": "12",
   "source": "kim",
-  "source_label": "KIM (lettre de médecin)",
+  "source_label": "KIM (Arztbrief)",
   "source_ref": "kim/praxis-berger@kim.example.test/arztbrief-weber.pdf",
   "type": "lettre",
   "titre": "Arztbrief – Hans Weber, geb. 23.11.1941",
@@ -195,12 +195,12 @@ Lettre de médecin (`a_verifier`) :
 }
 ```
 
-## Interroger le RAG
+## Das RAG abfragen
 
-1. Vectoriser la question avec Ollama : `POST /api/embed` `{"model": "nomic-embed-text", "input": "search_query: M. Weber chute"}` (le vecteur est `embeddings[0]`).
-2. Chercher : `POST /collections/patients/points/search` avec `vector`, `limit`, `with_payload: true` et un filtre.
+1. Die Frage mit Ollama vektorisieren: `POST /api/embed` `{"model": "nomic-embed-text", "input": "search_query: Herr Weber Sturz"}` (der Vektor ist `embeddings[0]`).
+2. Suchen: `POST /collections/patients/points/search` mit `vector`, `limit`, `with_payload: true` und einem Filter.
 
-Filtre « M. Weber, 12 dernières heures » (`date` est indexé en `datetime`, la valeur est une date ISO) :
+Filter « Herr Weber, letzte 12 Stunden » (`date` ist als `datetime` indexiert, der Wert ist ein ISO-Datum):
 
 ```json
 {
@@ -213,17 +213,17 @@ Filtre « M. Weber, 12 dernières heures » (`date` est indexé en `datetime`, l
 }
 ```
 
-Un résident se trouve par chambre (`chambre`), jamais par son nom : le nom n'est pas un champ du payload.
-Pour la réponse affichée aux soignants, on cite `source_label` entre crochets.
-Exemple vérifié : « M. Weber chute » renvoie des morceaux du logiciel de soins, de l'ePA et de la base de l'hôpital ; une recherche dans `connaissances` retrouve le protocole des chutes.
+Eine Person wird über das Zimmer (`chambre`) gefunden, niemals über ihren Namen: Der Name ist kein Feld des Payloads.
+Für die den Pflegekräften angezeigte Antwort wird `source_label` in eckigen Klammern zitiert.
+Geprüftes Beispiel: « Herr Weber Sturz » liefert Abschnitte der Pflegesoftware, der ePA und der Krankenhausdatenbank; eine Suche in `connaissances` findet das Sturzprotokoll.
 
-## Tables PostgreSQL liées (schéma `soins`)
+## Verknüpfte PostgreSQL-Tabellen (Schema `soins`)
 
-### Correspondance des identifiants
+### Zuordnung der Kennungen
 
-Un seul `patient_id` pour tous les systèmes. Table `soins.correspondance(patient_id, systeme, identifiant)`, vue à plat `soins.v_correspondance`.
+Eine einzige `patient_id` für alle Systeme. Tabelle `soins.correspondance(patient_id, systeme, identifiant)`, flache Sicht `soins.v_correspondance`.
 
-| `patient_id` | Chambre | Identifiant FHIR | KVNR (ePA, fictif) | Capteur (LoRaWAN) |
+| `patient_id` | Zimmer | FHIR-Kennung | KVNR (ePA, fiktiv) | Sensor (LoRaWAN) |
 |---|---|---|---|---|
 | PAT-001 | 10 | `aicare-schulz` | `Z000000010` | `lora-lit-010` |
 | PAT-002 | 11 | `aicare-mueller-1` | `Z000000011` | `lora-lit-011` |
@@ -234,29 +234,29 @@ Un seul `patient_id` pour tous les systèmes. Table `soins.correspondance(patien
 | PAT-007 | 22 | `aicare-fischer` | `Z000000022` | `lora-lit-022` |
 | PAT-008 | 23 | `aicare-hoffmann` | `Z000000023` | `lora-lit-023` |
 
-Fonctions : `soins.resoudre_patient(système, identifiant)` (ex. `('epa_kvnr', 'Z000000012')` donne `PAT-003`) et `soins.trouver_par_identite(nom, date de naissance)` (0 ligne si inconnu, plusieurs si ambigu : l'appelant range alors le document dans `a_verifier`).
+Funktionen: `soins.resoudre_patient(systeme, identifiant)` (z. B. liefert `('epa_kvnr', 'Z000000012')` `PAT-003`) und `soins.trouver_par_identite(nom, naissance)` (0 Zeilen, wenn unbekannt, mehrere, wenn mehrdeutig: Der Aufrufer legt das Dokument dann in `a_verifier` ab).
 
-### Journal des imports : `soins.journal_imports`
+### Import-Journal: `soins.journal_imports`
 
-| Colonne | Rôle |
+| Spalte | Aufgabe |
 |---|---|
 | `source` | `logiciel_soins`, `fhir`, `epa`, `fichier`, `kim` |
-| `reference` | `source_ref#numéro de morceau` |
-| `patient_id` | résident concerné (peut être vide) |
-| `empreinte` | SHA-256 du contenu ; `UNIQUE (source, empreinte)` |
-| `statut`, `detail` | `importe` ; `collection / type` |
-| `importe_le` | date de l'import |
+| `reference` | `source_ref#Nummer des Abschnitts` |
+| `patient_id` | betroffene Person (kann leer sein) |
+| `empreinte` | SHA-256 des Inhalts; `UNIQUE (source, empreinte)` |
+| `statut`, `detail` | `importe`; `collection / type` |
+| `importe_le` | Datum des Imports |
 
-Une ligne est écrite **après** le succès de l'écriture dans Qdrant. Avant d'embedder, l'Indexeur retire les morceaux dont l'empreinte est déjà au journal. Un morceau modifié a une nouvelle empreinte : il est ré-importé (nouvelle ligne, l'ancienne reste comme historique).
+Eine Zeile wird **nach** erfolgreichem Schreiben in Qdrant geschrieben. Vor dem Embedding entfernt der Indexeur die Abschnitte, deren Fingerabdruck bereits im Journal steht. Ein geänderter Abschnitt hat einen neuen Fingerabdruck: Er wird erneut importiert (neue Zeile, die alte bleibt als Verlauf).
 
-### Réponses validées : `soins.validations`
+### Validierte Antworten: `soins.validations`
 
-Rempli par le bouton « Valider & Enregistrer » (jour 3) : `patient_id`, `mode`, `action`, `consigne`, `texte`, `sources`, `modifiee`, `valide_par`, `valide_le`.
+Gefüllt von der Schaltfläche « Bestätigen & Speichern » (Tag 3): `patient_id`, `mode`, `action`, `consigne`, `texte`, `sources`, `modifiee`, `valide_par`, `valide_le`.
 
-## Pour vérifier
+## Zum Überprüfen
 
 ```bash
 node tests/test-du-soir.mjs
 ```
 
-Lance 3 passages des 5 connecteurs et vérifie : aucun doublon, journal stable, passages 2 et 3 sans rien importer, « M. Weber chute » sur au moins 3 sources, les 5 lettres KIM rattachées au bon résident.
+Startet 3 Durchläufe der 5 Konnektoren und prüft: kein Duplikat, stabiles Journal, Durchläufe 2 und 3 ohne Import, « Herr Weber Sturz » über mindestens 3 Quellen, die 5 KIM-Briefe der richtigen Person zugeordnet.

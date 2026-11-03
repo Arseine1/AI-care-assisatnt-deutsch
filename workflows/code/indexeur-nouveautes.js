@@ -1,11 +1,11 @@
-// Indexeur – anti-doublon : on ne garde que les morceaux dont l'empreinte SHA-256 n'est pas déjà au journal.
-// Un morceau inchangé n'est ni vectorisé ni renvoyé à Qdrant ; un morceau modifié a une nouvelle empreinte
-// et remplace le point existant (même identifiant stable).
-const morceaux = $('Découper et hacher').all().filter((m) => m.json.payload);
-const connus = new Set($('Déjà importés').all().map((i) => `${i.json.source}|${i.json.empreinte}`));
+// Indexer – Duplikatschutz: Es werden nur Abschnitte behalten, deren SHA-256-Fingerabdruck noch nicht im Protokoll steht.
+// Ein unveränderter Abschnitt wird weder vektorisiert noch erneut an Qdrant gesendet; ein geänderter Abschnitt hat einen neuen Fingerabdruck
+// und ersetzt den vorhandenen Punkt (gleiche stabile Kennung).
+const morceaux = $('Zerlegen und Hashen').all().filter((m) => m.json.payload);
+const connus = new Set($('Bereits importiert').all().map((i) => `${i.json.source}|${i.json.empreinte}`));
 
 const nouveaux = morceaux.filter((m) => !connus.has(`${m.json.payload.source}|${m.json.payload.empreinte}`));
 
-// Toujours au moins un élément : le marqueur « rien » est aiguillé vers la branche « Rien de nouveau ».
+// Immer mindestens ein Element: Der Marker « rien » wird auf den Zweig „Nichts Neues“ geleitet.
 if (nouveaux.length === 0) return [{ json: { rien: true, total: morceaux.length } }];
 return nouveaux;

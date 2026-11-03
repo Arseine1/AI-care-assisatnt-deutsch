@@ -1,4 +1,4 @@
-// Annuler une tâche – réponse à l'interface. L'annulation est prise en compte AVANT le prochain résident (ou la prochaine
-// étape) : la génération déjà en cours chez Ollama se termine, son résultat est abandonné.
+// Aufgabe abbrechen – Antwort an die Oberfläche. Der Abbruch wird VOR dem nächsten Bewohner (oder dem nächsten
+// Schritt) berücksichtigt: Die bereits laufende Erstellung bei Ollama wird beendet, ihr Ergebnis wird verworfen.
 const r = $input.first().json ?? {};
 return [{ json: { annulee: r.annulee === true, statut: r.statut ?? 'inconnue' } }];

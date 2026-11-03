@@ -1,37 +1,37 @@
-# Livrables : demandé / où / conforme ?
+# Liefergegenstände: verlangt / wo / konform?
 
-Vérifié le 27.10.2026. Le test `node tests/livrables.test.mjs` contrôle automatiquement les points marqués « test ».
+Geprüft am 27.10.2026. Der Test `node tests/livrables.test.mjs` kontrolliert die mit « Test » markierten Punkte automatisch.
 
 ## 1. docker-compose.yml
 
-| Demandé | Où dans le dépôt | Conforme ? |
+| Verlangt | Wo im Repository | Konform? |
 |---|---|---|
-| n8n | `compose/docker-compose.yml`, service `n8n` (port 5679) | Oui (test) |
-| Qdrant | service `qdrant` (port 6335) | Oui (test) |
-| Mosquitto | service `mosquitto` (port 1884), comptes et droits dans `compose/mosquitto/` | Oui (test) |
-| Ollama | service `ollama`, **profil `ollama`** : `docker compose --profile ollama up -d` | **Oui, avec une réserve** : par défaut le projet réutilise l'Ollama installé sur le poste (une seule copie des modèles, 8 Go de mémoire). Le conteneur est prêt mais ne démarre pas avec un simple `docker compose up -d`. Il n'a pas été essayé de bout en bout sur ce poste (mémoire). |
-| autres services | `postgres`, `mailpit` (boîte KIM simulée), `ocr`, `hapi-fhir` | Oui |
+| n8n | `compose/docker-compose.yml`, Dienst `n8n` (Port 5679) | Ja (Test) |
+| Qdrant | Dienst `qdrant` (Port 6335) | Ja (Test) |
+| Mosquitto | Dienst `mosquitto` (Port 1884), Konten und Rechte in `compose/mosquitto/` | Ja (Test) |
+| Ollama | Dienst `ollama`, **Profil `ollama`**: `docker compose --profile ollama up -d` | **Ja, mit einem Vorbehalt**: Standardmäßig verwendet das Projekt das auf dem Rechner installierte Ollama (nur eine Kopie der Modelle, 8 GB Arbeitsspeicher). Der Container ist bereit, startet aber nicht mit einem einfachen `docker compose up -d`. Er wurde auf diesem Rechner nicht durchgängig erprobt (Speicher). |
+| weitere Dienste | `postgres`, `mailpit` (simuliertes KIM-Postfach), `ocr`, `hapi-fhir` | Ja |
 
-Le fichier se valide avec `docker compose config -q` (avec et sans `--profile ollama`).
+Die Datei wird mit `docker compose config -q` validiert (mit und ohne `--profile ollama`).
 
-## 2. Trois workflows n8n (JSON dans `workflows/`)
+## 2. Drei n8n-Workflows (JSON in `workflows/`)
 
-Les workflows sont **générés** (`node workflows/generer.mjs`) à partir de `workflows/code/*.js`, puis exportés en JSON versionné. Chaque « workflow demandé » est un ensemble de fichiers qui partagent des briques communes.
+Die Workflows werden aus `workflows/code/*.js` **erzeugt** (`node workflows/generer.mjs`) und dann als versioniertes JSON exportiert. Jeder « verlangte Workflow » ist eine Gruppe von Dateien, die gemeinsame Bausteine teilen.
 
-| Demandé | Fichiers | Conforme ? |
+| Verlangt | Dateien | Konform? |
 |---|---|---|
-| **Rapport de garde et transmission (SBAR)** | `67-brique-rapport-garde` (un résident), `68-brique-etage-complet` et `74-maitre-etage` (un étage), `76-etage-automatique` (5 h 30), `66-brique-apres-validation` (ajout au RAG + transmission à l'équipe suivante), entrées `70`, `72`, `73` | Oui |
-| **Alarmes de capteurs** | `81-alarme-capteur` (MQTT + pont TTN), `82-maitre-alarmes` (liste, acquittement) | Oui. Depuis le 27.10 : l'alarme est aussi **indexée dans Qdrant** (voir 3). |
-| **Import des documents** | `00-indexeur` (commun), `10` logiciel de soins, `20` FHIR, `30` fichiers (OCR), `40` ePA, `50` KIM, `83` + `85` + `86` courrier en automatique | Oui |
-| Recherche RAG | `60-brique-chercher` : recherche vectorielle Qdrant + lecture directe du logiciel de soins | Oui |
-| Filtre par chambre / résident | la chambre est traduite en `patient_id` (`Résident de la chambre`) ; les recherches `Qdrant période` et `Qdrant fond` sont **toujours filtrées par `patient_id`** | Oui (test). Les protocoles (collection `connaissances`) n'ont volontairement pas de filtre résident. |
-| Température 0,0 à 0,2 | une seule brique appelle Llama pour rédiger (`62-brique-rediger`) : température du prompt, **0,1 pour les 8 prompts** ; `test-llama3.json` (essai de connexion) fixé à 0,1 depuis le 27.10 | Oui (test). Avant le 27.10, `test-llama3.json` n'indiquait pas de température (valeur par défaut d'Ollama, 0,8) : corrigé. |
+| **Dienstbericht und Übergabe (SBAR)** | `67-brique-rapport-garde` (eine Bewohnerin bzw. ein Bewohner), `68-brique-etage-complet` und `74-maitre-etage` (eine Etage), `76-etage-automatique` (5:30 Uhr), `66-brique-apres-validation` (Aufnahme ins RAG + Übermittlung an das nächste Team), Eingänge `70`, `72`, `73` | Ja |
+| **Sensoralarme** | `81-alarme-capteur` (MQTT + TTN-Brücke), `82-maitre-alarmes` (Liste, Quittierung) | Ja. Seit dem 27.10.: Der Alarm wird auch **in Qdrant indexiert** (siehe 3). |
+| **Import der Dokumente** | `00-indexeur` (gemeinsam), `10` Pflegesoftware, `20` FHIR, `30` Dateien (OCR), `40` ePA, `50` KIM, `83` + `85` + `86` Briefe automatisch | Ja |
+| RAG-Suche | `60-brique-chercher`: Vektorsuche in Qdrant + direktes Lesen der Pflegesoftware | Ja |
+| Filter nach Zimmer / Bewohner | Das Zimmer wird in eine `patient_id` übersetzt (`Bewohner des Zimmers`); die Suchen `Qdrant Zeitraum` und `Qdrant Hintergrund` sind **immer nach `patient_id` gefiltert** | Ja (Test). Die Protokolle (Collection `connaissances`) haben absichtlich keinen Bewohnerfilter. |
+| Temperatur 0,0 bis 0,2 | Nur ein Baustein ruft Llama zum Schreiben auf (`62-brique-rediger`): Temperatur des Prompts, **0,1 für alle 8 Prompts**; `test-llama3.json` (Verbindungstest) seit dem 27.10. auf 0,1 festgelegt | Ja (Test). Vor dem 27.10. gab `test-llama3.json` keine Temperatur an (Standardwert von Ollama, 0,8): korrigiert. |
 
-## 3. Démonstration : alarme IoT puis mise à jour de l'index Qdrant
+## 3. Demonstration: IoT-Alarm, dann Aktualisierung des Qdrant-Index
 
-| Demandé | Où | Conforme ? |
+| Verlangt | Wo | Konform? |
 |---|---|---|
-| Une alarme IoT | `node scripts/demo-nuit.mjs` (scène 2 : message MQTT `capteurs/chambre12/chute`) ; ou une vraie simulation d'uplink depuis TTN | Oui |
-| Puis la mise à jour de l'index du RAG dans Qdrant | workflow 81 : `Créer l'alarme` → `Document RAG (alarme)` → `Indexer (alarme)` (sous-workflow `00-indexeur`) ; la démo vérifie que le point apparaît dans la collection `patients` (source « Capteurs », type `alarme`, résident de la chambre) | **Oui depuis le 27.10, confirmé en réel** (workflow 81 réimporté, démo rapide du 27.10 à 09 h 36 : alarme visible en 1,4 s, point ajouté à Qdrant 5 s plus tard, collection `patients` passée de 93 à 94 points, source « Capteurs », résident PAT-003). Avant, l'alarme n'était **pas** ajoutée à Qdrant (seulement à PostgreSQL) : la deuxième moitié de la démonstration n'existait pas. |
+| Ein IoT-Alarm | `node scripts/demo-nuit.mjs` (Szene 2: MQTT-Nachricht `capteurs/chambre12/chute`); oder eine echte Uplink-Simulation aus TTN | Ja |
+| Danach die Aktualisierung des RAG-Index in Qdrant | Workflow 81: `Alarm erstellen` → `RAG-Dokument (Alarm)` → `Indizieren (Alarm)` (Unter-Workflow `00-indexeur`); die Demo prüft, dass der Punkt in der Collection `patients` erscheint (Quelle « Sensoren », Typ `alarme`, Bewohner des Zimmers) | **Ja seit dem 27.10., in der Praxis bestätigt** (Workflow 81 neu importiert, schnelle Demo vom 27.10. um 09:36 Uhr: Alarm nach 1,4 s sichtbar, Punkt 5 s später zu Qdrant hinzugefügt, Collection `patients` von 93 auf 94 Punkte gestiegen, Quelle « Sensoren », Bewohner PAT-003). Zuvor wurde der Alarm **nicht** zu Qdrant hinzugefügt (nur zu PostgreSQL): Die zweite Hälfte der Demonstration gab es nicht. |
 
-Ce que l'indexation de l'alarme n'est pas : un nouvel appel à Llama. C'est un embedding (`nomic-embed-text`), et une erreur d'indexation n'arrête ni l'alarme ni son contexte.
+Was die Indexierung des Alarms nicht ist: ein neuer Aufruf von Llama. Es handelt sich um ein Embedding (`nomic-embed-text`), und ein Indexierungsfehler hält weder den Alarm noch seinen Kontext an.

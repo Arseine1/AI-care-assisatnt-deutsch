@@ -1,6 +1,6 @@
 {
   "id": "aicaremaitretac01",
-  "name": "AI-Care – Avancement d'une tâche",
+  "name": "AI-Care – Fortschritt einer Aufgabe",
   "active": false,
   "nodes": [
     {
@@ -31,10 +31,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Avancement d'une tâche – contrôle de la demande de l'interface :\n//   { tache_id }                  une tâche précise (identifiant UUID)\n//   { etage, recent: true }       le dernier rapport d'étage des 16 dernières heures (par exemple celui de 5h30)\nconst e = $input.first().json?.body ?? {};\nif (e.recent === true) {\n  const etage = Number(e.etage);\n  if (!Number.isInteger(etage) || etage < 0 || etage > 20) throw new Error('étage invalide');\n  return [{ json: { tache_id: '', etage: String(etage) } }];\n}\nconst id = String(e.tache_id ?? '');\nif (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) throw new Error('tache_id invalide');\nreturn [{ json: { tache_id: id, etage: '' } }];\n"
+        "jsCode": "// Fortschritt einer Aufgabe – Prüfung der Anfrage der Oberfläche:\n//   { tache_id }                  eine bestimmte Aufgabe (UUID-Kennung)\n//   { etage, recent: true }       der letzte Etagenbericht der letzten 16 Stunden (z. B. der von 5:30 Uhr)\nconst e = $input.first().json?.body ?? {};\nif (e.recent === true) {\n  const etage = Number(e.etage);\n  if (!Number.isInteger(etage) || etage < 0 || etage > 20) throw new Error('Ungültige Etage');\n  return [{ json: { tache_id: '', etage: String(etage) } }];\n}\nconst id = String(e.tache_id ?? '');\nif (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) throw new Error('Ungültige tache_id');\nreturn [{ json: { tache_id: id, etage: '' } }];\n"
       },
       "id": "a1c3e000-0188-4000-8000-000000000188",
-      "name": "Contrôler la tâche",
+      "name": "Aufgabe prüfen",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -51,7 +51,7 @@
         }
       },
       "id": "a1c3e000-0189-4000-8000-000000000189",
-      "name": "Lire la tâche",
+      "name": "Aufgabe lesen",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
@@ -69,10 +69,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Avancement d'une tâche – réponse à l'interface.\nconst demande = $('Contrôler la tâche').first().json;\nconst t = $input.first().json ?? {};\nif (!t.id) {\n  if (demande.etage) return [{ json: { tache_id: null } }]; // « le dernier rapport de l'étage » : il n'y en a pas\n  throw new Error('Tâche introuvable');\n}\nreturn [\n  {\n    json: {\n      tache_id: t.id,\n      type: t.type,\n      statut: t.statut,\n      total: t.total,\n      fait: t.fait,\n      automatique: t.parametres?.automatique === true,\n      cree_le: t.cree_le,\n      resultat: t.resultat ?? [],\n    },\n  },\n];\n"
+        "jsCode": "// Fortschritt einer Aufgabe – Antwort an die Oberfläche.\nconst demande = $('Aufgabe prüfen').first().json;\nconst t = $input.first().json ?? {};\nif (!t.id) {\n  if (demande.etage) return [{ json: { tache_id: null } }]; // « der letzte Bericht der Etage »: Es gibt keinen\n  throw new Error('Aufgabe nicht gefunden');\n}\nreturn [\n  {\n    json: {\n      tache_id: t.id,\n      type: t.type,\n      statut: t.statut,\n      total: t.total,\n      fait: t.fait,\n      automatique: t.parametres?.automatique === true,\n      cree_le: t.cree_le,\n      resultat: t.resultat ?? [],\n    },\n  },\n];\n"
       },
       "id": "a1c3e000-0190-4000-8000-000000000190",
-      "name": "Réponse",
+      "name": "Antwort",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -82,10 +82,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Contrôle de session – le jeton « Bearer » de l'en-tête Authorization (43 caractères URL-safe) est haché (SHA-256) : seul le haché est en base.\nconst entetes = $input.first().json?.headers ?? {};\nconst m = String(entetes.authorization ?? '').match(/^Bearer ([A-Za-z0-9_-]{43})$/);\nif (!m) return [{ json: { hash: '' } }];\nreturn [{ json: { hash: require('crypto').createHash('sha256').update(m[1]).digest('hex') } }];\n"
+        "jsCode": "// Sitzungsprüfung – das « Bearer »-Token im Authorization-Header (43 URL-sichere Zeichen) wird gehasht (SHA-256): Nur der Hash steht in der Datenbank.\nconst entetes = $input.first().json?.headers ?? {};\nconst m = String(entetes.authorization ?? '').match(/^Bearer ([A-Za-z0-9_-]{43})$/);\nif (!m) return [{ json: { hash: '' } }];\nreturn [{ json: { hash: require('crypto').createHash('sha256').update(m[1]).digest('hex') } }];\n"
       },
       "id": "a1c3e000-0406-4000-8000-000000000406",
-      "name": "Session (jeton)",
+      "name": "Sitzung (Token)",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -102,7 +102,7 @@
         }
       },
       "id": "a1c3e000-0407-4000-8000-000000000407",
-      "name": "Session (base)",
+      "name": "Sitzung (Datenbank)",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
@@ -120,10 +120,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Contrôle de session – résultat : un soignant identifié (session ouverte, non expirée, compte actif) ou rien.\nconst r = $input.first().json ?? {};\nif (!r.identifiant) return [{ json: { ok: false } }];\nreturn [{ json: { ok: true, soignant: { identifiant: r.identifiant, nom: r.nom }, jeton_hash: r.jeton_hash } }];\n"
+        "jsCode": "// Sitzungsprüfung – Ergebnis: eine identifizierte Pflegekraft (Sitzung offen, nicht abgelaufen, Konto aktiv) oder nichts.\nconst r = $input.first().json ?? {};\nif (!r.identifiant) return [{ json: { ok: false } }];\nreturn [{ json: { ok: true, soignant: { identifiant: r.identifiant, nom: r.nom }, jeton_hash: r.jeton_hash } }];\n"
       },
       "id": "a1c3e000-0408-4000-8000-000000000408",
-      "name": "Session",
+      "name": "Sitzung",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -142,7 +142,7 @@
           },
           "conditions": [
             {
-              "id": "Session valide ?",
+              "id": "Sitzung gültig?",
               "leftValue": "={{ $json.ok === true }}",
               "rightValue": "",
               "operator": {
@@ -157,7 +157,7 @@
         "options": {}
       },
       "id": "a1c3e000-0409-4000-8000-000000000409",
-      "name": "Session valide ?",
+      "name": "Sitzung gültig?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
@@ -167,10 +167,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Contrôle de session – la session est valide : on rend aux nœuds suivants la requête d'origine (en-têtes, corps) telle que reçue.\nreturn [{ json: $('Webhook').first().json }];\n"
+        "jsCode": "// Sitzungsprüfung – die Sitzung ist gültig: Die ursprüngliche Anfrage (Header, Body) wird unverändert an die folgenden Knoten zurückgegeben.\nreturn [{ json: $('Webhook').first().json }];\n"
       },
       "id": "a1c3e000-0410-4000-8000-000000000410",
-      "name": "Requête",
+      "name": "Anfrage",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -180,10 +180,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Contrôle de session – refus : aucune donnée, seulement le motif. L'interface rouvre alors la page de connexion.\nreturn [{ json: { erreur: 'session' } }];\n"
+        "jsCode": "// Sitzungsprüfung – Ablehnung: keine Daten, nur der Grund. Die Oberfläche öffnet dann wieder die Anmeldeseite.\nreturn [{ json: { erreur: 'session' } }];\n"
       },
       "id": "a1c3e000-0411-4000-8000-000000000411",
-      "name": "Refus (session)",
+      "name": "Ablehnung (Sitzung)",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -197,91 +197,91 @@
       "main": [
         [
           {
-            "node": "Session (jeton)",
+            "node": "Sitzung (Token)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Contrôler la tâche": {
+    "Aufgabe prüfen": {
       "main": [
         [
           {
-            "node": "Lire la tâche",
+            "node": "Aufgabe lesen",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Lire la tâche": {
+    "Aufgabe lesen": {
       "main": [
         [
           {
-            "node": "Réponse",
+            "node": "Antwort",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Session (jeton)": {
+    "Sitzung (Token)": {
       "main": [
         [
           {
-            "node": "Session (base)",
+            "node": "Sitzung (Datenbank)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Session (base)": {
+    "Sitzung (Datenbank)": {
       "main": [
         [
           {
-            "node": "Session",
+            "node": "Sitzung",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Session": {
+    "Sitzung": {
       "main": [
         [
           {
-            "node": "Session valide ?",
+            "node": "Sitzung gültig?",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Session valide ?": {
+    "Sitzung gültig?": {
       "main": [
         [
           {
-            "node": "Requête",
+            "node": "Anfrage",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Refus (session)",
+            "node": "Ablehnung (Sitzung)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Requête": {
+    "Anfrage": {
       "main": [
         [
           {
-            "node": "Contrôler la tâche",
+            "node": "Aufgabe prüfen",
             "type": "main",
             "index": 0
           }

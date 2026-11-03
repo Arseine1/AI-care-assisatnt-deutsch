@@ -1,6 +1,6 @@
 {
   "id": "aicarebrqlettre01",
-  "name": "AI-Care – Brique lettre validée (ajout au RAG)",
+  "name": "AI-Care – Baustein bestätigtes Schreiben (Hinzufügen zum RAG)",
   "active": false,
   "nodes": [
     {
@@ -8,7 +8,7 @@
         "inputSource": "passthrough"
       },
       "id": "a1c3e000-0306-4000-8000-000000000306",
-      "name": "Entrée",
+      "name": "Eingang",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1.1,
       "position": [
@@ -19,13 +19,13 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT v.id AS validation_id, v.patient_id, b.id AS brouillon_id, (SELECT f->>'ref' FROM jsonb_array_elements(b.faits) f WHERE f->>'id' = 'L1') AS lettre_ref, (b.texte_ia LIKE '%Aucune contradiction détectée%') AS sans_contradiction FROM soins.validations v JOIN soins.brouillons b ON b.id = v.brouillon_id WHERE v.id = $1::bigint AND v.action = 'verifier_document'",
+        "query": "SELECT v.id AS validation_id, v.patient_id, b.id AS brouillon_id, (SELECT f->>'ref' FROM jsonb_array_elements(b.faits) f WHERE f->>'id' = 'L1') AS lettre_ref, (b.texte_ia LIKE '%Aucune contradiction détectée%' OR b.texte_ia LIKE '%Kein Widerspruch von den Kontrollregeln erkannt%' OR b.texte_ia LIKE '%Keine Widersprüche erkannt%' OR b.texte_ia LIKE '%Keinen Widerspruch erkannt%' OR b.texte_ia LIKE '%Kein Widerspruch erkannt%') AS sans_contradiction FROM soins.validations v JOIN soins.brouillons b ON b.id = v.brouillon_id WHERE v.id = $1::bigint AND v.action = 'verifier_document'",
         "options": {
           "queryReplacement": "={{ [ $json.validation_id ] }}"
         }
       },
       "id": "a1c3e000-0307-4000-8000-000000000307",
-      "name": "Lettre de la validation",
+      "name": "Schreiben der Bestätigung",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
@@ -43,10 +43,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Lettre validée – décision : la lettre n'entre dans le RAG (fiable) que si les règles de contrôle n'y ont trouvé AUCUNE contradiction.\n// Une lettre avec contradiction reste « à vérifier » tant que le médecin ne l'a pas clarifiée ; la validation du rapport est seulement enregistrée.\nconst v = $input.first().json ?? {};\nif (!v.validation_id) return [{ json: { ajouter: false, motif: 'validation introuvable ou sans rapport de vérification' } }];\nif (!/^kim\\/[^\\s]{1,200}$/.test(String(v.lettre_ref ?? ''))) return [{ json: { ajouter: false, motif: 'aucun courrier lié à ce rapport', patient_id: v.patient_id } }];\nif (v.sans_contradiction !== true) return [{ json: { ajouter: false, motif: 'contradiction à clarifier avec le médecin : le courrier reste à vérifier', patient_id: v.patient_id, lettre_ref: v.lettre_ref } }];\nreturn [{ json: { ajouter: true, patient_id: v.patient_id, lettre_ref: v.lettre_ref, validation_id: v.validation_id } }];\n"
+        "jsCode": "// Bestätigter Arztbrief – Entscheidung: Der Brief gelangt nur dann in das RAG (verlässlich), wenn die Kontrollregeln darin KEINEN Widerspruch gefunden haben.\n// Ein Brief mit Widerspruch bleibt „zu prüfen“, bis der Arzt ihn geklärt hat; die Bestätigung des Berichts wird nur festgehalten.\nconst v = $input.first().json ?? {};\nif (!v.validation_id) return [{ json: { ajouter: false, motif: 'Bestätigung nicht gefunden oder ohne Prüfbericht' } }];\nif (!/^kim\\/[^\\s]{1,200}$/.test(String(v.lettre_ref ?? ''))) return [{ json: { ajouter: false, motif: 'Kein Schreiben mit diesem Bericht verknüpft', patient_id: v.patient_id } }];\nif (v.sans_contradiction !== true) return [{ json: { ajouter: false, motif: 'Widerspruch mit dem Arzt zu klären: Das Schreiben bleibt zu prüfen', patient_id: v.patient_id, lettre_ref: v.lettre_ref } }];\nreturn [{ json: { ajouter: true, patient_id: v.patient_id, lettre_ref: v.lettre_ref, validation_id: v.validation_id } }];\n"
       },
       "id": "a1c3e000-0308-4000-8000-000000000308",
-      "name": "Décider",
+      "name": "Entscheiden",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -65,7 +65,7 @@
           },
           "conditions": [
             {
-              "id": "Ajouter la lettre ?",
+              "id": "Schreiben hinzufügen?",
               "leftValue": "={{ $json.ajouter === true }}",
               "rightValue": "",
               "operator": {
@@ -80,7 +80,7 @@
         "options": {}
       },
       "id": "a1c3e000-0309-4000-8000-000000000309",
-      "name": "Ajouter la lettre ?",
+      "name": "Schreiben hinzufügen?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
@@ -100,7 +100,7 @@
         }
       },
       "id": "a1c3e000-0310-4000-8000-000000000310",
-      "name": "Lire la lettre (a_verifier)",
+      "name": "Schreiben lesen (a_verifier)",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
@@ -110,10 +110,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Lettre validée – reconstitue la lettre à partir de ses morceaux (collection « a_verifier ») pour l'ajouter à « patients ».\n// Type « lettre_validee » : distinct de « lettre » (l'empreinte du journal d'imports ne se confond pas avec celle de la version à vérifier).\nconst d = $('Décider').first().json;\nconst points = ($input.first().json?.result?.points ?? []).map((p) => p.payload).sort((a, b) => a.chunk_index - b.chunk_index);\nif (!points.length) throw new Error('lettre introuvable dans « a_verifier »');\nconst p0 = points[0];\nif (p0.patient_id !== d.patient_id) throw new Error('le résident de la lettre ne correspond pas à celui de la validation');\nreturn [\n  {\n    json: {\n      collection: 'patients',\n      source: 'kim',\n      source_label: 'KIM (lettre de médecin)',\n      source_ref: p0.source_ref,\n      type: 'lettre_validee',\n      titre: `${p0.titre} (validée)`,\n      expediteur: p0.expediteur,\n      patient_id: p0.patient_id,\n      chambre: p0.chambre,\n      statut: 'valide',\n      texte: points.map((p) => p.texte).join('\\n'),\n      date: p0.date,\n    },\n  },\n];\n"
+        "jsCode": "// Bestätigter Arztbrief – setzt den Brief aus seinen Abschnitten (Collection « a_verifier ») wieder zusammen, um ihn zu « patients » hinzuzufügen.\n// Typ « lettre_validee »: unterscheidet sich von « lettre » (der Fingerabdruck im Importprotokoll wird nicht mit dem der zu prüfenden Version verwechselt).\nconst d = $('Entscheiden').first().json;\nconst points = ($input.first().json?.result?.points ?? []).map((p) => p.payload).sort((a, b) => a.chunk_index - b.chunk_index);\nif (!points.length) throw new Error('Schreiben in « a_verifier » nicht gefunden');\nconst p0 = points[0];\nif (p0.patient_id !== d.patient_id) throw new Error('Der Bewohner des Schreibens stimmt nicht mit dem der Bestätigung überein');\nreturn [\n  {\n    json: {\n      collection: 'patients',\n      source: 'kim',\n      source_label: 'KIM (Arztbrief)',\n      source_ref: p0.source_ref,\n      type: 'lettre_validee',\n      titre: `${p0.titre} (bestätigt)`,\n      expediteur: p0.expediteur,\n      patient_id: p0.patient_id,\n      chambre: p0.chambre,\n      statut: 'valide',\n      texte: points.map((p) => p.texte).join('\\n'),\n      date: p0.date,\n    },\n  },\n];\n"
       },
       "id": "a1c3e000-0311-4000-8000-000000000311",
-      "name": "Reconstituer la lettre",
+      "name": "Schreiben rekonstruieren",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -135,7 +135,7 @@
         }
       },
       "id": "a1c3e000-0312-4000-8000-000000000312",
-      "name": "Indexer (lettre validée)",
+      "name": "Indizieren (bestätigtes Schreiben)",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.2,
       "position": [
@@ -149,13 +149,13 @@
         "specifyBody": "json",
         "method": "POST",
         "url": "http://qdrant:6333/collections/a_verifier/points/payload?wait=true",
-        "jsonBody": "={{ JSON.stringify({ payload: { statut: 'valide' }, filter: { must: [{ key: 'source_ref', match: { value: $('Décider').first().json.lettre_ref } }] } }) }}",
+        "jsonBody": "={{ JSON.stringify({ payload: { statut: 'valide' }, filter: { must: [{ key: 'source_ref', match: { value: $('Entscheiden').first().json.lettre_ref } }] } }) }}",
         "options": {
           "timeout": 60000
         }
       },
       "id": "a1c3e000-0313-4000-8000-000000000313",
-      "name": "Marquer la lettre validée",
+      "name": "Schreiben als bestätigt markieren",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
@@ -165,10 +165,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Lettre validée – résultat renvoyé à l'appelant, et événement d'audit.\nconst d = $('Décider').first().json;\nconst ajoutee = d.ajouter === true;\nreturn [\n  {\n    json: {\n      lettre: { ajoutee, motif: ajoutee ? 'lettre validée ajoutée aux sources d\\'intelligence' : d.motif },\n      evenement_journal: {\n        evenement: ajoutee ? 'lettre_validee' : 'lettre_non_ajoutee',\n        patient_id: d.patient_id ?? null,\n        mode: 'a',\n        action: 'verifier_document',\n        details: { lettre: d.lettre_ref ?? null, motif: ajoutee ? 'ajoutee' : d.motif },\n      },\n    },\n  },\n];\n"
+        "jsCode": "// Bestätigter Arztbrief – an den Aufrufer zurückgegebenes Ergebnis und Audit-Ereignis.\nconst d = $('Entscheiden').first().json;\nconst ajoutee = d.ajouter === true;\nreturn [\n  {\n    json: {\n      lettre: { ajoutee, motif: ajoutee ? 'Bestätigter Arztbrief zu den Wissensquellen hinzugefügt' : d.motif },\n      evenement_journal: {\n        evenement: ajoutee ? 'lettre_validee' : 'lettre_non_ajoutee',\n        patient_id: d.patient_id ?? null,\n        mode: 'a',\n        action: 'verifier_document',\n        details: { lettre: d.lettre_ref ?? null, motif: ajoutee ? 'ajoutee' : d.motif },\n      },\n    },\n  },\n];\n"
       },
       "id": "a1c3e000-0314-4000-8000-000000000314",
-      "name": "Résultat",
+      "name": "Ergebnis",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -178,10 +178,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Lettre validée – entrée du sous-workflow « journal ».\nreturn [{ json: $('Résultat').first().json.evenement_journal }];\n"
+        "jsCode": "// Bestätigter Arztbrief – Eingang des Unter-Workflows « Protokoll ».\nreturn [{ json: $('Ergebnis').first().json.evenement_journal }];\n"
       },
       "id": "a1c3e000-0315-4000-8000-000000000315",
-      "name": "Événement",
+      "name": "Ereignis",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -203,7 +203,7 @@
         }
       },
       "id": "a1c3e000-0316-4000-8000-000000000316",
-      "name": "Journal",
+      "name": "Protokoll",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.2,
       "position": [
@@ -213,10 +213,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Lettre validée – sortie du sous-workflow (sans l'événement de journal).\nconst { evenement_journal, ...r } = $('Résultat').first().json;\nreturn [{ json: r }];\n"
+        "jsCode": "// Bestätigter Arztbrief – Ausgang des Unter-Workflows (ohne das Protokollereignis).\nconst { evenement_journal, ...r } = $('Ergebnis').first().json;\nreturn [{ json: r }];\n"
       },
       "id": "a1c3e000-0317-4000-8000-000000000317",
-      "name": "Sortie",
+      "name": "Ausgabe",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -226,128 +226,128 @@
     }
   ],
   "connections": {
-    "Entrée": {
+    "Eingang": {
       "main": [
         [
           {
-            "node": "Lettre de la validation",
+            "node": "Schreiben der Bestätigung",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Lettre de la validation": {
+    "Schreiben der Bestätigung": {
       "main": [
         [
           {
-            "node": "Décider",
+            "node": "Entscheiden",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Décider": {
+    "Entscheiden": {
       "main": [
         [
           {
-            "node": "Ajouter la lettre ?",
+            "node": "Schreiben hinzufügen?",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Ajouter la lettre ?": {
+    "Schreiben hinzufügen?": {
       "main": [
         [
           {
-            "node": "Lire la lettre (a_verifier)",
+            "node": "Schreiben lesen (a_verifier)",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Résultat",
+            "node": "Ergebnis",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Lire la lettre (a_verifier)": {
+    "Schreiben lesen (a_verifier)": {
       "main": [
         [
           {
-            "node": "Reconstituer la lettre",
+            "node": "Schreiben rekonstruieren",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Reconstituer la lettre": {
+    "Schreiben rekonstruieren": {
       "main": [
         [
           {
-            "node": "Indexer (lettre validée)",
+            "node": "Indizieren (bestätigtes Schreiben)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Indexer (lettre validée)": {
+    "Indizieren (bestätigtes Schreiben)": {
       "main": [
         [
           {
-            "node": "Marquer la lettre validée",
+            "node": "Schreiben als bestätigt markieren",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Marquer la lettre validée": {
+    "Schreiben als bestätigt markieren": {
       "main": [
         [
           {
-            "node": "Résultat",
+            "node": "Ergebnis",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Résultat": {
+    "Ergebnis": {
       "main": [
         [
           {
-            "node": "Événement",
+            "node": "Ereignis",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Événement": {
+    "Ereignis": {
       "main": [
         [
           {
-            "node": "Journal",
+            "node": "Protokoll",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Journal": {
+    "Protokoll": {
       "main": [
         [
           {
-            "node": "Sortie",
+            "node": "Ausgabe",
             "type": "main",
             "index": 0
           }

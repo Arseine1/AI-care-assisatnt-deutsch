@@ -1,21 +1,21 @@
-# Dernière démonstration (nuit fictive)
+# Letzte Demonstration (fiktive Nacht)
 
-*Généré par `node scripts/demo-nuit.mjs` le 2026-10-27 13:09 ; compte : arsene. Ne pas modifier à la main.*
+*Erzeugt von `node scripts/demo-nuit.mjs` am 2026-10-27 13:09; Konto: arsene. Nicht von Hand ändern.*
 
-Durée totale : 6.4 minutes.
+Gesamtdauer: 6.4 Minuten.
 
-| Vérification | Résultat | Détail |
+| Prüfung | Ergebnis | Detail |
 |---|---|---|
-| connecté : Arsène (compte de test) | OK | 0.4 s |
-| l'alarme apparaît dans l'interface | OK | 0.8 s (cible : moins de 5 s ; inclut ~1 s de commande docker) |
-| l'index du RAG (Qdrant) est mis à jour : l'alarme y est ajoutée | OK | 0.0 s après l'affichage ; « Alarme de capteur (chute) le 27.10. à 14h02, chambre 12. » [Capteurs], résident PAT-003, 95 points dans « patients » |
-| la lettre est reçue dans la boîte | OK | HTTP 200 |
-| n8n lit la lettre (OCR), identifie le résident et crée une alerte « à vérifier » | OK | 25.4 s |
-| la lettre est rattachée à un Müller (nom + date de naissance), jamais devinée | OK | M. Heinz Müller (chambre 21) |
-| un brouillon est produit | OK | 235.4 s |
-| la réponse est produite | OK | 111.3 s |
-| la consigne est refusée | OK | motif : regles, 1.1 s |
-| aucun brouillon n'a été créé (l'IA n'a pas été sollicitée) | OK |  |
-| le rapport est validé et enregistré | OK | 3.0 s |
-| la signature enregistrée est celle du compte connecté (le nom envoyé par la page est ignoré) | OK | arsene / Arsène (compte de test) |
-| phrases sans source : 0 sur 8 lignes | OK |  |
+| angemeldet: Arsène (Testkonto) | OK | 0.4 s |
+| der Alarm erscheint in der Oberfläche | OK | 0.8 s (Ziel: unter 5 s; enthält ~1 s für den Docker-Befehl) |
+| der RAG-Index (Qdrant) wird aktualisiert: der Alarm wird dort hinzugefügt | OK | 0.0 s nach der Anzeige; « Sensoralarm (Sturz) am 27.10. um 14:02 Uhr, Zimmer 12. » [Sensoren], Bewohner PAT-003, 95 Punkte in « patients » |
+| der Brief wird im Postfach empfangen | OK | HTTP 200 |
+| n8n liest den Brief (OCR), identifiziert die Bewohnerin bzw. den Bewohner und legt eine Warnung zum Prüfen des Dokuments an | OK | 25.4 s |
+| der Brief wird einem Müller zugeordnet (Name + Geburtsdatum), nie erraten | OK | Herr Heinz Müller (Zimmer 21) |
+| ein Entwurf wird erstellt | OK | 235.4 s |
+| die Antwort wird erstellt | OK | 111.3 s |
+| die Anweisung wird abgelehnt | OK | Grund: regles, 1.1 s |
+| es wurde kein Entwurf angelegt (die KI wurde nicht angefragt) | OK |  |
+| der Bericht wird validiert und gespeichert | OK | 3.0 s |
+| die gespeicherte Signatur ist die des angemeldeten Kontos (der von der Seite gesendete Name wird ignoriert) | OK | arsene / Arsène (Testkonto) |
+| Sätze ohne Quelle: 0 von 8 Zeilen | OK |  |

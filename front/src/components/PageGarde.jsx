@@ -4,10 +4,10 @@ import SelecteurResident from './SelecteurResident.jsx';
 import ModeA from './ModeA.jsx';
 import ModeB from './ModeB.jsx';
 
-// Premier processus : rapport de garde et transmission. Une seule page, deux modes au choix :
-//   Actions rapides (mode A) : rapport de garde, résumé ePA, points de vigilance, rapport d'un étage entier
-//   Consigne guidée (mode B) : une question contrôlée sur le résident
-// Le résident se choisit une seule fois, au-dessus des deux modes.
+// Erster Prozess: Übergabebericht und Weitergabe. Eine einzige Seite, zwei Modi zur Auswahl:
+//   Schnellaktionen (Modus A): Übergabebericht, ePA-Zusammenfassung, Aufmerksamkeitspunkte, Bericht für ein ganzes Stockwerk
+//   Geführte Anweisung (Modus B): eine kontrollierte Frage zum Bewohner
+// Der Bewohner wird nur einmal gewählt, oberhalb der beiden Modi.
 export default function PageGarde({ onAction, onEtage, onConsigne, enCours }) {
   const [chambre, setChambre] = useState('');
   const [mode, setMode] = useState('a');

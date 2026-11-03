@@ -1,4 +1,4 @@
-// Brique « rédiger » – événement d'audit « generation » (sans le texte : il est dans le brouillon).
+// Baustein „Verfassen“ – Audit-Ereignis „generation“ (ohne den Text: Er steht im Entwurf).
 const s = $input.first().json;
 return [
   {

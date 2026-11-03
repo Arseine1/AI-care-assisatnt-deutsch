@@ -1,6 +1,6 @@
 {
   "id": "aicarebrqetagecp1",
-  "name": "AI-Care – Brique rapport de garde d'un étage (complet)",
+  "name": "AI-Care – Baustein Dienstbericht einer Etage (vollständig)",
   "active": false,
   "nodes": [
     {
@@ -8,7 +8,7 @@
         "inputSource": "passthrough"
       },
       "id": "a1c3e000-0175-4000-8000-000000000175",
-      "name": "Entrée",
+      "name": "Eingang",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1.1,
       "position": [
@@ -25,7 +25,7 @@
         }
       },
       "id": "a1c3e000-0176-4000-8000-000000000176",
-      "name": "Résidents de l'étage",
+      "name": "Bewohner der Etage",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
@@ -43,10 +43,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Rapport de garde d'un étage – un élément par résident, traités l'un après l'autre par le sous-workflow « rapport de garde ».\n// Le prompt est FIXÉ ici (generer_sbar) : l'étage ne peut demander rien d'autre.\nconst tache = $('Entrée').first().json.task_id;\nconst residents = $('Résidents de l\\'étage').all().map((i) => i.json).filter((r) => r.patient_id);\nreturn residents.map((r) => ({ json: { patient_id: r.patient_id, prompt_id: 'generer_sbar', task_id: tache } }));\n"
+        "jsCode": "// Dienstbericht einer Etage – ein Element je Bewohner, nacheinander vom Unter-Workflow « Dienstbericht » verarbeitet.\n// Der Prompt ist hier FEST vorgegeben (generer_sbar): Die Etage kann nichts anderes anfordern.\nconst tache = $('Eingang').first().json.task_id;\nconst residents = $('Bewohner der Etage').all().map((i) => i.json).filter((r) => r.patient_id);\nreturn residents.map((r) => ({ json: { patient_id: r.patient_id, prompt_id: 'generer_sbar', task_id: tache } }));\n"
       },
       "id": "a1c3e000-0177-4000-8000-000000000177",
-      "name": "Résidents à traiter",
+      "name": "Zu bearbeitende Bewohner",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -68,7 +68,7 @@
         }
       },
       "id": "a1c3e000-0178-4000-8000-000000000178",
-      "name": "Rapport de garde",
+      "name": "Dienstbericht",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.2,
       "position": [
@@ -83,11 +83,11 @@
         "operation": "executeQuery",
         "query": "UPDATE soins.taches SET statut = CASE WHEN jsonb_path_exists(resultat, '$[*].erreur') OR fait < total THEN 'termine_avec_erreurs' ELSE 'termine' END, termine_le = now() WHERE id = $1::uuid AND statut = 'en_cours' RETURNING id",
         "options": {
-          "queryReplacement": "={{ [ $('Entrée').first().json.task_id ] }}"
+          "queryReplacement": "={{ [ $('Eingang').first().json.task_id ] }}"
         }
       },
       "id": "a1c3e000-0179-4000-8000-000000000179",
-      "name": "Terminer la tâche",
+      "name": "Aufgabe beenden",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
@@ -105,44 +105,44 @@
     }
   ],
   "connections": {
-    "Entrée": {
+    "Eingang": {
       "main": [
         [
           {
-            "node": "Résidents de l'étage",
+            "node": "Bewohner der Etage",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Résidents de l'étage": {
+    "Bewohner der Etage": {
       "main": [
         [
           {
-            "node": "Résidents à traiter",
+            "node": "Zu bearbeitende Bewohner",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Résidents à traiter": {
+    "Zu bearbeitende Bewohner": {
       "main": [
         [
           {
-            "node": "Rapport de garde",
+            "node": "Dienstbericht",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Rapport de garde": {
+    "Dienstbericht": {
       "main": [
         [
           {
-            "node": "Terminer la tâche",
+            "node": "Aufgabe beenden",
             "type": "main",
             "index": 0
           }

@@ -1,5 +1,5 @@
-# Droits des comptes MQTT (les mots de passe sont dans compose/mosquitto/passwd, créé par scripts/generer-secrets.mjs).
-# Les capteurs ne font que PUBLIER sur capteurs/# ; n8n ne fait que LIRE capteurs/#. Aucun autre sujet n'est accessible.
+# Rechte der MQTT-Konten (die Passwörter stehen in compose/mosquitto/passwd, erstellt von scripts/generer-secrets.mjs).
+# Die Sensoren VERÖFFENTLICHEN nur auf capteurs/#; n8n LIEST nur capteurs/#. Kein anderes Thema ist zugänglich.
 user capteurs
 topic write capteurs/#
 

@@ -1,12 +1,12 @@
-// Connecteur « KIM » : lettre de médecin (texte du PDF ou OCR) -> document de la collection « a_verifier ».
+// KIM-Konnektor: Arztbrief (PDF-Text oder OCR) -> Dokument der Collection « a_verifier ».
 //
-// Une lettre est TOUJOURS déposée dans « a_verifier » : tant qu'elle n'a pas été contrôlée (contradiction avec
-// l'allergie, le traitement, la fonction rénale…), son contenu n'est pas présenté comme fiable.
-// Rattachement au résident : le nom ET la date de naissance (jj.mm.aaaa) du courrier doivent correspondre à UN
-// seul résident (les deux « Heinz Müller » ne se distinguent que par la date). Sinon on ne devine pas :
-// la lettre reste sans patient_id, avec le motif identite_inconnue ou identite_ambigue.
-const residents = $('Résidents').all().map((i) => i.json);
-const pieces = $('Pièces jointes').all();
+// Ein Arztbrief wird IMMER in « a_verifier » abgelegt: Solange er nicht geprüft wurde (Widerspruch zu
+// Allergie, Behandlung, Nierenfunktion …), wird sein Inhalt nicht als verlässlich dargestellt.
+// Zuordnung zum Bewohner: Name UND Geburtsdatum (TT.MM.JJJJ) des Schreibens müssen zu GENAU EINEM
+// Bewohner passen (die beiden „Heinz Müller“ unterscheiden sich nur durch das Datum). Sonst wird nicht geraten:
+// Der Brief bleibt ohne patient_id, mit dem Motiv identite_inconnue oder identite_ambigue.
+const residents = $('Bewohnerliste').all().map((i) => i.json);
+const pieces = $('Anhänge').all();
 const norm = (s) => String(s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 
 const docs = [];
@@ -20,8 +20,8 @@ $input.all().forEach((item, i) => {
   const base = {
     collection: 'a_verifier',
     source: 'kim',
-    source_label: 'KIM (lettre de médecin)',
-    // Référence stable (expéditeur + nom du fichier) : renvoyer le même courrier ne crée pas de doublon.
+    source_label: 'KIM (Arztbrief)',
+    // Stabile Referenz (Absender + Dateiname): Das erneute Senden desselben Schreibens erzeugt kein Duplikat.
     source_ref: `kim/${p.from}/${p.fileName}`,
     type: 'lettre',
     titre: p.subject,
@@ -38,7 +38,7 @@ $input.all().forEach((item, i) => {
       motif: 'lettre_a_verifier',
       patient_id: r.patient_id,
       chambre: r.chambre,
-      patient_label: `${r.civilite} ${r.prenom} ${r.nom} (chambre ${r.chambre})`,
+      patient_label: `${r.civilite} ${r.prenom} ${r.nom} (Zimmer ${r.chambre})`,
     });
   } else {
     docs.push({ ...base, motif: trouves.length === 0 ? 'identite_inconnue' : 'identite_ambigue' });

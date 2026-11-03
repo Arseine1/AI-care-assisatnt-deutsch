@@ -1,2 +1,2 @@
-// Contrôle de session – refus : aucune donnée, seulement le motif. L'interface rouvre alors la page de connexion.
+// Sitzungsprüfung – Ablehnung: keine Daten, nur der Grund. Die Oberfläche öffnet dann wieder die Anmeldeseite.
 return [{ json: { erreur: 'session' } }];

@@ -5,7 +5,7 @@ export function libelleResident(r) {
   return `${r.civilite} ${r.nom}`;
 }
 
-// Libellé complet pour la liste : prénom et date de naissance lèvent le doute entre homonymes.
+// Vollständige Bezeichnung für die Liste: Vorname und Geburtsdatum klären Verwechslungen bei Namensgleichheit.
 function libelleListe(r) {
   const [a, m, j] = r.naissance.split('-');
   return `${r.civilite} ${r.prenom} ${r.nom} (${j}.${m}.${a})`;
@@ -15,7 +15,7 @@ export function trouverResident(chambre) {
   return residents.find((r) => r.chambre === chambre);
 }
 
-// Liste déroulante chambre / résident, commune aux deux modes.
+// Dropdown-Liste Zimmer / Bewohner, für beide Modi gemeinsam.
 export default function SelecteurResident({ valeur, onChange, obligatoire = false }) {
   return (
     <label className="champ">

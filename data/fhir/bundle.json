@@ -55,7 +55,7 @@
               "code": "I48.2"
             }
           ],
-          "text": "Fibrillation auriculaire permanente"
+          "text": "Permanentes Vorhofflimmern"
         },
         "subject": {
           "reference": "Patient/aicare-schulz"
@@ -86,7 +86,7 @@
               "code": "Z86.7"
             }
           ],
-          "text": "Antécédent d'embolie pulmonaire"
+          "text": "Z. n. Lungenembolie"
         },
         "subject": {
           "reference": "Patient/aicare-schulz"
@@ -117,7 +117,7 @@
               "code": "I10"
             }
           ],
-          "text": "Hypertension artérielle"
+          "text": "Arterielle Hypertonie"
         },
         "subject": {
           "reference": "Patient/aicare-schulz"
@@ -148,7 +148,7 @@
               "code": "Z79.01"
             }
           ],
-          "text": "Anticoagulation au long cours (Marcumar)"
+          "text": "Dauerantikoagulation (Marcumar)"
         },
         "subject": {
           "reference": "Patient/aicare-schulz"
@@ -173,12 +173,12 @@
         },
         "dosage": [
           {
-            "text": "3 mg, le soir, selon INR (cible 2,0–3,0)"
+            "text": "3 mg, abends, nach INR (Zielbereich 2,0–3,0)"
           }
         ],
         "reasonCode": [
           {
-            "text": "Fibrillation auriculaire / prévention embolique"
+            "text": "Vorhofflimmern / Embolieprophylaxe"
           }
         ]
       },
@@ -206,7 +206,7 @@
         ],
         "reasonCode": [
           {
-            "text": "Fréquence cardiaque"
+            "text": "Herzfrequenz"
           }
         ]
       },
@@ -234,7 +234,7 @@
         ],
         "reasonCode": [
           {
-            "text": "Hypertension"
+            "text": "Hypertonie"
           }
         ]
       },
@@ -265,7 +265,7 @@
         "subject": {
           "reference": "Patient/aicare-schulz"
         },
-        "effectiveDateTime": "2026-10-22T09:59:10.146Z",
+        "effectiveDateTime": "2026-11-02T12:21:01.568Z",
         "valueQuantity": {
           "value": 2.6,
           "unit": ""
@@ -329,7 +329,7 @@
               "code": "J44.1"
             }
           ],
-          "text": "BPCO, stade GOLD 3"
+          "text": "COPD, Stadium GOLD 3"
         },
         "subject": {
           "reference": "Patient/aicare-mueller-1"
@@ -360,7 +360,7 @@
               "code": "I50.9"
             }
           ],
-          "text": "Insuffisance cardiaque chronique, NYHA II"
+          "text": "Chronische Herzinsuffizienz, NYHA II"
         },
         "subject": {
           "reference": "Patient/aicare-mueller-1"
@@ -378,7 +378,7 @@
         "id": "aicare-mueller-1-med-1",
         "status": "active",
         "medicationCodeableConcept": {
-          "text": "Furosémide"
+          "text": "Furosemid"
         },
         "subject": {
           "reference": "Patient/aicare-mueller-1"
@@ -390,7 +390,7 @@
         ],
         "reasonCode": [
           {
-            "text": "Insuffisance cardiaque"
+            "text": "Herzinsuffizienz"
           }
         ]
       },
@@ -413,12 +413,12 @@
         },
         "dosage": [
           {
-            "text": "18 µg, 1-0-0 (inhalation)"
+            "text": "18 µg, 1-0-0 (Inhalation)"
           }
         ],
         "reasonCode": [
           {
-            "text": "BPCO"
+            "text": "COPD"
           }
         ]
       },
@@ -441,12 +441,12 @@
         },
         "dosage": [
           {
-            "text": "100 µg, si dyspnée, 2 bouffées"
+            "text": "100 µg, bei Atemnot, 2 Hübe"
           }
         ],
         "reasonCode": [
           {
-            "text": "BPCO"
+            "text": "COPD"
           }
         ]
       },
@@ -474,7 +474,7 @@
         ],
         "reasonCode": [
           {
-            "text": "Insuffisance cardiaque"
+            "text": "Herzinsuffizienz"
           }
         ]
       },
@@ -536,7 +536,7 @@
               "code": "I10"
             }
           ],
-          "text": "Hypertension artérielle"
+          "text": "Arterielle Hypertonie"
         },
         "subject": {
           "reference": "Patient/aicare-weber"
@@ -567,7 +567,7 @@
               "code": "M17.0"
             }
           ],
-          "text": "Gonarthrose bilatérale"
+          "text": "Beidseitige Gonarthrose"
         },
         "subject": {
           "reference": "Patient/aicare-weber"
@@ -598,7 +598,7 @@
               "code": "F06.7"
             }
           ],
-          "text": "Trouble cognitif léger avec désorientation nocturne"
+          "text": "Leichte kognitive Störung mit nächtlicher Desorientierung"
         },
         "subject": {
           "reference": "Patient/aicare-weber"
@@ -629,7 +629,7 @@
               "code": "Z91.81"
             }
           ],
-          "text": "Antécédent de chutes à répétition (2 chutes en 2024)"
+          "text": "Z. n. wiederholten Stürzen (2 Stürze 2024)"
         },
         "subject": {
           "reference": "Patient/aicare-weber"
@@ -654,14 +654,14 @@
           ]
         },
         "code": {
-          "text": "Pénicilline"
+          "text": "Penicillin"
         },
         "patient": {
           "reference": "Patient/aicare-weber"
         },
         "reaction": [
           {
-            "description": "Urticaire généralisée"
+            "description": "Generalisierte Urtikaria"
           }
         ]
       },
@@ -689,7 +689,7 @@
         ],
         "reasonCode": [
           {
-            "text": "Hypertension"
+            "text": "Hypertonie"
           }
         ]
       },
@@ -705,7 +705,7 @@
         "id": "aicare-weber-med-2",
         "status": "active",
         "medicationCodeableConcept": {
-          "text": "Amlodipine"
+          "text": "Amlodipin"
         },
         "subject": {
           "reference": "Patient/aicare-weber"
@@ -717,7 +717,7 @@
         ],
         "reasonCode": [
           {
-            "text": "Hypertension"
+            "text": "Hypertonie"
           }
         ]
       },
@@ -733,19 +733,19 @@
         "id": "aicare-weber-med-3",
         "status": "active",
         "medicationCodeableConcept": {
-          "text": "Paracétamol"
+          "text": "Paracetamol"
         },
         "subject": {
           "reference": "Patient/aicare-weber"
         },
         "dosage": [
           {
-            "text": "500 mg, si douleur, max 3 g/jour"
+            "text": "500 mg, bei Schmerzen, max. 3 g/Tag"
           }
         ],
         "reasonCode": [
           {
-            "text": "Douleurs articulaires"
+            "text": "Gelenkschmerzen"
           }
         ]
       },
@@ -776,7 +776,7 @@
         "subject": {
           "reference": "Patient/aicare-weber"
         },
-        "effectiveDateTime": "2026-10-21T09:59:10.152Z",
+        "effectiveDateTime": "2026-11-01T12:21:01.570Z",
         "valueQuantity": {
           "value": 18,
           "unit": "mg/L"
@@ -840,7 +840,7 @@
               "code": "E11.7"
             }
           ],
-          "text": "Diabète de type 2 insulino-traité"
+          "text": "Insulinpflichtiger Diabetes mellitus Typ 2"
         },
         "subject": {
           "reference": "Patient/aicare-becker"
@@ -871,7 +871,7 @@
               "code": "E11.4"
             }
           ],
-          "text": "Neuropathie diabétique des pieds"
+          "text": "Diabetische Neuropathie der Füße"
         },
         "subject": {
           "reference": "Patient/aicare-becker"
@@ -902,7 +902,7 @@
               "code": "E16.2"
             }
           ],
-          "text": "Hypoglycémies nocturnes récidivantes"
+          "text": "Rezidivierende nächtliche Hypoglykämien"
         },
         "subject": {
           "reference": "Patient/aicare-becker"
@@ -920,19 +920,19 @@
         "id": "aicare-becker-med-1",
         "status": "active",
         "medicationCodeableConcept": {
-          "text": "Insuline glargine"
+          "text": "Insulin glargin"
         },
         "subject": {
           "reference": "Patient/aicare-becker"
         },
         "dosage": [
           {
-            "text": "18 UI, le soir à 21h"
+            "text": "18 IE, abends um 21 Uhr"
           }
         ],
         "reasonCode": [
           {
-            "text": "Diabète de type 2"
+            "text": "Diabetes mellitus Typ 2"
           }
         ]
       },
@@ -948,19 +948,19 @@
         "id": "aicare-becker-med-2",
         "status": "active",
         "medicationCodeableConcept": {
-          "text": "Insuline lispro"
+          "text": "Insulin lispro"
         },
         "subject": {
           "reference": "Patient/aicare-becker"
         },
         "dosage": [
           {
-            "text": "selon schéma, avant les repas"
+            "text": "nach Schema, vor den Mahlzeiten"
           }
         ],
         "reasonCode": [
           {
-            "text": "Diabète de type 2"
+            "text": "Diabetes mellitus Typ 2"
           }
         ]
       },
@@ -976,7 +976,7 @@
         "id": "aicare-becker-med-3",
         "status": "active",
         "medicationCodeableConcept": {
-          "text": "Metformine"
+          "text": "Metformin"
         },
         "subject": {
           "reference": "Patient/aicare-becker"
@@ -988,7 +988,7 @@
         ],
         "reasonCode": [
           {
-            "text": "Diabète de type 2"
+            "text": "Diabetes mellitus Typ 2"
           }
         ]
       },
@@ -1019,7 +1019,7 @@
         "subject": {
           "reference": "Patient/aicare-becker"
         },
-        "effectiveDateTime": "2026-10-03T09:59:10.152Z",
+        "effectiveDateTime": "2026-10-14T12:21:01.570Z",
         "valueQuantity": {
           "value": 8.1,
           "unit": "%"
@@ -1083,7 +1083,7 @@
               "code": "N18.4"
             }
           ],
-          "text": "Insuffisance rénale chronique stade 4"
+          "text": "Chronische Niereninsuffizienz Stadium 4"
         },
         "subject": {
           "reference": "Patient/aicare-wagner"
@@ -1114,7 +1114,7 @@
               "code": "I10"
             }
           ],
-          "text": "Hypertension artérielle"
+          "text": "Arterielle Hypertonie"
         },
         "subject": {
           "reference": "Patient/aicare-wagner"
@@ -1145,7 +1145,7 @@
               "code": "D63.1"
             }
           ],
-          "text": "Anémie rénale"
+          "text": "Renale Anämie"
         },
         "subject": {
           "reference": "Patient/aicare-wagner"
@@ -1176,7 +1176,7 @@
               "code": "M10.9"
             }
           ],
-          "text": "Goutte"
+          "text": "Gicht"
         },
         "subject": {
           "reference": "Patient/aicare-wagner"
@@ -1194,7 +1194,7 @@
         "id": "aicare-wagner-med-1",
         "status": "active",
         "medicationCodeableConcept": {
-          "text": "Amlodipine"
+          "text": "Amlodipin"
         },
         "subject": {
           "reference": "Patient/aicare-wagner"
@@ -1206,7 +1206,7 @@
         ],
         "reasonCode": [
           {
-            "text": "Hypertension"
+            "text": "Hypertonie"
           }
         ]
       },
@@ -1222,7 +1222,7 @@
         "id": "aicare-wagner-med-2",
         "status": "active",
         "medicationCodeableConcept": {
-          "text": "Torasémide"
+          "text": "Torasemid"
         },
         "subject": {
           "reference": "Patient/aicare-wagner"
@@ -1234,7 +1234,7 @@
         ],
         "reasonCode": [
           {
-            "text": "Diurétique"
+            "text": "Diuretikum"
           }
         ]
       },
@@ -1262,7 +1262,7 @@
         ],
         "reasonCode": [
           {
-            "text": "Goutte (dose adaptée à la fonction rénale)"
+            "text": "Gicht (an die Nierenfunktion angepasste Dosis)"
           }
         ]
       },
@@ -1278,19 +1278,19 @@
         "id": "aicare-wagner-med-4",
         "status": "active",
         "medicationCodeableConcept": {
-          "text": "Érythropoïétine"
+          "text": "Erythropoetin"
         },
         "subject": {
           "reference": "Patient/aicare-wagner"
         },
         "dosage": [
           {
-            "text": "4 000 UI, une fois par semaine"
+            "text": "4 000 IE, einmal pro Woche"
           }
         ],
         "reasonCode": [
           {
-            "text": "Anémie rénale"
+            "text": "Renale Anämie"
           }
         ]
       },
@@ -1316,12 +1316,12 @@
           }
         ],
         "code": {
-          "text": "DFG estimé"
+          "text": "Geschätzte GFR"
         },
         "subject": {
           "reference": "Patient/aicare-wagner"
         },
-        "effectiveDateTime": "2026-10-22T09:59:10.152Z",
+        "effectiveDateTime": "2026-11-02T12:21:01.570Z",
         "valueQuantity": {
           "value": 22,
           "unit": "ml/min/1,73 m²"
@@ -1349,12 +1349,12 @@
           }
         ],
         "code": {
-          "text": "Créatinine"
+          "text": "Kreatinin"
         },
         "subject": {
           "reference": "Patient/aicare-wagner"
         },
-        "effectiveDateTime": "2026-10-22T09:59:10.152Z",
+        "effectiveDateTime": "2026-11-02T12:21:01.570Z",
         "valueQuantity": {
           "value": 2.9,
           "unit": "mg/dl"
@@ -1382,12 +1382,12 @@
           }
         ],
         "code": {
-          "text": "Potassium"
+          "text": "Kalium"
         },
         "subject": {
           "reference": "Patient/aicare-wagner"
         },
-        "effectiveDateTime": "2026-10-22T09:59:10.152Z",
+        "effectiveDateTime": "2026-11-02T12:21:01.570Z",
         "valueQuantity": {
           "value": 5.1,
           "unit": "mmol/l"
@@ -1451,7 +1451,7 @@
               "code": "E11.9"
             }
           ],
-          "text": "Diabète de type 2"
+          "text": "Diabetes mellitus Typ 2"
         },
         "subject": {
           "reference": "Patient/aicare-mueller-2"
@@ -1482,7 +1482,7 @@
               "code": "I10"
             }
           ],
-          "text": "Hypertension artérielle"
+          "text": "Arterielle Hypertonie"
         },
         "subject": {
           "reference": "Patient/aicare-mueller-2"
@@ -1513,7 +1513,7 @@
               "code": "Z88.2"
             }
           ],
-          "text": "Allergie aux sulfamides"
+          "text": "Sulfonamid-Allergie"
         },
         "subject": {
           "reference": "Patient/aicare-mueller-2"
@@ -1538,14 +1538,14 @@
           ]
         },
         "code": {
-          "text": "Sulfamides (sulfonamides, dont le cotrimoxazole)"
+          "text": "Sulfonamide (einschließlich Cotrimoxazol)"
         },
         "patient": {
           "reference": "Patient/aicare-mueller-2"
         },
         "reaction": [
           {
-            "description": "Éruption cutanée sévère"
+            "description": "Schwerer Hautausschlag"
           }
         ]
       },
@@ -1561,7 +1561,7 @@
         "id": "aicare-mueller-2-med-1",
         "status": "active",
         "medicationCodeableConcept": {
-          "text": "Metformine"
+          "text": "Metformin"
         },
         "subject": {
           "reference": "Patient/aicare-mueller-2"
@@ -1573,7 +1573,7 @@
         ],
         "reasonCode": [
           {
-            "text": "Diabète de type 2"
+            "text": "Diabetes mellitus Typ 2"
           }
         ]
       },
@@ -1589,7 +1589,7 @@
         "id": "aicare-mueller-2-med-2",
         "status": "active",
         "medicationCodeableConcept": {
-          "text": "Candésartan"
+          "text": "Candesartan"
         },
         "subject": {
           "reference": "Patient/aicare-mueller-2"
@@ -1601,7 +1601,7 @@
         ],
         "reasonCode": [
           {
-            "text": "Hypertension"
+            "text": "Hypertonie"
           }
         ]
       },
@@ -1632,7 +1632,7 @@
         "subject": {
           "reference": "Patient/aicare-mueller-2"
         },
-        "effectiveDateTime": "2026-09-28T09:59:10.153Z",
+        "effectiveDateTime": "2026-10-09T12:21:01.570Z",
         "valueQuantity": {
           "value": 7.2,
           "unit": "%"
@@ -1696,7 +1696,7 @@
               "code": "M17.1"
             }
           ],
-          "text": "Gonarthrose du genou droit"
+          "text": "Gonarthrose des rechten Knies"
         },
         "subject": {
           "reference": "Patient/aicare-fischer"
@@ -1727,7 +1727,7 @@
               "code": "M81.9"
             }
           ],
-          "text": "Ostéoporose"
+          "text": "Osteoporose"
         },
         "subject": {
           "reference": "Patient/aicare-fischer"
@@ -1758,7 +1758,7 @@
               "code": "E03.9"
             }
           ],
-          "text": "Hypothyroïdie"
+          "text": "Hypothyreose"
         },
         "subject": {
           "reference": "Patient/aicare-fischer"
@@ -1776,19 +1776,19 @@
         "id": "aicare-fischer-med-1",
         "status": "active",
         "medicationCodeableConcept": {
-          "text": "Lévothyroxine"
+          "text": "Levothyroxin"
         },
         "subject": {
           "reference": "Patient/aicare-fischer"
         },
         "dosage": [
           {
-            "text": "75 µg, 1-0-0, à jeun"
+            "text": "75 µg, 1-0-0, nüchtern"
           }
         ],
         "reasonCode": [
           {
-            "text": "Hypothyroïdie"
+            "text": "Hypothyreose"
           }
         ]
       },
@@ -1804,19 +1804,19 @@
         "id": "aicare-fischer-med-2",
         "status": "active",
         "medicationCodeableConcept": {
-          "text": "Calcium + vitamine D3"
+          "text": "Calcium + Vitamin D3"
         },
         "subject": {
           "reference": "Patient/aicare-fischer"
         },
         "dosage": [
           {
-            "text": "500 mg / 1000 UI, 0-0-1"
+            "text": "500 mg / 1000 IE, 0-0-1"
           }
         ],
         "reasonCode": [
           {
-            "text": "Ostéoporose"
+            "text": "Osteoporose"
           }
         ]
       },
@@ -1832,19 +1832,19 @@
         "id": "aicare-fischer-med-3",
         "status": "active",
         "medicationCodeableConcept": {
-          "text": "Paracétamol"
+          "text": "Paracetamol"
         },
         "subject": {
           "reference": "Patient/aicare-fischer"
         },
         "dosage": [
           {
-            "text": "500 mg, si douleur, max 3 g/jour"
+            "text": "500 mg, bei Schmerzen, max. 3 g/Tag"
           }
         ],
         "reasonCode": [
           {
-            "text": "Douleur du genou"
+            "text": "Knieschmerzen"
           }
         ]
       },
@@ -1906,7 +1906,7 @@
               "code": "G30.1"
             }
           ],
-          "text": "Maladie d'Alzheimer, stade modéré"
+          "text": "Alzheimer-Krankheit, mittleres Stadium"
         },
         "subject": {
           "reference": "Patient/aicare-hoffmann"
@@ -1937,7 +1937,7 @@
               "code": "L89.1"
             }
           ],
-          "text": "Escarre du sacrum, stade 1"
+          "text": "Dekubitus am Kreuzbein, Stadium 1"
         },
         "subject": {
           "reference": "Patient/aicare-hoffmann"
@@ -1968,7 +1968,7 @@
               "code": "E44.0"
             }
           ],
-          "text": "Dénutrition modérée"
+          "text": "Mäßige Mangelernährung"
         },
         "subject": {
           "reference": "Patient/aicare-hoffmann"
@@ -2000,7 +2000,7 @@
         },
         "reaction": [
           {
-            "description": "Urticaire de contact"
+            "description": "Kontakturtikaria"
           }
         ]
       },
@@ -2016,7 +2016,7 @@
         "id": "aicare-hoffmann-med-1",
         "status": "active",
         "medicationCodeableConcept": {
-          "text": "Donépézil"
+          "text": "Donepezil"
         },
         "subject": {
           "reference": "Patient/aicare-hoffmann"
@@ -2028,7 +2028,7 @@
         ],
         "reasonCode": [
           {
-            "text": "Maladie d'Alzheimer"
+            "text": "Alzheimer-Krankheit"
           }
         ]
       },
@@ -2044,19 +2044,19 @@
         "id": "aicare-hoffmann-med-2",
         "status": "active",
         "medicationCodeableConcept": {
-          "text": "Vitamine D3"
+          "text": "Vitamin D3"
         },
         "subject": {
           "reference": "Patient/aicare-hoffmann"
         },
         "dosage": [
           {
-            "text": "1000 UI, 1-0-0"
+            "text": "1000 IE, 1-0-0"
           }
         ],
         "reasonCode": [
           {
-            "text": "Prévention"
+            "text": "Prophylaxe"
           }
         ]
       },
@@ -2072,7 +2072,7 @@
         "id": "aicare-hoffmann-med-3",
         "status": "active",
         "medicationCodeableConcept": {
-          "text": "Complément nutritionnel hypercalorique"
+          "text": "Hochkalorische Trinknahrung"
         },
         "subject": {
           "reference": "Patient/aicare-hoffmann"
@@ -2084,7 +2084,7 @@
         ],
         "reasonCode": [
           {
-            "text": "Dénutrition"
+            "text": "Mangelernährung"
           }
         ]
       },

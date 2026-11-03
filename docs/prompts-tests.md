@@ -1,44 +1,44 @@
-# Essais des 6 prompts avec le vrai modèle
+# Praxisversuche der 6 Prompts mit dem echten Modell
 
-Résultats de `node tests/prompts-live.mjs` : cas **nominal** de chaque prompt, texte généré par Ollama avec les mêmes réglages que la production (température 0,1, graine fixe, pénalité de répétition) et vérifié par les mêmes contrôles automatiques. Poste d'essai : 8 Go de RAM, processeur seul (sans carte graphique). Données entièrement fictives.
+Ergebnisse von `node tests/prompts-live.mjs`: **nominaler** Fall jedes Prompts, von Ollama erzeugter Text mit denselben Einstellungen wie in der Produktion (Temperatur 0,1, feste Zufallsinitialisierung, Wiederholungsstrafe) und von denselben automatischen Kontrollen geprüft. Testrechner: 8 GB RAM, nur Prozessor (ohne Grafikkarte). Vollständig fiktive Daten.
 
-Un cas est « réussi » si le texte contient ce qu'il doit, ne contient pas ce qu'il ne doit pas, et respecte les chemins JSON attendus. **Réussi ne veut pas dire fiable** : la colonne « Avertissements » montre ce que les contrôles ont signalé.
+Ein Fall ist « bestanden », wenn der Text enthält, was er enthalten muss, nicht enthält, was er nicht enthalten darf, und die erwarteten JSON-Pfade einhält. **Bestanden heißt nicht verlässlich**: Die Spalte « Warnungen » zeigt, was die Kontrollen gemeldet haben.
 
-## Llama 3.2 (3 milliards de paramètres) : modèle par défaut sur ce poste
+## Llama 3.2 (3 Milliarden Parameter): Standardmodell auf diesem Rechner
 
-| Prompt | 1er essai | Après affinage des prompts | Durée | Avertissements des contrôles (2e essai) |
+| Prompt | 1. Versuch | Nach Verfeinerung der Prompts | Dauer | Warnungen der Kontrollen (2. Versuch) |
 |---|---|---|---|---|
-| `extraire_faits` | échec : action « poursuite » au lieu de « debut », 2 médicaments rangés en recommandations | **échec** : champ `duree` omis, prénom perdu | 125 → 159 s | aucun (clé `duree` manquante non vue : outil de test corrigé depuis, et signalée maintenant) |
-| `comparer` | échec : `aucune_contradiction: true` avec une contradiction dans la liste, clé `gravité` accentuée | **réussi** (détails approximatifs : `element_source` imprécis) | 67 → 86 s | aucun |
-| `resume_epa` | réussi | **réussi** | 72 → 74 s | sources écrites hors format (`[CIM-10 …]`) |
-| `points_vigilance` | échec : introduction ajoutée, sources fausses, termes inventés | **réussi** | 100 → 89 s | `source_inconnue`, `terme_non_source` |
-| `contexte_alarme` | échec : « information non disponible » sous Alarme alors que l'alarme existe | **réussi** | 62 → 73 s | `copie_des_faits`, `valeur_non_sourcee`, `phrase_sans_source`, `terme_non_source` |
-| `generer_sbar` | (voir `docs/briques-ia.md`) | **réussi** | 96 → 133 s | 9 avertissements : sources inconnues, jugement ajouté (« élevée »), chiffre hors source citée, phrases sans source |
+| `extraire_faits` | Fehlschlag: Aktion « poursuite » statt « debut », 2 Medikamente unter Empfehlungen eingeordnet | **Fehlschlag**: Feld `duree` ausgelassen, Vorname verloren | 125 → 159 s | keine (fehlender Schlüssel `duree` nicht gesehen: Testwerkzeug seither korrigiert, wird jetzt gemeldet) |
+| `comparer` | Fehlschlag: `aucune_contradiction: true` mit einem Widerspruch in der Liste, Schlüssel `gravité` mit Akzent | **bestanden** (Details ungefähr: `element_source` ungenau) | 67 → 86 s | keine |
+| `resume_epa` | bestanden | **bestanden** | 72 → 74 s | Quellen in falschem Format geschrieben (`[CIM-10 …]`) |
+| `points_vigilance` | Fehlschlag: Einleitung hinzugefügt, falsche Quellen, erfundene Begriffe | **bestanden** | 100 → 89 s | `source_inconnue`, `terme_non_source` |
+| `contexte_alarme` | Fehlschlag: « Information nicht verfügbar » unter Alarm, obwohl der Alarm existiert | **bestanden** | 62 → 73 s | `copie_des_faits`, `valeur_non_sourcee`, `phrase_sans_source`, `terme_non_source` |
+| `generer_sbar` | (siehe `docs/briques-ia.md`) | **bestanden** | 96 → 133 s | 9 Warnungen: unbekannte Quellen, hinzugefügtes Urteil (« erhöht »), Zahl außerhalb der zitierten Quelle, Sätze ohne Quelle |
 
-À retenir : 5 cas sur 6 passent les vérifications de base après affinage, mais **le texte reste souvent imparfait** (jugements ajoutés, sources mal écrites, phrases sans source) : les contrôles le signalent, ils ne le corrigent pas.
+Zu merken: 5 von 6 Fällen bestehen nach der Verfeinerung die Grundprüfungen, aber **der Text bleibt oft unvollkommen** (hinzugefügte Urteile, falsch geschriebene Quellen, Sätze ohne Quelle): Die Kontrollen melden es, sie korrigieren es nicht.
 
-## Llama 3 (8 milliards de paramètres) : essai sur les deux prompts JSON
+## Llama 3 (8 Milliarden Parameter): Versuch mit den beiden JSON-Prompts
 
-| Prompt | Verdict | Durée | Remarque |
+| Prompt | Urteil | Dauer | Bemerkung |
 |---|---|---|---|
-| `extraire_faits` | **réussi** | 309 s | meilleur que Llama 3.2 : durée « 7 Tage » extraite |
-| `comparer` | **échec grave** | 599 s | répond `{"contradictions": [], "aucune_contradiction": true}` : **rate l'allergie à la pénicilline** malgré l'amoxicilline prescrite |
+| `extraire_faits` | **bestanden** | 309 s | besser als Llama 3.2: Dauer « 7 Tage » extrahiert (« 7 Tage » im Dokument) |
+| `comparer` | **schwerer Fehlschlag** | 599 s | antwortet `{"contradictions": [], "aucune_contradiction": true}`: **übersieht die Penicillinallergie** trotz verschriebenem Amoxicillin |
 
-Le cas de `comparer` est un **faux négatif** : aucun contrôle ne peut le détecter (la réponse est valide et cohérente). C'est le risque le plus sérieux de tout le dispositif : une fausse rassurance.
+Der Fall `comparer` ist ein **falsch-negativer**: Keine Kontrolle kann ihn erkennen (die Antwort ist gültig und konsistent). Das ist das ernsteste Risiko des gesamten Systems: eine falsche Beruhigung.
 
-## Conclusion et conséquences
+## Schlussfolgerung und Konsequenzen
 
-1. **Un modèle de langage ne doit pas être la seule garde contre les contradictions graves** (allergie, double anticoagulation, anti-inflammatoire en insuffisance rénale). Le plus gros modèle l'a ratée, le plus petit l'a vue : le résultat n'est pas prévisible.
-2. **Filet de sécurité déterministe, indépendant du modèle** : les familles de médicaments du prompt `comparer` (pénicillines, sulfamides, anticoagulants, AINS) sont une liste fermée ; elles peuvent être appliquées par un simple code de règles sur les faits et la lettre extraite. Il se combine avec le modèle (union des alertes) : à construire avec le bouton « Vérifier le document » (jour 3, étape 3).
-3. **Les contrôles automatiques et la relecture du soignant restent obligatoires** ; le bouton [Valider & Enregistrer] n'est jamais automatique.
-4. **Matériel** : sur ce poste, Llama 3 (8 Md) lit un prompt de 1 500 tokens en plusieurs minutes (599 s pour un JSON de 17 tokens). Un poste avec carte graphique ou 16 Go de RAM ou plus est nécessaire pour un usage réel, avec le plus gros modèle disponible.
+1. **Ein Sprachmodell darf nicht die einzige Wache gegen schwere Widersprüche sein** (Allergie, doppelte Antikoagulation, Entzündungshemmer bei Niereninsuffizienz). Das größere Modell hat sie übersehen, das kleinste hat sie gesehen: Das Ergebnis ist nicht vorhersehbar.
+2. **Deterministisches, vom Modell unabhängiges Sicherheitsnetz**: Die Medikamentenfamilien des Prompts `comparer` (Penicilline, Sulfonamide, Antikoagulanzien, NSAR) sind eine geschlossene Liste; sie lassen sich durch einfachen Regelcode auf die Fakten und den extrahierten Brief anwenden. Es wird mit dem Modell kombiniert (Vereinigung der Warnungen): zu bauen mit der Schaltfläche « Dokument prüfen » (Tag 3, Schritt 3).
+3. **Die automatischen Kontrollen und das Gegenlesen durch die Pflegekraft bleiben Pflicht**; die Schaltfläche [Bestätigen & Speichern] ist niemals automatisch.
+4. **Hardware**: Auf diesem Rechner liest Llama 3 (8 Md) einen Prompt von 1 500 Token in mehreren Minuten (599 s für ein JSON von 17 Token). Für den realen Einsatz ist ein Rechner mit Grafikkarte oder 16 GB RAM oder mehr nötig, mit dem größten verfügbaren Modell.
 
-## Refaire ces essais
+## Diese Versuche wiederholen
 
 ```bash
-node tests/prompts-live.mjs comparer 1          # un cas
-node tests/prompts-live.mjs                     # les 18 cas (très long)
-$env:AICARE_MODELE = 'llama3'; node tests/prompts-live.mjs extraire_faits 1   # autre modèle (PowerShell)
+node tests/prompts-live.mjs comparer 1          # ein Fall
+node tests/prompts-live.mjs                     # die 18 Fälle (sehr lang)
+$env:AICARE_MODELE = 'llama3'; node tests/prompts-live.mjs extraire_faits 1   # anderes Modell (PowerShell)
 ```
 
-Les 18 cas se composent de 6 prompts × (nominal, information manquante, piège). Seuls les cas nominaux ont été essayés avec le vrai modèle ; les 18 réponses de référence sont vérifiées sans IA par `node tests/prompts.test.mjs` (58 tests).
+Die 18 Fälle bestehen aus 6 Prompts × (nominal, fehlende Information, Falle). Nur die nominalen Fälle wurden mit dem echten Modell erprobt; die 18 Referenzantworten werden ohne KI von `node tests/prompts.test.mjs` geprüft (58 Tests).

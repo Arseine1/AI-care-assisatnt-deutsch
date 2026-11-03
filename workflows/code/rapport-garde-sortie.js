@@ -1,2 +1,2 @@
-// Rapport de garde d'un résident – sortie du sous-workflow.
-return [{ json: $('Résultat du rapport').first().json.entree }];
+// Dienstbericht eines Bewohners – Ausgabe des Unter-Workflows.
+return [{ json: $('Ergebnis des Berichts').first().json.entree }];

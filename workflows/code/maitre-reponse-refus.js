@@ -1,3 +1,3 @@
-// Mode B – réponse au front pour une consigne refusée : rien n'a été envoyé à l'IA.
-const c = $('Contrôler la consigne').first().json;
+// Modus B – Antwort an die Oberfläche bei abgelehnter Anweisung: Es wurde nichts an die KI gesendet.
+const c = $('Anweisung prüfen').first().json;
 return [{ json: { refuse: true, motif: c.motif, message: c.message } }];

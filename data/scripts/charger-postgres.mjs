@@ -1,5 +1,5 @@
-﻿// Charge le schéma puis les données de test dans le PostgreSQL du docker-compose.
-// Prérequis : `docker compose up -d` dans compose/. Rejouable (rafraîchit les horodatages).
+﻿// Lädt das Schema und dann die Testdaten in das PostgreSQL des docker-compose.
+// Voraussetzung: `docker compose up -d` in compose/. Wiederholbar (aktualisiert die Zeitstempel).
 import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';

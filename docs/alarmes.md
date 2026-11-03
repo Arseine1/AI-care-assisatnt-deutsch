@@ -1,30 +1,30 @@
-# Alarmes de capteurs (MQTT)
+# Sensoralarme (MQTT)
 
-Un capteur publie un message MQTT ; l'interface affiche une alarme en moins d'une seconde (poste au repos), avec les faits du dossier lus par le **code**. Le texte de contexte de l'assistant IA s'ajoute ensuite, quand il est prêt.
+Ein Sensor veröffentlicht eine MQTT-Nachricht; die Oberfläche zeigt einen Alarm in weniger als einer Sekunde an (Rechner im Ruhezustand), mit den vom **Code** gelesenen Fakten der Akte. Der Kontexttext des KI-Assistenten kommt anschließend hinzu, sobald er bereit ist.
 
-## Sujets MQTT
+## MQTT-Themen
 
-`capteurs/chambre{n}/{type}` avec `type` parmi `chute`, `sortie_lit`, `appel` (`n` : 1 à 3 chiffres). Tout autre sujet est rejeté (ligne `alarme_rejetee` au journal d'audit, sujet nettoyé). Le broker est le Mosquitto du docker-compose : `localhost:1884` depuis le poste, `mosquitto:1883` depuis n8n, accès réservé à deux comptes (voir « Comptes du broker » ci-dessous).
+`capteurs/chambre{n}/{type}` mit `type` aus `chute`, `sortie_lit`, `appel` (`n`: 1 bis 3 Ziffern). Jedes andere Thema wird abgelehnt (Zeile `alarme_rejetee` im Audit-Journal, Thema bereinigt). Der Broker ist das Mosquitto des docker-compose: `localhost:1884` vom Rechner aus, `mosquitto:1883` von n8n aus, Zugriff nur für zwei Konten (siehe « Konten des Brokers » weiter unten).
 
-**Le contenu du message n'est jamais lu, ni stocké, ni envoyé à l'IA** : seul le sujet compte. Un capteur défaillant ou piraté ne peut donc injecter aucun texte (testé : `tests/alarmes.test.mjs`).
+**Der Inhalt der Nachricht wird niemals gelesen, gespeichert oder an die KI gesendet**: Nur das Thema zählt. Ein defekter oder gehackter Sensor kann daher keinen Text einschleusen (getestet: `tests/alarmes.test.mjs`).
 
-## Ce qui se passe (workflow `81-alarme-capteur`)
+## Was geschieht (Workflow `81-alarme-capteur`)
 
-1. **Contrôle du sujet** (code) puis recherche du résident de la chambre.
-2. **Faits codés**, sans IA : résident, risques, allergies, diagnostics et **médication à risque** repérée par famille (anticoagulant : saignement ; insuline : hypoglycémie ; sédatif : somnolence, chute ; baisse de tension ou diurétique : chute). Chambre sans résident : l'alarme s'affiche quand même, sans contexte IA.
-3. **Alarme enregistrée** (`soins.alarmes`) : c'est le moment où elle devient visible. Une alarme répétée par le capteur pour la même chambre et le même type dans la minute n'en crée pas une seconde.
-4. **Contexte de l'assistant IA** (prompt `contexte_alarme`, 7 faits du dossier + la ligne « [Capteurs] » construite par le code, 4 phrases au plus, filtre anti-invention comme partout). **Une seule génération à la fois** : une alarme qui arrive pendant qu'une autre prépare son contexte est marquée « différé » (les faits codés restent affichés).
+1. **Prüfung des Themas** (Code), dann Suche nach der Bewohnerin bzw. dem Bewohner des Zimmers.
+2. **Codierte Fakten**, ohne KI: Bewohner, Risiken, Allergien, Diagnosen und **Risikomedikation**, nach Familie erkannt (Antikoagulans: Blutung; Insulin: Hypoglykämie; Sedativum: Schläfrigkeit, Sturz; Blutdrucksenker oder Diuretikum: Sturz). Zimmer ohne Bewohner: Der Alarm wird trotzdem angezeigt, ohne KI-Kontext.
+3. **Alarm gespeichert** (`soins.alarmes`): Ab diesem Moment wird er sichtbar. Ein vom Sensor wiederholter Alarm für dasselbe Zimmer und denselben Typ innerhalb einer Minute erzeugt keinen zweiten.
+4. **Kontext des KI-Assistenten** (Prompt `contexte_alarme`, 7 Fakten der Akte + die vom Code erstellte Zeile « [Sensoren] », höchstens 4 Sätze, Anti-Erfindungs-Filter wie überall). **Immer nur eine Generierung gleichzeitig**: Ein Alarm, der eintrifft, während ein anderer seinen Kontext vorbereitet, wird mit dem Status `differe` (zurückgestellt) markiert (die codierten Fakten bleiben angezeigt).
 
-L'interface interroge `POST /webhook/aicare-alarmes` toutes les 2 secondes ; `{ "acquitter": "<uuid>" }` acquitte, `{ "historique": true }` ajoute les alarmes acquittées des 24 dernières heures. Une alarme reste affichée jusqu'à son acquittement. Un contexte « en préparation » dont n8n s'est arrêté devient « indisponible » (reprise au démarrage, veilleur).
+Die Oberfläche fragt alle 2 Sekunden `POST /webhook/aicare-alarmes` ab; `{ "acquitter": "<uuid>" }` quittiert, `{ "historique": true }` fügt die quittierten Alarme der letzten 24 Stunden hinzu. Ein Alarm bleibt bis zu seiner Quittierung angezeigt. Ein Kontext im Status `en_cours` (in Vorbereitung), dessen n8n angehalten wurde, wird `indisponible` (nicht verfügbar) (Wiederaufnahme beim Start, Wächter).
 
-## Dans l'interface
+## In der Oberfläche
 
-- **Carte d'alarme** (douce, sans bandeau coloré) en haut des pages de travail : titre, heure, faits du dossier, contexte de l'IA, bouton « Acquitter ».
-- **Page « Alarmes »** (un onglet à elle, avec compteur) : uniquement les alarmes de capteurs, liste en attente et historique de 24 heures. Les alertes de documents (courriers, ePA) sont sur leur propre page « Documents » (voir docs/documents.md).
-- **Connexion perdue** : si l'interface n'obtient plus de réponse de n8n trois fois de suite, elle l'écrit (« Connexion au serveur perdue… ») au lieu de laisser croire qu'il n'y a aucune alarme.
-- À chaque nouvelle alarme : deux bips courts (le navigateur peut exiger un premier clic sur la page) et le titre de l'onglet annonce « (n) ALARME ».
+- **Alarmkarte** (dezent, ohne farbigen Balken) oben auf den Arbeitsseiten: Titel, Uhrzeit, Fakten der Akte, Kontext der KI, Schaltfläche « Quittieren ».
+- **Seite « Alarme »** (ein eigener Tab, mit Zähler): ausschließlich Sensoralarme, Liste der offenen Alarme und Verlauf von 24 Stunden. Die Dokumentenwarnungen (Briefe, ePA) stehen auf ihrer eigenen Seite « Dokumente » (siehe docs/documents.md).
+- **Verbindung verloren**: Erhält die Oberfläche dreimal hintereinander keine Antwort von n8n mehr, schreibt sie das (« Verbindung zum Server verloren »), statt glauben zu lassen, es gebe keinen Alarm.
+- Bei jedem neuen Alarm: zwei kurze Pieptöne (der Browser kann einen ersten Klick auf die Seite verlangen), und der Tab-Titel kündigt « (n) ALARM – … » an.
 
-## Simuler une alarme
+## Einen Alarm simulieren
 
 ```bash
 scripts/simuler-alarme.sh 12 sortie_lit
@@ -33,48 +33,48 @@ scripts/simuler-alarme.sh 12 sortie_lit
 .\scripts\simuler-alarme.ps1 -Chambre 12 -Type sortie_lit
 ```
 
-Les deux utilisent `mosquitto_pub` s'il est installé, sinon celui du conteneur (rien à installer). Essai complet avec mesures : `node tests/alarme-live.mjs` (alarmes sur plusieurs chambres, sujets invalides, doublons, délais, acquittement).
+Beide verwenden `mosquitto_pub`, falls installiert, sonst das des Containers (nichts zu installieren). Vollständiger Test mit Messungen: `node tests/alarme-live.mjs` (Alarme in mehreren Zimmern, ungültige Themen, Duplikate, Fristen, Quittierung).
 
-## Délais mesurés (poste de test : 8 Go de RAM, 4 coeurs, sans carte graphique)
+## Gemessene Zeiten (Testrechner: 8 GB RAM, 4 Kerne, ohne Grafikkarte)
 
-| Mesure | Résultat |
+| Messung | Ergebnis |
 |---|---|
-| Alarme visible, poste au repos | **0,4 à 0,9 s** (sans la commande `docker exec` qui ajoute 1 à 2 s à la mesure), puis au plus 2 s d'intervalle d'interrogation de l'interface |
-| Alarme visible pendant qu'une génération tourne (Ollama normal) | 6,5 s à **43,8 s** |
-| Alarme visible pendant qu'une génération tourne (Ollama 3 threads, priorité basse) | médiane **2,4 s**, 4 alarmes sur 5 sous 2,5 s, **une à 13 s** |
-| Contexte de l'IA prêt (première mesure, 8 phrases) | **209 s** |
-| Contexte de l'IA (4 phrases, 3 threads) | **mesures non fiables** : 320 s, mais pendant la mesure le poste était saturé (modèle presque entièrement sorti de la mémoire, 18 Go de fichier d'échange) |
+| Alarm sichtbar, Rechner im Ruhezustand | **0,4 bis 0,9 s** (ohne den Befehl `docker exec`, der der Messung 1 bis 2 s hinzufügt), danach höchstens 2 s Abfrageintervall der Oberfläche |
+| Alarm sichtbar, während eine Generierung läuft (Ollama normal) | 6,5 s bis **43,8 s** |
+| Alarm sichtbar, während eine Generierung läuft (Ollama 3 Threads, niedrige Priorität) | Median **2,4 s**, 4 von 5 Alarmen unter 2,5 s, **einer bei 13 s** |
+| KI-Kontext bereit (erste Messung, 8 Sätze) | **209 s** |
+| KI-Kontext (4 Sätze, 3 Threads) | **unzuverlässige Messungen**: 320 s, aber während der Messung war der Rechner überlastet (Modell fast vollständig aus dem Speicher verdrängt, 18 GB Auslagerungsdatei) |
 
-**Conclusion franche** : le test « alarme affichée en moins de 5 secondes » est tenu **au repos** (moins d'une seconde) et **le plus souvent sous charge** avec les réglages ci-dessous, mais **pas toujours** sur ce poste (13 s mesurés une fois). Le texte de l'IA, lui, prend plusieurs minutes ici.
+**Offenes Fazit**: Der Test « Alarm in weniger als 5 Sekunden angezeigt » wird **im Ruhezustand** erfüllt (unter einer Sekunde) und **meist auch unter Last** mit den unten genannten Einstellungen, aber **nicht immer** auf diesem Rechner (einmal 13 s gemessen). Der Text der KI braucht hier mehrere Minuten.
 
-### Réglages qui protègent l'affichage des alarmes
+### Einstellungen, die die Anzeige der Alarme schützen
 
-- `AICARE_THREADS` (3 par défaut) : threads de calcul laissés à Ollama, pour garder un coeur libre.
-- `scripts/priorite-ollama.ps1` : Ollama en priorité inférieure pendant qu'il génère (`-Normale` pour revenir). **Compromis** : n8n et PostgreSQL passent devant, mais la génération ralentit dès que le poste fait autre chose. À refaire après chaque redémarrage d'Ollama.
+- `AICARE_THREADS` (Standard 3): Rechenthreads, die Ollama überlassen werden, um einen Kern frei zu halten.
+- `scripts/priorite-ollama.ps1`: Ollama mit niedrigerer Priorität, während es generiert (`-Normale`, um zurückzukehren). **Kompromiss**: n8n und PostgreSQL ziehen vorbei, aber die Generierung verlangsamt sich, sobald der Rechner etwas anderes tut. Nach jedem Neustart von Ollama zu wiederholen.
 
-### Pour aller plus vite (voir aussi `docs/vitesse.md`)
+### Um schneller zu werden (siehe auch `docs/vitesse.md`)
 
-1. **16 Go de RAM** : supprime la saturation observée (c'est elle qui fait varier les mesures du simple au triple) ; le texte reste calculé par le processeur.
-2. **Carte graphique** : le texte en quelques secondes.
-3. **Texte de contexte sans génération** : la mesure du protocole de la maison pourrait être citée directement depuis le RAG par le code (une seconde, sans invention possible) ; non fait, à décider.
+1. **16 GB RAM**: beseitigt die beobachtete Überlastung (sie lässt die Messungen um das Dreifache schwanken); der Text wird weiterhin vom Prozessor berechnet.
+2. **Grafikkarte**: der Text in wenigen Sekunden.
+3. **Kontexttext ohne Generierung**: Die Maßnahme aus dem Protokoll des Hauses könnte vom Code direkt aus dem RAG zitiert werden (eine Sekunde, ohne Erfindungsmöglichkeit); nicht umgesetzt, noch zu entscheiden.
 
-## Comptes du broker (accès fermé)
+## Konten des Brokers (geschlossener Zugang)
 
-Le broker refuse toute connexion sans compte. Deux comptes, créés par `node scripts/generer-secrets.mjs` (mots de passe aléatoires écrits dans `.env`, jamais dans le dépôt ; le fichier haché `compose/mosquitto/passwd` est ignoré par Git) :
+Der Broker verweigert jede Verbindung ohne Konto. Zwei Konten, angelegt mit `node scripts/generer-secrets.mjs` (Zufallspasswörter, in `.env` geschrieben, niemals ins Repository; die gehashte Datei `compose/mosquitto/passwd` wird von Git ignoriert):
 
-- `capteurs` : publie sur `capteurs/#`, ne peut rien lire ;
-- `n8n` : lit `capteurs/#`, ne publie pas.
+- `capteurs`: veröffentlicht auf `capteurs/#`, kann nichts lesen;
+- `n8n`: liest `capteurs/#`, veröffentlicht nicht.
 
-Les scripts `scripts/simuler-alarme.ps1` et `.sh` lisent le compte `capteurs` dans `.env` : aucune saisie de mot de passe. Aucune clé API n'est nécessaire en local.
+Die Skripte `scripts/simuler-alarme.ps1` und `.sh` lesen das Konto `capteurs` aus `.env`: keine Passworteingabe. Lokal ist kein API-Schlüssel nötig.
 
-## Pont TTN (The Things Stack)
+## TTN-Brücke (The Things Stack)
 
-Second point d'entrée du même workflow `81` : le nœud « Alarme TTN » s'abonne à `v3/<application>/devices/+/up` sur votre serveur TTN (MQTT chiffré, port 8883), le nœud « Traduire (TTN) » en tire la chambre et le type d'alarme, puis la suite est identique aux capteurs locaux.
+Zweiter Einstiegspunkt desselben Workflows `81`: Der Knoten « TTN-Alarm » abonniert `v3/<application>/devices/+/up` auf Ihrem TTN-Server (verschlüsseltes MQTT, Port 8883), der Knoten « Übersetzen (TTN) » entnimmt daraus Zimmer und Alarmtyp, danach ist der Ablauf identisch mit den lokalen Sensoren.
 
-- Configuration dans `.env` : `TTN_SERVEUR`, `TTN_PORT` (8883), `TTN_APPLICATION` (identifiant complet `application@locataire`), `TTN_CLE_API` (clé en lecture du trafic seulement). Puis `node workflows/importer.mjs --seulement=81`. Sans ces valeurs, le nœud reste désactivé.
-- Format reconnu : message décodé `{ "alarme": "chute|sortie_lit|appel", "chambre": 12 }` (formateur JavaScript de l'application TTN, voir ci-dessous), ou, à défaut, un nom d'appareil du type `chambre12-sortie-lit`. Synonymes acceptés : `fall`, `bed_exit`, `call`, `sos`, `room`…
-- Seuls la chambre (1 à 3 chiffres) et le type (liste fermée) sont repris : aucun autre texte du message TTN n'entre dans le système ni dans le prompt.
-- Formateur à coller dans TTN (Payload formatters, Uplink, JavaScript personnalisé) :
+- Konfiguration in `.env`: `TTN_SERVEUR`, `TTN_PORT` (8883), `TTN_APPLICATION` (vollständige Kennung `application@locataire`), `TTN_CLE_API` (Schlüssel nur zum Lesen des Datenverkehrs). Dann `node workflows/importer.mjs --seulement=81`. Ohne diese Werte bleibt der Knoten deaktiviert.
+- Erkanntes Format: dekodierte Nachricht `{ "alarme": "chute|sortie_lit|appel", "chambre": 12 }` (JavaScript-Formatter der TTN-Anwendung, siehe unten) oder ersatzweise ein Gerätename der Form `chambre12-sortie-lit`. Akzeptierte Synonyme: `fall`, `bed_exit`, `call`, `sos`, `room` …
+- Übernommen werden nur das Zimmer (1 bis 3 Ziffern) und der Typ (geschlossene Liste): Kein anderer Text der TTN-Nachricht gelangt in das System oder in den Prompt.
+- In TTN einzufügender Formatter (Payload formatters, Uplink, Benutzerdefiniertes JavaScript):
 
 ```javascript
 function decodeUplink(input) {
@@ -84,5 +84,5 @@ function decodeUplink(input) {
 }
 ```
 
-- Essais depuis TTN (Messaging, Simulate uplink, FPort 1) : `010C` chute chambre 12, `020C` sortie de lit chambre 12, `030C` appel chambre 12.
-- Limite : seule la connexion à un compte TTN réel prouve le chemin complet ; les tests hors ligne couvrent la traduction (`tests/alarmes.test.mjs`).
+- Tests aus TTN (Messaging, Simulate uplink, FPort 1): `010C` Sturz Zimmer 12, `020C` Bettausstieg Zimmer 12, `030C` Ruf Zimmer 12.
+- Grenze: Nur die Verbindung zu einem echten TTN-Konto beweist den vollständigen Weg; die Offline-Tests decken die Übersetzung ab (`tests/alarmes.test.mjs`).

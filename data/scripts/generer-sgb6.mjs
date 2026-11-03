@@ -1,6 +1,6 @@
-﻿// Génère data/sql/03_sgb6.sql : les questionnaires fictifs de data/sgb6/questionnaires/ importés comme dossiers « à traiter ».
-// « INSERT … ON CONFLICT DO NOTHING » : rejouable, un dossier déjà traité ou décidé n'est jamais écrasé.
-// Lancer : node data/scripts/generer-sgb6.mjs   (puis npm run postgres dans data/, ou voir docs/cotisations.md)
+﻿// Erzeugt data/sql/03_sgb6.sql: die fiktiven Fragebögen aus data/sgb6/questionnaires/, importiert als Akten „zu bearbeiten“.
+// „INSERT … ON CONFLICT DO NOTHING“: wiederholbar, eine bereits bearbeitete oder entschiedene Akte wird nie überschrieben.
+// Aufruf: node data/scripts/generer-sgb6.mjs   (danach npm run postgres in data/, oder siehe docs/cotisations.md)
 import { readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -18,10 +18,10 @@ const lignes = readdirSync(dossier)
     const nom = (p, n) => `${donnees[p] ?? ''} ${donnees[n] ?? ''}`.trim();
     return `  (${lit(f.replace(/\.txt$/, ''))}, ${lit(texte)}, ${lit(nom('aidant_prenom', 'aidant_nom'))}, ${lit(nom('personne_prenom', 'personne_nom'))}, ${recu_le ? lit(recu_le) : 'current_date'})`;
   });
-const sql = `-- GÉNÉRÉ par data/scripts/generer-sgb6.mjs (ne pas modifier à la main). Données entièrement fictives.
+const sql = `-- ERZEUGT von data/scripts/generer-sgb6.mjs (nicht von Hand ändern). Vollständig fiktive Daten.
 INSERT INTO soins.sgb6_dossiers (id, questionnaire, aidant, personne, recu_le) VALUES
 ${lignes.join(',\n')}
 ON CONFLICT (id) DO NOTHING;
 `;
 writeFileSync(join(racine, 'sql', '03_sgb6.sql'), sql, 'utf8');
-console.log(`écrit data/sql/03_sgb6.sql (${lignes.length} dossiers)`);
+console.log(`geschrieben data/sql/03_sgb6.sql (${lignes.length} Akten)`);

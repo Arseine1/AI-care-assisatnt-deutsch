@@ -1,5 +1,5 @@
-// Mesure du temps entre une alarme MQTT et le texte de contexte de l'assistant IA affiché (une seule alarme, poste au repos).
-// Lancer : node tests/alarme-contexte-live.mjs [chambre] [type] [étiquette]
+// Messung der Zeit zwischen einem MQTT-Alarm und dem angezeigten Kontexttext des KI-Assistenten (ein einziger Alarm, Rechner im Leerlauf).
+// Start: node tests/alarme-contexte-live.mjs [Zimmer] [Typ] [Bezeichnung]
 import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { appendFileSync, mkdirSync } from 'node:fs';
@@ -8,13 +8,13 @@ import { fileURLToPath } from 'node:url';
 import { appelN8n } from './lib/n8n.mjs';
 
 const racine = join(dirname(fileURLToPath(import.meta.url)), '..');
-// compte MQTT « capteurs » (le broker refuse les connexions anonymes) : lu dans .env, jamais écrit dans le dépôt
+// MQTT-Konto « capteurs » (der Broker lehnt anonyme Verbindungen ab): aus .env gelesen, nie im Repository gespeichert
 const envFichier = readFileSync(join(racine, '.env'), 'utf8');
 const lireEnv = (cle) => new RegExp('^' + cle + '=(.*)$', 'm').exec(envFichier)?.[1]?.trim();
 const MQTT = { utilisateur: lireEnv('MQTT_UTILISATEUR_CAPTEURS'), motDePasse: lireEnv('MQTT_MOT_DE_PASSE_CAPTEURS') };
 const chambre = process.argv[2] ?? '12';
 const type = process.argv[3] ?? 'sortie_lit';
-const etiquette = process.argv[4] ?? 'essai';
+const etiquette = process.argv[4] ?? 'test';
 const pause = (ms) => new Promise((r) => setTimeout(r, ms));
 const sql = (requete) => spawnSync('docker', ['compose', 'exec', '-T', 'postgres', 'sh', '-c', 'psql -t -A -F "|" -U "$POSTGRES_USER" -d "$POSTGRES_DB"'], { cwd: join(racine, 'compose'), input: requete, encoding: 'utf8' }).stdout.trim();
 const lire = async () => (await (await appelN8n('http://localhost:5679/webhook/aicare-alarmes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })).json()).alarmes;
@@ -33,7 +33,7 @@ for (let i = 0; i < 200 && !pret; i++) {
   else await pause(1000);
 }
 if (!pret) {
-  console.log('contexte non prêt dans le délai');
+  console.log('Kontext nicht rechtzeitig bereit');
   process.exit(1);
 }
 const [duree, tokens, faits] = sql("select duree_ms, details->>'tokens', details->>'nb_faits' from soins.journal_ia where evenement = 'generation' and action = 'contexte_alarme' order by id desc limit 1;").split('|');

@@ -1,8 +1,8 @@
-// Génère les secrets de l'étape « sécurité » dans le fichier .env (jamais dans Git) et le fichier des mots de passe de Mosquitto.
-//   AICARE_CLE_WEBHOOK / VITE_N8N_CLE     clé secrète envoyée par l'interface à chaque webhook n8n (même valeur des deux côtés)
-//   MQTT_*_N8N / MQTT_*_CAPTEURS           comptes du broker MQTT : n8n lit, les capteurs publient
-// Rejouable : une valeur déjà présente (et différente de TA-CLE) n'est jamais écrasée. Les valeurs ne sont pas affichées.
-// Usage : node scripts/generer-secrets.mjs [--mqtt]    (--mqtt : recrée aussi le fichier des mots de passe de Mosquitto)
+// Erzeugt die Geheimnisse des Schritts „Sicherheit“ in der Datei .env (niemals in Git) und die Passwortdatei von Mosquitto.
+//   AICARE_CLE_WEBHOOK / VITE_N8N_CLE     geheimer Schlüssel, den die Oberfläche bei jedem n8n-Webhook mitsendet (auf beiden Seiten derselbe Wert)
+//   MQTT_*_N8N / MQTT_*_CAPTEURS           Konten des MQTT-Brokers: n8n liest, die Sensoren veröffentlichen
+// Wiederholbar: Ein bereits vorhandener Wert (der nicht TA-CLE ist) wird nie überschrieben. Die Werte werden nicht angezeigt.
+// Aufruf: node scripts/generer-secrets.mjs [--mqtt]    (--mqtt: erstellt auch die Passwortdatei von Mosquitto neu)
 import { randomBytes, randomInt } from 'node:crypto';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
@@ -12,7 +12,7 @@ import { fileURLToPath } from 'node:url';
 const racine = join(dirname(fileURLToPath(import.meta.url)), '..');
 const fichierEnv = join(racine, '.env');
 if (!existsSync(fichierEnv)) {
-  console.error("Fichier .env introuvable : copier .env.exemple en .env, puis relancer.");
+  console.error("Datei .env nicht gefunden: .env.exemple nach .env kopieren und erneut starten.");
   process.exit(1);
 }
 let env = readFileSync(fichierEnv, 'utf8');
@@ -28,8 +28,8 @@ function assurer(cle, valeur) {
   return true;
 }
 const cree = [];
-// base PostgreSQL (partagée avec n8n) et clé de chiffrement des credentials de n8n : sur un poste neuf elles valent TA-CLE.
-// Une valeur déjà présente n'est jamais touchée (changer le mot de passe ou la clé d'une pile existante la casserait).
+// PostgreSQL-Datenbank (mit n8n geteilt) und Verschlüsselungsschlüssel der n8n-Zugangsdaten: Auf einem neuen Rechner lauten sie TA-CLE.
+// Ein bereits vorhandener Wert wird nie angetastet (das Ändern des Passworts oder Schlüssels eines bestehenden Stacks würde ihn beschädigen).
 if (assurer('POSTGRES_USER', 'aicare')) cree.push('POSTGRES_USER');
 if (assurer('POSTGRES_DB', 'aicare')) cree.push('POSTGRES_DB');
 if (assurer('POSTGRES_PASSWORD', secret())) cree.push('POSTGRES_PASSWORD');
@@ -40,18 +40,18 @@ if (assurer('N8N_ENCRYPTION_KEY', randomBytes(24).toString('hex'))) cree.push('N
 const cle = lire('AICARE_CLE_WEBHOOK');
 const nouvelleCle = cle && cle !== 'TA-CLE' ? cle : secret();
 if (assurer('AICARE_CLE_WEBHOOK', nouvelleCle)) cree.push('AICARE_CLE_WEBHOOK');
-// l'interface envoie la même clé : visible dans le code de l'interface dans le navigateur (voir DECISIONS.md : ce n'est PAS la protection principale)
+// die Oberfläche sendet denselben Schlüssel: im Code der Oberfläche im Browser sichtbar (siehe DECISIONS.md: das ist NICHT der Hauptschutz)
 if (assurer('VITE_N8N_CLE', lire('AICARE_CLE_WEBHOOK'))) cree.push('VITE_N8N_CLE');
 for (const [c, v] of Object.entries(defaut)) if (assurer(c, v)) cree.push(c);
 for (const c of ['MQTT_MOT_DE_PASSE_N8N', 'MQTT_MOT_DE_PASSE_CAPTEURS']) if (assurer(c, secret())) cree.push(c);
-// clé INTERNE : utilisée seulement par n8n pour s'appeler lui-même ; elle n'est jamais envoyée à l'interface
+// INTERNER Schlüssel: wird nur von n8n verwendet, um sich selbst aufzurufen; er wird nie an die Oberfläche gesendet
 if (assurer('AICARE_CLE_INTERNE', secret())) cree.push('AICARE_CLE_INTERNE');
-// codes PIN des comptes de démonstration (fictifs) : 6 chiffres tirés au hasard, lus ensuite par scripts/creer-soignants.mjs
+// PIN-Codes der Demokonten (fiktiv): 6 zufällig gezogene Ziffern, anschließend von scripts/creer-soignants.mjs gelesen
 for (const c of ['DEMO_PIN_MARTIN', 'DEMO_PIN_KELLER', 'DEMO_PIN_ROTH', 'DEMO_PIN_ARSENE']) if (assurer(c, String(randomInt(100000, 1000000)))) cree.push(c);
 writeFileSync(fichierEnv, env, 'utf8');
-console.log(cree.length ? `.env : ${cree.length} valeur(s) créée(s) (${cree.join(', ')}).` : '.env : tous les secrets existent déjà.');
+console.log(cree.length ? `.env: ${cree.length} Wert(e) erstellt (${cree.join(', ')}).` : '.env: Alle Geheimnisse sind bereits vorhanden.');
 
-// fichier des mots de passe de Mosquitto (haché par mosquitto_passwd, dans le conteneur ; ignoré par Git)
+// Passwortdatei von Mosquitto (von mosquitto_passwd im Container gehasht; von Git ignoriert)
 const passwd = join(racine, 'compose', 'mosquitto', 'passwd');
 if (process.argv.includes('--mqtt') || !existsSync(passwd) || cree.some((c) => c.startsWith('MQTT_'))) {
   const comptes = [
@@ -61,8 +61,8 @@ if (process.argv.includes('--mqtt') || !existsSync(passwd) || cree.some((c) => c
   const commande = comptes.map(([u, p], i) => `mosquitto_passwd -${i === 0 ? 'c -' : ''}b /cfg/passwd '${u}' '${p}'`).join(' && ') + ' && chmod 644 /cfg/passwd';
   const r = spawnSync('docker', ['run', '--rm', '-v', `${join(racine, 'compose', 'mosquitto')}:/cfg`, '--entrypoint', 'sh', 'eclipse-mosquitto:2', '-c', commande], { encoding: 'utf8' });
   if (r.status !== 0) {
-    console.error(`mosquitto_passwd a échoué : ${r.stderr.replace(/'[^']*'/g, "'***'")}`);
+    console.error(`mosquitto_passwd ist fehlgeschlagen: ${r.stderr.replace(/'[^']*'/g, "'***'")}`);
     process.exit(1);
   }
-  console.log('compose/mosquitto/passwd : créé (2 comptes : n8n lit, capteurs publient).');
+  console.log('compose/mosquitto/passwd: erstellt (2 Konten: n8n liest, Sensoren veröffentlichen).');
 }

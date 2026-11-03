@@ -1,5 +1,5 @@
-// Tests hors n8n de l'étape 7 du jour 4 : sécurité minimale (connexion du soignant, sessions, clé des webhooks, origines, secrets).
-// Lancer : node tests/securite.test.mjs   (après node workflows/generer.mjs)
+// Tests außerhalb von n8n, Schritt 7 von Tag 4: Mindestsicherheit (Anmeldung der Pflegekraft, Sitzungen, Webhook-Schlüssel, Ursprünge, Geheimnisse).
+// Start: node tests/securite.test.mjs   (nach node workflows/generer.mjs)
 import assert from 'node:assert/strict';
 import { createHash, randomBytes, scryptSync } from 'node:crypto';
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
@@ -16,69 +16,69 @@ const test = (nom, fn) => {
 const tous = readdirSync(join(racine, 'workflows')).filter((f) => /^\d\d-.*\.json$/.test(f)).map((f) => ({ f, wf: workflow(f) }));
 const webhooks = tous.flatMap(({ f, wf }) => wf.nodes.filter((n) => n.type === 'n8n-nodes-base.webhook').map((n) => ({ f, wf, n, chemin: n.parameters.path })));
 const voisins = (w, nom) => (w.connections[nom]?.main ?? []).flatMap((liste, sortie) => (liste ?? []).map((l) => ({ vers: l.node, sortie })));
-const PUBLICS = ['courrier-recu']; // appelé par Mailpit, qui ne sait pas envoyer d'en-tête (limite documentée dans DECISIONS.md)
+const PUBLICS = ['courrier-recu']; // von Mailpit aufgerufen, das keinen Header senden kann (in DECISIONS.md dokumentierte Grenze)
 const SANS_SESSION = ['aicare-connexion', 'aicare-verifier-interne', ...PUBLICS];
 
-// ---------------------------------------------------------------- clé des webhooks et origines
-test('tous les webhooks (sauf le courrier reçu de Mailpit) exigent une clé secrète en en-tête', () => {
+// ---------------------------------------------------------------- Webhook-Schlüssel und Ursprünge
+test('alle Webhooks (außer der eingegangenen Post von Mailpit) verlangen einen geheimen Schlüssel im Header', () => {
   assert.ok(webhooks.length >= 18);
   for (const { f, n, chemin } of webhooks) {
     if (PUBLICS.includes(chemin)) {
-      assert.equal(n.parameters.authentication, undefined, `${chemin} : appelé par Mailpit`);
+      assert.equal(n.parameters.authentication, undefined, `${chemin}: von Mailpit aufgerufen`);
       continue;
     }
-    assert.equal(n.parameters.authentication, 'headerAuth', `${f} : ${chemin}`);
-    assert.ok(n.credentials?.httpHeaderAuth?.id, `${f} : ${chemin} sans credential`);
+    assert.equal(n.parameters.authentication, 'headerAuth', `${f}: ${chemin}`);
+    assert.ok(n.credentials?.httpHeaderAuth?.id, `${f}: ${chemin} ohne Credential`);
   }
 });
-test('le chemin interne a sa propre clé, distincte de celle de l\'interface', () => {
+test('der interne Pfad hat einen eigenen Schlüssel, getrennt von dem der Oberfläche', () => {
   const interne = webhooks.find((w) => w.chemin === 'aicare-verifier-interne');
   assert.equal(interne.n.credentials.httpHeaderAuth.name, 'AI-Care clé interne');
   const autres = webhooks.filter((w) => !PUBLICS.includes(w.chemin) && w.chemin !== 'aicare-verifier-interne');
   for (const a of autres) assert.equal(a.n.credentials.httpHeaderAuth.name, 'AI-Care clé des webhooks', a.chemin);
-  assert.equal(interne.n.parameters.options?.allowedOrigins, undefined, 'aucun navigateur n\'appelle le chemin interne');
+  assert.equal(interne.n.parameters.options?.allowedOrigins, undefined, 'kein Browser ruft den internen Pfad auf');
 });
-test('CORS : plus aucune ouverture à toutes les origines, seulement l\'adresse de l\'interface', () => {
+test('CORS: keine Öffnung für alle Ursprünge mehr, nur die Adresse der Oberfläche', () => {
   for (const { f, n, chemin } of webhooks) {
     const o = n.parameters.options?.allowedOrigins;
-    assert.notEqual(o, '*', `${f} : ${chemin}`);
-    if (o) assert.ok(o.split(',').every((x) => /^http:\/\/(localhost|127\.0\.0\.1):\d{4}$/.test(x)), `${chemin} : ${o}`);
+    assert.notEqual(o, '*', `${f}: ${chemin}`);
+    if (o) assert.ok(o.split(',').every((x) => /^http:\/\/(localhost|127\.0\.0\.1):\d{4}$/.test(x)), `${chemin}: ${o}`);
   }
   for (const { chemin, n } of webhooks.filter((w) => !SANS_SESSION.includes(w.chemin) || w.chemin === 'aicare-connexion')) assert.ok(n.parameters.options.allowedOrigins, chemin);
 });
 
-// ---------------------------------------------------------------- la session est contrôlée AVANT tout traitement
-test('chaque point d\'entrée des soignants passe par le contrôle de session avant tout nœud de traitement', () => {
+// ---------------------------------------------------------------- die Sitzung wird VOR jeder Verarbeitung geprüft
+test('jeder Einstiegspunkt der Pflegekräfte durchläuft die Sitzungsprüfung vor jedem Verarbeitungsknoten', () => {
   const gardes = webhooks.filter((w) => !SANS_SESSION.includes(w.chemin));
   assert.ok(gardes.length >= 15);
   for (const { f, wf, n, chemin } of gardes) {
-    // tout ce qui est atteignable SANS passer par la sortie « session valide » doit être le contrôle lui-même ou le refus
+    // alles, was OHNE den Ausgang „Sitzung gültig“ erreichbar ist, muss die Prüfung selbst oder die Ablehnung sein
     const vus = new Set();
     const aller = (nom) => {
       if (vus.has(nom)) return;
       vus.add(nom);
       for (const v of voisins(wf, nom)) {
-        if (/^Session valide \?/.test(nom) && v.sortie === 0) continue; // chemin autorisé
+        if (/^Sitzung gültig\?/.test(nom) && v.sortie === 0) continue; // erlaubter Pfad
         aller(v.vers);
       }
     };
     aller(n.name);
-    const hors = [...vus].filter((x) => x !== n.name && !/^(Session|Refus \(session\)|Répondre \(session\))/.test(x));
-    assert.deepEqual(hors, [], `${f} : ${chemin} atteint ${hors.join(', ')} sans session`);
-    assert.ok([...vus].some((x) => /^Session valide \?/.test(x)), `${f} : ${chemin} sans contrôle de session`);
-    // le point d'entrée n'est branché sur rien d'autre que le contrôle
-    assert.match(voisins(wf, n.name)[0].vers, /^Session \(jeton\)/);
+    const hors = [...vus].filter((x) => x !== n.name && !/^(Sitzung|Ablehnung \(Sitzung\)|Antworten \(Sitzung\))/.test(x));
+    assert.deepEqual(hors, [], `${f}: ${chemin} erreicht ${hors.join(', ')} ohne Sitzung`);
+    assert.ok([...vus].some((x) => /^Sitzung gültig\?/.test(x)), `${f}: ${chemin} ohne Sitzungsprüfung`);
+    // der Einstiegspunkt ist nur mit der Prüfung verbunden
+    assert.match(voisins(wf, n.name)[0].vers, /^Sitzung \(Token\)/);
   }
 });
-test('le contrôle de session lit la base : jeton haché, session non expirée, compte actif', () => {
+test('die Sitzungsprüfung liest die Datenbank: gehashter Token, nicht abgelaufene Sitzung, aktives Konto', () => {
   const wf = workflow('72-maitre-valider.json');
-  const q = wf.nodes.find((x) => x.name === 'Session (base)').parameters.query;
+  const q = wf.nodes.find((x) => x.name === 'Sitzung (Datenbank)').parameters.query;
   assert.match(q, /s\.jeton_hash = \$1/);
   assert.match(q, /s\.expire_le > now\(\)/);
   assert.match(q, /g\.actif/);
 });
-const jeton = jsCode('72-maitre-valider.json', 'Session (jeton)');
-test('jeton : seul « Bearer » + 43 caractères sûrs est accepté, et seule l\'empreinte SHA-256 est transmise', () => {
+const jeton = jsCode('72-maitre-valider.json', 'Sitzung (Token)');
+test('Token: nur „Bearer“ + 43 sichere Zeichen werden akzeptiert, und nur der SHA-256-Fingerabdruck wird weitergegeben', () => {
   const j = randomBytes(32).toString('base64url');
   assert.equal(j.length, 43);
   const attendu = createHash('sha256').update(j).digest('hex');
@@ -88,48 +88,48 @@ test('jeton : seul « Bearer » + 43 caractères sûrs est accepté, et seule l\
   }
   assert.equal(lancer(jeton, { entree: {} })[0].hash, '');
 });
-test('résultat de session : sans ligne -> refus ; avec une ligne -> le soignant, jamais le PIN', () => {
-  const res = jsCode('72-maitre-valider.json', 'Session');
+test('Sitzungsergebnis: ohne Zeile -> Ablehnung; mit einer Zeile -> die Pflegekraft, nie die PIN', () => {
+  const res = jsCode('72-maitre-valider.json', 'Sitzung');
   assert.deepEqual(lancer(res, { entree: {} })[0], { ok: false });
-  const ok = lancer(res, { entree: { identifiant: 'martin', nom: 'Mme Martin', jeton_hash: 'abc' } })[0];
+  const ok = lancer(res, { entree: { identifiant: 'martin', nom: 'Frau Martin', jeton_hash: 'abc' } })[0];
   assert.equal(ok.ok, true);
-  assert.deepEqual(ok.soignant, { identifiant: 'martin', nom: 'Mme Martin' });
+  assert.deepEqual(ok.soignant, { identifiant: 'martin', nom: 'Frau Martin' });
   assert.doesNotMatch(JSON.stringify(ok), /pin/i);
 });
-test('refus de session : aucune donnée, seulement le motif', () => {
-  assert.deepEqual(lancer(jsCode('72-maitre-valider.json', 'Refus (session)'))[0], { erreur: 'session' });
-  // les workflows qui répondent par « Répondre au webhook » ont leur propre réponse de refus
-  for (const f of ['74-maitre-etage.json', '77-maitre-verifier.json']) assert.ok(workflow(f).nodes.some((x) => x.name === 'Répondre (session)'), f);
+test('Sitzungsablehnung: keine Daten, nur der Grund', () => {
+  assert.deepEqual(lancer(jsCode('72-maitre-valider.json', 'Ablehnung (Sitzung)'))[0], { erreur: 'session' });
+  // Workflows, die mit „Auf Webhook antworten“ antworten, haben ihre eigene Ablehnungsantwort
+  for (const f of ['74-maitre-etage.json', '77-maitre-verifier.json']) assert.ok(workflow(f).nodes.some((x) => x.name === 'Antworten (Sitzung)'), f);
 });
 
-// ---------------------------------------------------------------- connexion : PIN haché, comptes verrouillés, mêmes refus
+// ---------------------------------------------------------------- Anmeldung: gehashte PIN, gesperrte Konten, gleiche Ablehnungen
 const connexion = workflow('88-connexion.json');
 const hache = (pin) => {
   const sel = randomBytes(16);
   return `scrypt$${sel.toString('hex')}$${scryptSync(pin, sel, 32).toString('hex')}`;
 };
 const verifier = (pin, soignant, forme = true) =>
-  lancer(jsCode('88-connexion.json', 'Vérifier le PIN'), { entree: soignant, noeuds: { 'Contrôler la connexion': [{ identifiant: 'martin', pin, forme }] } })[0];
-const compte = { identifiant: 'martin', nom: 'Mme Martin', pin_hash: hache('482913'), actif: true, verrouille: false };
+  lancer(jsCode('88-connexion.json', 'PIN überprüfen'), { entree: soignant, noeuds: { 'Anmeldung prüfen': [{ identifiant: 'martin', pin, forme }] } })[0];
+const compte = { identifiant: 'martin', nom: 'Frau Martin', pin_hash: hache('482913'), actif: true, verrouille: false };
 
-test('connexion : la forme de l\'identifiant et du PIN est contrôlée', () => {
-  const c = jsCode('88-connexion.json', 'Contrôler la connexion');
+test('Anmeldung: die Form von Kennung und PIN wird geprüft', () => {
+  const c = jsCode('88-connexion.json', 'Anmeldung prüfen');
   const lire = (body) => lancer(c, { entree: { body } })[0];
   assert.deepEqual(lire({ identifiant: ' Martin ', pin: '482913' }), { identifiant: 'martin', pin: '482913', forme: true });
   for (const faux of [{}, { identifiant: 'martin' }, { identifiant: 'martin', pin: '12' }, { identifiant: 'martin', pin: '123456789' }, { identifiant: 'martin', pin: 'abcdef' }, { identifiant: "x'; DROP TABLE soins.soignants;--", pin: '123456' }, { identifiant: 'a', pin: '123456' }, { identifiant: 'martin', pin: ['1', '2', '3', '4'] }]) {
     assert.equal(lire(faux).forme, false, JSON.stringify(faux));
   }
-  assert.equal(lire({ identifiant: "x'; DROP", pin: '123456' }).pin, '', 'un PIN de forme invalide n\'est pas conservé');
+  assert.equal(lire({ identifiant: "x'; DROP", pin: '123456' }).pin, '', 'eine PIN mit ungültiger Form wird nicht aufbewahrt');
 });
-test('PIN : comparé à l\'empreinte scrypt, bon PIN accepté, mauvais refusé', () => {
+test('PIN: mit dem scrypt-Fingerabdruck verglichen, richtige PIN akzeptiert, falsche abgelehnt', () => {
   const ok = verifier('482913', compte);
   assert.equal(ok.autorise, true);
   assert.equal(ok.motif, 'ok');
-  assert.equal(ok.nom, 'Mme Martin');
+  assert.equal(ok.nom, 'Frau Martin');
   assert.equal(verifier('482914', compte).autorise, false);
   assert.equal(verifier('482914', compte).motif, 'identifiants');
 });
-test('PIN : un compte inconnu, désactivé ou sans empreinte est refusé comme un mauvais PIN (rien ne révèle si le compte existe)', () => {
+test('PIN: ein unbekanntes, deaktiviertes Konto oder eines ohne Fingerabdruck wird wie eine falsche PIN abgelehnt (nichts verrät, ob das Konto existiert)', () => {
   const inconnu = verifier('482913', {});
   const inactif = verifier('482913', { ...compte, actif: false });
   const sans = verifier('482913', { ...compte, pin_hash: null });
@@ -139,88 +139,88 @@ test('PIN : un compte inconnu, désactivé ou sans empreinte est refusé comme u
     assert.equal(r.nom, null);
   }
 });
-test('verrouillage : 5 échecs -> même le BON PIN est refusé pendant le délai ; la forme invalide est refusée aussi', () => {
+test('Sperre: 5 Fehlversuche -> selbst die RICHTIGE PIN wird während der Frist abgelehnt; die ungültige Form wird ebenfalls abgelehnt', () => {
   const v = verifier('482913', { ...compte, verrouille: true });
   assert.equal(v.autorise, false);
   assert.equal(v.motif, 'verrouille');
   assert.equal(verifier('482913', compte, false).motif, 'format');
-  const q = connexion.nodes.find((x) => x.name === 'Soignant').parameters.query;
+  const q = connexion.nodes.find((x) => x.name === 'Pflegekraft').parameters.query;
   assert.match(q, /count\(\*\)[\s\S]*interval '5 minutes'\) >= 5 AS verrouille/);
-  assert.match(connexion.nodes.find((x) => x.name === "Noter l'échec").parameters.query, /EXISTS \(SELECT 1 FROM soins\.soignants/);
+  assert.match(connexion.nodes.find((x) => x.name === "Fehlschlag vermerken").parameters.query, /EXISTS \(SELECT 1 FROM soins\.soignants/);
 });
-test('le refus de connexion est identique pour un compte inconnu et un mauvais PIN ; seul le verrouillage est signalé', () => {
-  const refus = (motif) => lancer(jsCode('88-connexion.json', 'Refus de connexion'), { entree: {}, noeuds: { 'Vérifier le PIN': [{ motif }] } })[0];
+test('die Ablehnung der Anmeldung ist für ein unbekanntes Konto und eine falsche PIN identisch; nur die Sperre wird gemeldet', () => {
+  const refus = (motif) => lancer(jsCode('88-connexion.json', 'Anmeldung abgelehnt'), { entree: {}, noeuds: { 'PIN überprüfen': [{ motif }] } })[0];
   assert.deepEqual(refus('identifiants'), { erreur: 'identifiants' });
   assert.deepEqual(refus('format'), { erreur: 'identifiants' });
   assert.deepEqual(refus('verrouille'), { erreur: 'verrouille' });
 });
-test('jeton de session : 32 octets aléatoires, jamais le même, seule l\'empreinte va en base, durée de 12 heures', () => {
-  const creer = () => lancer(jsCode('88-connexion.json', 'Créer le jeton'), { entree: {}, noeuds: { 'Vérifier le PIN': [{ identifiant: 'martin', nom: 'Mme Martin' }] } })[0];
+test('Sitzungstoken: 32 zufällige Bytes, nie dasselbe, nur der Fingerabdruck kommt in die Datenbank, Dauer 12 Stunden', () => {
+  const creer = () => lancer(jsCode('88-connexion.json', 'Token erstellen'), { entree: {}, noeuds: { 'PIN überprüfen': [{ identifiant: 'martin', nom: 'Frau Martin' }] } })[0];
   const a = creer();
   const b = creer();
   assert.match(a.jeton, /^[A-Za-z0-9_-]{43}$/);
   assert.notEqual(a.jeton, b.jeton);
   assert.equal(a.hash, createHash('sha256').update(a.jeton).digest('hex'));
-  assert.doesNotMatch(connexion.nodes.find((x) => x.name === 'Ouvrir la session').parameters.query, /jeton[^_]/, 'le jeton en clair n\'est pas écrit en base');
+  assert.doesNotMatch(connexion.nodes.find((x) => x.name === 'Sitzung öffnen').parameters.query, /jeton[^_]/, 'der Token im Klartext wird nicht in die Datenbank geschrieben');
   assert.match(readFileSync(join(racine, 'data', 'sql', '01_schema.sql'), 'utf8'), /expire_le\s+timestamptz NOT NULL DEFAULT now\(\) \+ interval '12 hours'/);
-  const rep = lancer(jsCode('88-connexion.json', 'Réponse connexion'), { entree: { expire_le: 'demain' }, noeuds: { 'Créer le jeton': [a] } })[0];
+  const rep = lancer(jsCode('88-connexion.json', 'Antwort Anmeldung'), { entree: { expire_le: 'morgen' }, noeuds: { 'Token erstellen': [a] } })[0];
   assert.deepEqual(Object.keys(rep).sort(), ['expire_le', 'jeton', 'soignant']);
-  assert.equal(rep.hash, undefined, 'l\'empreinte n\'est pas renvoyée');
+  assert.equal(rep.hash, undefined, 'der Fingerabdruck wird nicht zurückgegeben');
 });
-test('SÉCURITÉ : le PIN n\'est enregistré nulle part (ni en base, ni au journal, ni dans une réponse)', () => {
+test('SICHERHEIT: die PIN wird nirgends gespeichert (weder in der Datenbank noch im Protokoll noch in einer Antwort)', () => {
   const schema = readFileSync(join(racine, 'data', 'sql', '01_schema.sql'), 'utf8');
   assert.match(schema, /pin_hash\s+text NOT NULL/);
   assert.doesNotMatch(schema, /\bpin\s+text/i);
   for (const n of connexion.nodes.filter((x) => x.type === 'n8n-nodes-base.postgres')) assert.doesNotMatch(n.parameters.query, /\bpin\b(?!_hash)/i, n.name);
-  // les autres nœuds de code ne lisent pas le PIN (on ignore les noms de nœuds cités et les commentaires)
-  for (const x of connexion.nodes.filter((y) => !['Contrôler la connexion', 'Vérifier le PIN'].includes(y.name) && y.type.endsWith('code'))) {
+  // die anderen Code-Knoten lesen die PIN nicht (genannte Knotennamen und Kommentare werden ignoriert)
+  for (const x of connexion.nodes.filter((y) => !['Anmeldung prüfen', 'PIN überprüfen'].includes(y.name) && y.type.endsWith('code'))) {
     assert.doesNotMatch(x.parameters.jsCode.replace(/\/\/.*$/gm, '').replace(/\$\('[^']*'\)/g, ''), /\bpin\b(?!_hash)/i, x.name);
   }
 });
 
-// ---------------------------------------------------------------- le nom du soignant vient de la session, jamais de la requête
-test('SIGNATURE : valide_par et soignant_id viennent de la session ; le corps de la requête ne peut pas les imposer', () => {
-  const session = { 'Session': [{ soignant: { identifiant: 'martin', nom: 'Mme Martin' } }] };
-  const piege = { valide_par: 'Dr. Quelqu\'un d\'autre', soignant_id: 'keller' };
-  const un = lancer(jsCode('72-maitre-valider.json', 'Corps de la validation'), { entree: { body: { brouillon_id: 'b1', texte: 'T', ...piege } }, noeuds: session })[0];
-  assert.equal(un.valide_par, 'Mme Martin');
+// ---------------------------------------------------------------- der Name der Pflegekraft stammt aus der Sitzung, nie aus der Anfrage
+test('SIGNATUR: valide_par und soignant_id stammen aus der Sitzung; der Anfragekörper kann sie nicht vorgeben', () => {
+  const session = { 'Sitzung': [{ soignant: { identifiant: 'martin', nom: 'Frau Martin' } }] };
+  const piege = { valide_par: 'Dr. Jemand Anderes', soignant_id: 'keller' };
+  const un = lancer(jsCode('72-maitre-valider.json', 'Inhalt der Bestätigung'), { entree: { body: { brouillon_id: 'b1', texte: 'T', ...piege } }, noeuds: session })[0];
+  assert.equal(un.valide_par, 'Frau Martin');
   assert.equal(un.soignant_id, 'martin');
-  const lot = lancer(jsCode('73-maitre-valider-lot.json', 'Corps du lot'), { entree: { body: { etage: 1, rapports: [{ brouillon_id: 'b1', texte: 'T', ...piege }, { brouillon_id: 'b2', texte: 'U' }] } }, noeuds: session });
-  assert.deepEqual(lot.map((x) => [x.valide_par, x.soignant_id]), [['Mme Martin', 'martin'], ['Mme Martin', 'martin']]);
-  // aucun point d'entrée n'accepte valide_par ni soignant_id depuis la requête (« r.valide_par » du message de transmission est lu dans la base)
+  const lot = lancer(jsCode('73-maitre-valider-lot.json', 'Inhalt des Stapels'), { entree: { body: { etage: 1, rapports: [{ brouillon_id: 'b1', texte: 'T', ...piege }, { brouillon_id: 'b2', texte: 'U' }] } }, noeuds: session });
+  assert.deepEqual(lot.map((x) => [x.valide_par, x.soignant_id]), [['Frau Martin', 'martin'], ['Frau Martin', 'martin']]);
+  // kein Einstiegspunkt akzeptiert valide_par oder soignant_id aus der Anfrage („r.valide_par“ der Übergabenachricht wird aus der Datenbank gelesen)
   for (const { f, wf } of tous) for (const n of wf.nodes.filter((x) => x.type.endsWith('.code'))) assert.doesNotMatch(n.parameters.jsCode, /body\??\.valide_par|\bb\.valide_par|\bb\.soignant_id|body\??\.soignant_id/, `${f} : ${n.name}`);
 });
-test('SIGNATURE : le soignant est enregistré avec la validation et au journal d\'audit', () => {
+test('SIGNATUR: die Pflegekraft wird mit der Bestätigung und im Prüfprotokoll gespeichert', () => {
   const enreg = workflow('63-brique-enregistrer.json');
-  const q = enreg.nodes.find((x) => x.name === 'Valider le brouillon');
+  const q = enreg.nodes.find((x) => x.name === 'Entwurf bestätigen');
   assert.match(q.parameters.query, /valide_par, soignant_id, brouillon_id/);
   assert.match(q.parameters.query, /NULLIF\(\$4::text, ''\)/);
   assert.match(String(q.parameters.options?.queryReplacement ?? q.parameters.queryReplacement ?? JSON.stringify(q.parameters)), /soignant_id/);
-  const ctrl = lancer(jsCode('63-brique-enregistrer.json', 'Contrôler la validation'), { entree: { brouillon_id: 'a1c3e000-0001-4000-8000-000000000001', texte: 'T', valide_par: 'Mme Martin', soignant_id: 'martin' } })[0];
+  const ctrl = lancer(jsCode('63-brique-enregistrer.json', 'Bestätigung prüfen'), { entree: { brouillon_id: 'a1c3e000-0001-4000-8000-000000000001', texte: 'T', valide_par: 'Frau Martin', soignant_id: 'martin' } })[0];
   assert.equal(ctrl.soignant_id, 'martin');
-  const res = lancer(jsCode('63-brique-enregistrer.json', 'Résultat de la validation'), { entree: {}, noeuds: { 'Contrôler la validation': [ctrl], 'Valider le brouillon': [{ validation_id: 7, patient_id: 'PAT-001', mode: 'a', action: 'generer_sbar', modifiee: false }] } })[0];
+  const res = lancer(jsCode('63-brique-enregistrer.json', 'Ergebnis der Bestätigung'), { entree: {}, noeuds: { 'Bestätigung prüfen': [ctrl], 'Entwurf bestätigen': [{ validation_id: 7, patient_id: 'PAT-001', mode: 'a', action: 'generer_sbar', modifiee: false }] } })[0];
   assert.equal(res.evenement_journal.details.soignant_id, 'martin');
-  assert.equal(res.evenement_journal.details.valide_par, 'Mme Martin');
+  assert.equal(res.evenement_journal.details.valide_par, 'Frau Martin');
 });
-test('« qui suis-je » et déconnexion : la session ferme le jeton de la requête, et seulement lui', () => {
+test('„Wer bin ich“ und Abmeldung: die Sitzung schließt den Token der Anfrage, und nur diesen', () => {
   const moi = workflow('89-session.json');
-  assert.match(moi.nodes.find((x) => x.name === 'Fermer la session').parameters.query, /DELETE FROM soins\.sessions WHERE jeton_hash = \$1/);
-  const rep = lancer(jsCode('89-session.json', 'Réponse moi'), { entree: {}, noeuds: { Session: [{ soignant: { identifiant: 'martin', nom: 'Mme Martin' }, jeton_hash: 'h' }] } })[0];
-  assert.deepEqual(rep, { soignant: { identifiant: 'martin', nom: 'Mme Martin' } });
+  assert.match(moi.nodes.find((x) => x.name === 'Sitzung schließen').parameters.query, /DELETE FROM soins\.sessions WHERE jeton_hash = \$1/);
+  const rep = lancer(jsCode('89-session.json', 'Antwort Ich'), { entree: {}, noeuds: { Sitzung: [{ soignant: { identifiant: 'martin', nom: 'Frau Martin' }, jeton_hash: 'h' }] } })[0];
+  assert.deepEqual(rep, { soignant: { identifiant: 'martin', nom: 'Frau Martin' } });
 });
 
-// ---------------------------------------------------------------- l'appel interne du courrier
-test('le workflow du courrier appelle le chemin INTERNE avec la clé interne (et non l\'interface publique)', () => {
-  const v = workflow('85-brique-courrier.json').nodes.find((x) => x.name === 'Vérifier le courrier');
+// ---------------------------------------------------------------- der interne Aufruf der Post
+test('der Workflow der Post ruft den INTERNEN Pfad mit dem internen Schlüssel auf (nicht die öffentliche Oberfläche)', () => {
+  const v = workflow('85-brique-courrier.json').nodes.find((x) => x.name === 'Post überprüfen');
   assert.match(v.parameters.url, /aicare-verifier-interne$/);
   assert.equal(v.parameters.genericAuthType, 'httpHeaderAuth');
   assert.equal(v.credentials.httpHeaderAuth.name, 'AI-Care clé interne');
   const w = workflow('77-maitre-verifier.json');
-  assert.deepEqual(voisins(w, 'Webhook (interne)').map((x) => x.vers), ['Contrôler la demande']);
+  assert.deepEqual(voisins(w, 'Webhook (intern)').map((x) => x.vers), ['Anfrage prüfen']);
 });
 
-// ---------------------------------------------------------------- l'interface
-test('interface : clé et jeton partent dans les en-têtes, le PIN n\'est jamais conservé, la session perdue ramène à la connexion', () => {
+// ---------------------------------------------------------------- die Oberfläche
+test('Oberfläche: Schlüssel und Token gehen in den Headern mit, die PIN wird nie aufbewahrt, eine verlorene Sitzung führt zur Anmeldung zurück', () => {
   const api = readFileSync(join(racine, 'front', 'src', 'api.js'), 'utf8');
   assert.match(api, /'X-AICare-Cle': CLE/);
   assert.match(api, /Authorization: `Bearer \$\{jeton\}`/);
@@ -229,24 +229,24 @@ test('interface : clé et jeton partent dans les en-têtes, le PIN n\'est jamais
   assert.doesNotMatch(api, /localStorage/);
   assert.doesNotMatch(api, /(setItem|memoriserJeton)\([^)]*pin/i);
   const front = readdirSync(join(racine, 'front', 'src'), { recursive: true }).filter((f) => /\.(jsx?|json)$/.test(f)).map((f) => readFileSync(join(racine, 'front', 'src', f), 'utf8')).join('\n');
-  assert.doesNotMatch(front, /AICARE_CLE_INTERNE|CLE_INTERNE/, 'la clé interne n\'est jamais dans l\'interface');
+  assert.doesNotMatch(front, /AICARE_CLE_INTERNE|CLE_INTERNE/, 'der interne Schlüssel steht nie in der Oberfläche');
 });
 
-// ---------------------------------------------------------------- aucun secret dans le dépôt
-test('SECRETS : aucune clé, aucun mot de passe de .env n\'apparaît dans un fichier du dépôt', () => {
+// ---------------------------------------------------------------- kein Geheimnis im Repository
+test('GEHEIMNISSE: kein Schlüssel, kein Passwort aus .env erscheint in einer Datei des Repositorys', () => {
   const envFichier = join(racine, '.env');
-  assert.ok(existsSync(envFichier), '.env absent');
+  assert.ok(existsSync(envFichier), '.env fehlt');
   const env = readFileSync(envFichier, 'utf8');
   const secrets = [...env.matchAll(/^(AICARE_CLE_WEBHOOK|AICARE_CLE_INTERNE|VITE_N8N_CLE|MQTT_MOT_DE_PASSE_\w+|TTN_CLE_API|POSTGRES_PASSWORD)=(.{8,})$/gm)].map((m) => m[2].trim()).filter((v) => v !== 'TA-CLE');
   assert.ok(secrets.length >= 6);
   const git = spawnSync('git', ['ls-files', '-co', '--exclude-standard'], { cwd: racine, encoding: 'utf8' });
-  assert.equal(git.status, 0, 'git ls-files a échoué');
+  assert.equal(git.status, 0, 'git ls-files ist fehlgeschlagen');
   const fichiers = git.stdout.split('\n').filter((f) => f && !/\.(pdf|png|jpe?g|ico|woff2?)$/i.test(f) && existsSync(join(racine, f)));
   assert.ok(fichiers.length > 100);
   for (const f of fichiers) {
     const contenu = readFileSync(join(racine, f), 'utf8');
-    for (const s of secrets) assert.ok(!contenu.includes(s), `un secret de .env apparaît dans ${f}`);
-    assert.doesNotMatch(contenu, /NNSXS\.[A-Z0-9]{20,}/, `une clé TTN apparaît dans ${f}`);
+    for (const s of secrets) assert.ok(!contenu.includes(s), `ein Geheimnis aus .env erscheint in ${f}`);
+    assert.doesNotMatch(contenu, /NNSXS\.[A-Z0-9]{20,}/, `ein TTN-Schlüssel erscheint in ${f}`);
   }
   assert.match(readFileSync(join(racine, '.gitignore'), 'utf8'), /^\.env$/m);
   assert.match(readFileSync(join(racine, '.gitignore'), 'utf8'), /mosquitto\/passwd/);
@@ -254,4 +254,4 @@ test('SECRETS : aucune clé, aucun mot de passe de .env n\'apparaît dans un fic
   for (const cle of ['AICARE_CLE_WEBHOOK', 'AICARE_CLE_INTERNE', 'VITE_N8N_CLE', 'TTN_CLE_API', 'DEMO_PIN_MARTIN', 'MQTT_MOT_DE_PASSE_N8N']) assert.match(exemple, new RegExp(`^${cle}=TA-CLE$`, 'm'), cle);
 });
 
-console.log(`\n${nb} tests réussis.`);
+console.log(`\n${nb} Tests bestanden.`);

@@ -3,7 +3,7 @@ import { t } from '../i18n';
 
 const MAX_AVERTISSEMENTS = 6;
 
-// Les contrôles automatiques signalent ce qui n'est pas dans les sources ; ils ne corrigent rien.
+// Die automatischen Kontrollen melden, was nicht in den Quellen steht; sie korrigieren nichts.
 export default function Avertissements({ liste }) {
   const [toutVoir, setToutVoir] = useState(false);
   if (!liste?.length) return null;

@@ -1,6 +1,6 @@
-// Cotisations retraite – avancement de l'agent : statut, étapes ou tours déjà faits (journal) et, une fois terminé, le résultat.
+// Rentenbeiträge – Fortschritt des Agenten: Status, bereits erledigte Schritte oder Runden (Protokoll) und, nach dem Ende, das Ergebnis.
 const t = $input.first().json ?? {};
-if (!t.id) throw new Error('Tâche introuvable');
+if (!t.id) throw new Error('Aufgabe nicht gefunden');
 const termine = ['termine', 'termine_avec_erreurs'].includes(t.statut);
 return [
   {

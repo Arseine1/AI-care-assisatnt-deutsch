@@ -1,6 +1,6 @@
 {
   "id": "aicarebrqcourrier1",
-  "name": "AI-Care – Brique courrier (un message : OCR, identification, règles, alerte)",
+  "name": "AI-Care – Baustein Post (eine Nachricht: OCR, Identifizierung, Regeln, Meldung)",
   "active": false,
   "nodes": [
     {
@@ -8,7 +8,7 @@
         "inputSource": "passthrough"
       },
       "id": "a1c3e000-0280-4000-8000-000000000280",
-      "name": "Entrée",
+      "name": "Eingang",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1.1,
       "position": [
@@ -25,7 +25,7 @@
         }
       },
       "id": "a1c3e000-0281-4000-8000-000000000281",
-      "name": "Prendre le courrier",
+      "name": "Post übernehmen",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
@@ -52,7 +52,7 @@
           },
           "conditions": [
             {
-              "id": "Courrier libre ?",
+              "id": "Post frei?",
               "leftValue": "={{ !!$json.message_id }}",
               "rightValue": "",
               "operator": {
@@ -67,7 +67,7 @@
         "options": {}
       },
       "id": "a1c3e000-0282-4000-8000-000000000282",
-      "name": "Courrier libre ?",
+      "name": "Post frei?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
@@ -82,7 +82,7 @@
         "options": {}
       },
       "id": "a1c3e000-0283-4000-8000-000000000283",
-      "name": "Résidents",
+      "name": "Bewohnerliste",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
@@ -99,13 +99,13 @@
     },
     {
       "parameters": {
-        "url": "=http://mailpit:8025/api/v1/message/{{ $('Entrée').first().json.id }}",
+        "url": "=http://mailpit:8025/api/v1/message/{{ $('Eingang').first().json.id }}",
         "options": {
           "timeout": 120000
         }
       },
       "id": "a1c3e000-0284-4000-8000-000000000284",
-      "name": "Détail du message",
+      "name": "Nachrichtendetail",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
@@ -115,10 +115,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Connecteur « KIM » : une ligne par PDF joint (lettre de médecin).\nconst sortie = [];\nfor (const { json: m } of $input.all()) {\n  for (const pj of m.Attachments ?? []) {\n    const estPdf = /pdf/i.test(pj.ContentType ?? '') || /\\.pdf$/i.test(pj.FileName ?? '');\n    if (!estPdf) continue;\n    sortie.push({\n      json: {\n        id: m.ID,\n        partId: pj.PartID,\n        fileName: pj.FileName,\n        from: m.From?.Address,\n        expediteur: m.From?.Name || m.From?.Address,\n        subject: m.Subject,\n        date: m.Date,\n      },\n    });\n  }\n}\nreturn sortie;\n"
+        "jsCode": "// KIM-Konnektor: eine Zeile je angehängtem PDF (Arztbrief).\nconst sortie = [];\nfor (const { json: m } of $input.all()) {\n  for (const pj of m.Attachments ?? []) {\n    const estPdf = /pdf/i.test(pj.ContentType ?? '') || /\\.pdf$/i.test(pj.FileName ?? '');\n    if (!estPdf) continue;\n    sortie.push({\n      json: {\n        id: m.ID,\n        partId: pj.PartID,\n        fileName: pj.FileName,\n        from: m.From?.Address,\n        expediteur: m.From?.Name || m.From?.Address,\n        subject: m.Subject,\n        date: m.Date,\n      },\n    });\n  }\n}\nreturn sortie;\n"
       },
       "id": "a1c3e000-0285-4000-8000-000000000285",
-      "name": "Pièces jointes",
+      "name": "Anhänge",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -140,7 +140,7 @@
         }
       },
       "id": "a1c3e000-0286-4000-8000-000000000286",
-      "name": "Télécharger la pièce jointe",
+      "name": "Anhang herunterladen",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
@@ -169,7 +169,7 @@
         }
       },
       "id": "a1c3e000-0287-4000-8000-000000000287",
-      "name": "Texte du PDF (OCRmyPDF)",
+      "name": "PDF-Text (OCRmyPDF)",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
@@ -179,10 +179,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Connecteur « KIM » : lettre de médecin (texte du PDF ou OCR) -> document de la collection « a_verifier ».\n//\n// Une lettre est TOUJOURS déposée dans « a_verifier » : tant qu'elle n'a pas été contrôlée (contradiction avec\n// l'allergie, le traitement, la fonction rénale…), son contenu n'est pas présenté comme fiable.\n// Rattachement au résident : le nom ET la date de naissance (jj.mm.aaaa) du courrier doivent correspondre à UN\n// seul résident (les deux « Heinz Müller » ne se distinguent que par la date). Sinon on ne devine pas :\n// la lettre reste sans patient_id, avec le motif identite_inconnue ou identite_ambigue.\nconst residents = $('Résidents').all().map((i) => i.json);\nconst pieces = $('Pièces jointes').all();\nconst norm = (s) => String(s).normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').toLowerCase();\n\nconst docs = [];\n$input.all().forEach((item, i) => {\n  const p = pieces[i].json;\n  const texte = String(item.json.texte ?? '').trim();\n  if (!texte) return;\n\n  const t = norm(texte);\n  const trouves = residents.filter((r) => t.includes(norm(r.nom)) && texte.includes(r.naissance));\n  const base = {\n    collection: 'a_verifier',\n    source: 'kim',\n    source_label: 'KIM (lettre de médecin)',\n    // Référence stable (expéditeur + nom du fichier) : renvoyer le même courrier ne crée pas de doublon.\n    source_ref: `kim/${p.from}/${p.fileName}`,\n    type: 'lettre',\n    titre: p.subject,\n    expediteur: p.expediteur,\n    statut: 'a_verifier',\n    texte,\n    date: new Date(p.date).toISOString(),\n  };\n\n  if (trouves.length === 1) {\n    const r = trouves[0];\n    docs.push({\n      ...base,\n      motif: 'lettre_a_verifier',\n      patient_id: r.patient_id,\n      chambre: r.chambre,\n      patient_label: `${r.civilite} ${r.prenom} ${r.nom} (chambre ${r.chambre})`,\n    });\n  } else {\n    docs.push({ ...base, motif: trouves.length === 0 ? 'identite_inconnue' : 'identite_ambigue' });\n  }\n});\nreturn docs.map((json) => ({ json }));\n"
+        "jsCode": "// KIM-Konnektor: Arztbrief (PDF-Text oder OCR) -> Dokument der Collection « a_verifier ».\n//\n// Ein Arztbrief wird IMMER in « a_verifier » abgelegt: Solange er nicht geprüft wurde (Widerspruch zu\n// Allergie, Behandlung, Nierenfunktion …), wird sein Inhalt nicht als verlässlich dargestellt.\n// Zuordnung zum Bewohner: Name UND Geburtsdatum (TT.MM.JJJJ) des Schreibens müssen zu GENAU EINEM\n// Bewohner passen (die beiden „Heinz Müller“ unterscheiden sich nur durch das Datum). Sonst wird nicht geraten:\n// Der Brief bleibt ohne patient_id, mit dem Motiv identite_inconnue oder identite_ambigue.\nconst residents = $('Bewohnerliste').all().map((i) => i.json);\nconst pieces = $('Anhänge').all();\nconst norm = (s) => String(s).normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').toLowerCase();\n\nconst docs = [];\n$input.all().forEach((item, i) => {\n  const p = pieces[i].json;\n  const texte = String(item.json.texte ?? '').trim();\n  if (!texte) return;\n\n  const t = norm(texte);\n  const trouves = residents.filter((r) => t.includes(norm(r.nom)) && texte.includes(r.naissance));\n  const base = {\n    collection: 'a_verifier',\n    source: 'kim',\n    source_label: 'KIM (Arztbrief)',\n    // Stabile Referenz (Absender + Dateiname): Das erneute Senden desselben Schreibens erzeugt kein Duplikat.\n    source_ref: `kim/${p.from}/${p.fileName}`,\n    type: 'lettre',\n    titre: p.subject,\n    expediteur: p.expediteur,\n    statut: 'a_verifier',\n    texte,\n    date: new Date(p.date).toISOString(),\n  };\n\n  if (trouves.length === 1) {\n    const r = trouves[0];\n    docs.push({\n      ...base,\n      motif: 'lettre_a_verifier',\n      patient_id: r.patient_id,\n      chambre: r.chambre,\n      patient_label: `${r.civilite} ${r.prenom} ${r.nom} (Zimmer ${r.chambre})`,\n    });\n  } else {\n    docs.push({ ...base, motif: trouves.length === 0 ? 'identite_inconnue' : 'identite_ambigue' });\n  }\n});\nreturn docs.map((json) => ({ json }));\n"
       },
       "id": "a1c3e000-0288-4000-8000-000000000288",
-      "name": "Documents KIM",
+      "name": "KIM-Dokumente",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -205,7 +205,7 @@
         }
       },
       "id": "a1c3e000-0289-4000-8000-000000000289",
-      "name": "Indexer",
+      "name": "Indizieren",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.2,
       "position": [
@@ -215,10 +215,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Courrier reçu – un élément par lettre PDF indexée (identifiée ou non).\nconst docs = $('Documents KIM').all().map((i) => i.json).filter((d) => d.source_ref);\nreturn docs.map((d) => ({\n  json: {\n    source_ref: d.source_ref,\n    titre: d.titre ?? 'Lettre de médecin',\n    expediteur: d.expediteur ?? 'expéditeur inconnu',\n    date: d.date,\n    motif: d.motif,\n    patient_id: d.patient_id ?? '',\n    chambre: d.chambre ?? '',\n    patient_label: d.patient_label ?? '',\n  },\n}));\n"
+        "jsCode": "// Eingegangene Post – ein Element je indexiertem PDF-Schreiben (zugeordnet oder nicht).\nconst docs = $('KIM-Dokumente').all().map((i) => i.json).filter((d) => d.source_ref);\nreturn docs.map((d) => ({\n  json: {\n    source_ref: d.source_ref,\n    titre: d.titre ?? 'Arztbrief',\n    expediteur: d.expediteur ?? 'Absender unbekannt',\n    date: d.date,\n    motif: d.motif,\n    patient_id: d.patient_id ?? '',\n    chambre: d.chambre ?? '',\n    patient_label: d.patient_label ?? '',\n  },\n}));\n"
       },
       "id": "a1c3e000-0290-4000-8000-000000000290",
-      "name": "Courriers à traiter",
+      "name": "Zu verarbeitende Post",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -237,7 +237,7 @@
           },
           "conditions": [
             {
-              "id": "Courrier identifié ?",
+              "id": "Post identifiziert?",
               "leftValue": "={{ !!$json.patient_id }}",
               "rightValue": "",
               "operator": {
@@ -252,7 +252,7 @@
         "options": {}
       },
       "id": "a1c3e000-0291-4000-8000-000000000291",
-      "name": "Courrier identifié ?",
+      "name": "Post identifiziert?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
@@ -274,7 +274,7 @@
         }
       },
       "id": "a1c3e000-0292-4000-8000-000000000292",
-      "name": "Vérifier le courrier",
+      "name": "Post überprüfen",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
@@ -291,10 +291,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Courrier reçu – alerte d'un courrier RATTACHÉ à un résident. Le rapport des règles de contrôle (sans IA) donne la gravité :\n// contradiction = rouge ; aucune contradiction = information (le courrier reste à valider par un soignant).\nconst lettres = $('Courriers à traiter').all().map((i) => i.json).filter((d) => d.patient_id);\nconst alertes = $input.all().map((item, i) => {\n  const l = lettres[i];\n  const r = item.json ?? {};\n  const courrier = { titre: l.titre, expediteur: l.expediteur, date: l.date, ref: l.source_ref };\n  const resident = l.patient_label.replace(/\\s*\\(chambre[^)]*\\)\\s*$/, '');\n  const base = { resident, chambre: l.chambre, courrier, source: 'KIM (lettre de médecin)' };\n  const contradictions = (Array.isArray(r.alertes) ? r.alertes : []).map((a) => String(a.message ?? '').slice(0, 300));\n  if (!r.brouillon_id) {\n    return {\n      topic: `courrier/${l.source_ref}`, chambre: l.chambre, libelle: 'Courrier reçu : vérification impossible', patient_id: l.patient_id,\n      faits: { ...base, gravite: 'attention', avertissement: 'La vérification automatique de ce courrier n\\'a pas abouti. Ouvrez « Vérifier le document » pour la relancer.' },\n    };\n  }\n  return {\n    topic: `courrier/${l.source_ref}`,\n    chambre: l.chambre,\n    libelle: contradictions.length ? 'Contradiction dans un courrier' : 'Courrier à valider : aucune contradiction',\n    patient_id: l.patient_id,\n    faits: { ...base, gravite: contradictions.length ? 'rouge' : 'info', contradictions, brouillon_id: r.brouillon_id },\n  };\n});\nreturn [{ json: { alertes } }];\n"
+        "jsCode": "// Eingegangene Post – Meldung zu einem Schreiben, das einem Bewohner ZUGEORDNET ist. Der Bericht der Kontrollregeln (ohne KI) bestimmt den Schweregrad:\n// Widerspruch = rot; kein Widerspruch = Information (das Schreiben muss weiterhin von einer Pflegekraft bestätigt werden).\nconst lettres = $('Zu verarbeitende Post').all().map((i) => i.json).filter((d) => d.patient_id);\nconst alertes = $input.all().map((item, i) => {\n  const l = lettres[i];\n  const r = item.json ?? {};\n  const courrier = { titre: l.titre, expediteur: l.expediteur, date: l.date, ref: l.source_ref };\n  const resident = l.patient_label.replace(/\\s*\\((?:chambre|Zimmer)[^)]*\\)\\s*$/, '');\n  const base = { resident, chambre: l.chambre, courrier, source: 'KIM (Arztbrief)' };\n  const contradictions = (Array.isArray(r.alertes) ? r.alertes : []).map((a) => String(a.message ?? '').slice(0, 300));\n  if (!r.brouillon_id) {\n    return {\n      topic: `courrier/${l.source_ref}`, chambre: l.chambre, libelle: 'Post erhalten: Prüfung nicht möglich', patient_id: l.patient_id,\n      faits: { ...base, gravite: 'attention', avertissement: 'Die automatische Prüfung dieses Schreibens ist fehlgeschlagen. Öffnen Sie „Dokument prüfen“, um sie erneut zu starten.' },\n    };\n  }\n  return {\n    topic: `courrier/${l.source_ref}`,\n    chambre: l.chambre,\n    libelle: contradictions.length ? 'Widerspruch in einem Schreiben' : 'Schreiben zu bestätigen: kein Widerspruch',\n    patient_id: l.patient_id,\n    faits: { ...base, gravite: contradictions.length ? 'rouge' : 'info', contradictions, brouillon_id: r.brouillon_id },\n  };\n});\nreturn [{ json: { alertes } }];\n"
       },
       "id": "a1c3e000-0293-4000-8000-000000000293",
-      "name": "Alerte (courrier identifié)",
+      "name": "Meldung (Post identifiziert)",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -304,10 +304,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Courrier reçu – alerte d'un courrier NON rattaché : nom et date de naissance ne correspondent à aucun résident, ou à plusieurs.\n// Le courrier reste dans « à vérifier », sans résident : on ne devine jamais.\nconst alertes = $input.all().map((i) => i.json).map((l) => ({\n  topic: `courrier/${l.source_ref}`,\n  chambre: '',\n  libelle: 'Courrier non identifié',\n  patient_id: '',\n  faits: {\n    gravite: 'attention',\n    courrier: { titre: l.titre, expediteur: l.expediteur, date: l.date, ref: l.source_ref },\n    avertissement: l.motif === 'identite_ambigue'\n      ? 'Le nom et la date de naissance du courrier correspondent à plusieurs résidents : le courrier n\\'est rattaché à personne.'\n      : 'Le nom et la date de naissance du courrier ne correspondent à aucun résident : le courrier n\\'est rattaché à personne.',\n    source: 'KIM (lettre de médecin)',\n  },\n}));\nreturn [{ json: { alertes } }];\n"
+        "jsCode": "// Eingegangene Post – Meldung zu einem NICHT zugeordneten Schreiben: Name und Geburtsdatum passen zu keinem oder zu mehreren Bewohnern.\n// Das Schreiben bleibt in « a_verifier », ohne Bewohner: Es wird nie geraten.\nconst alertes = $input.all().map((i) => i.json).map((l) => ({\n  topic: `courrier/${l.source_ref}`,\n  chambre: '',\n  libelle: 'Schreiben nicht zugeordnet',\n  patient_id: '',\n  faits: {\n    gravite: 'attention',\n    courrier: { titre: l.titre, expediteur: l.expediteur, date: l.date, ref: l.source_ref },\n    avertissement: l.motif === 'identite_ambigue'\n      ? 'Name und Geburtsdatum des Schreibens passen zu mehreren Bewohnern: Das Schreiben ist niemandem zugeordnet.'\n      : 'Name und Geburtsdatum des Schreibens passen zu keinem Bewohner: Das Schreiben ist niemandem zugeordnet.',\n    source: 'KIM (Arztbrief)',\n  },\n}));\nreturn [{ json: { alertes } }];\n"
       },
       "id": "a1c3e000-0294-4000-8000-000000000294",
-      "name": "Alerte (courrier non identifié)",
+      "name": "Meldung (Post nicht identifiziert)",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -324,7 +324,7 @@
         }
       },
       "id": "a1c3e000-0295-4000-8000-000000000295",
-      "name": "Créer les alertes",
+      "name": "Meldungen erstellen",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
@@ -345,11 +345,11 @@
         "operation": "executeQuery",
         "query": "UPDATE soins.courriers_traites SET etat = 'traite', traite_le = now() WHERE message_id = $1",
         "options": {
-          "queryReplacement": "={{ [ $('Entrée').first().json.id ] }}"
+          "queryReplacement": "={{ [ $('Eingang').first().json.id ] }}"
         }
       },
       "id": "a1c3e000-0296-4000-8000-000000000296",
-      "name": "Marquer le courrier traité",
+      "name": "Post als verarbeitet markieren",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
@@ -367,33 +367,33 @@
     }
   ],
   "connections": {
-    "Entrée": {
+    "Eingang": {
       "main": [
         [
           {
-            "node": "Prendre le courrier",
+            "node": "Post übernehmen",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Prendre le courrier": {
+    "Post übernehmen": {
       "main": [
         [
           {
-            "node": "Courrier libre ?",
+            "node": "Post frei?",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Courrier libre ?": {
+    "Post frei?": {
       "main": [
         [
           {
-            "node": "Résidents",
+            "node": "Bewohnerliste",
             "type": "main",
             "index": 0
           }
@@ -401,150 +401,150 @@
         []
       ]
     },
-    "Résidents": {
+    "Bewohnerliste": {
       "main": [
         [
           {
-            "node": "Détail du message",
+            "node": "Nachrichtendetail",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Détail du message": {
+    "Nachrichtendetail": {
       "main": [
         [
           {
-            "node": "Pièces jointes",
+            "node": "Anhänge",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Pièces jointes": {
+    "Anhänge": {
       "main": [
         [
           {
-            "node": "Télécharger la pièce jointe",
+            "node": "Anhang herunterladen",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Télécharger la pièce jointe": {
+    "Anhang herunterladen": {
       "main": [
         [
           {
-            "node": "Texte du PDF (OCRmyPDF)",
+            "node": "PDF-Text (OCRmyPDF)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Texte du PDF (OCRmyPDF)": {
+    "PDF-Text (OCRmyPDF)": {
       "main": [
         [
           {
-            "node": "Documents KIM",
+            "node": "KIM-Dokumente",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Documents KIM": {
+    "KIM-Dokumente": {
       "main": [
         [
           {
-            "node": "Indexer",
+            "node": "Indizieren",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Indexer": {
+    "Indizieren": {
       "main": [
         [
           {
-            "node": "Courriers à traiter",
+            "node": "Zu verarbeitende Post",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Courriers à traiter": {
+    "Zu verarbeitende Post": {
       "main": [
         [
           {
-            "node": "Courrier identifié ?",
+            "node": "Post identifiziert?",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Courrier identifié ?": {
+    "Post identifiziert?": {
       "main": [
         [
           {
-            "node": "Vérifier le courrier",
+            "node": "Post überprüfen",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Alerte (courrier non identifié)",
+            "node": "Meldung (Post nicht identifiziert)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Vérifier le courrier": {
+    "Post überprüfen": {
       "main": [
         [
           {
-            "node": "Alerte (courrier identifié)",
+            "node": "Meldung (Post identifiziert)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Alerte (courrier identifié)": {
+    "Meldung (Post identifiziert)": {
       "main": [
         [
           {
-            "node": "Créer les alertes",
+            "node": "Meldungen erstellen",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Créer les alertes": {
+    "Meldungen erstellen": {
       "main": [
         [
           {
-            "node": "Marquer le courrier traité",
+            "node": "Post als verarbeitet markieren",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Alerte (courrier non identifié)": {
+    "Meldung (Post nicht identifiziert)": {
       "main": [
         [
           {
-            "node": "Créer les alertes",
+            "node": "Meldungen erstellen",
             "type": "main",
             "index": 0
           }

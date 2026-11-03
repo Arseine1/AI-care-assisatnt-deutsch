@@ -1,6 +1,6 @@
-// Réponse au front pour un texte rédigé par l'IA (Mode A et Mode B) : un BROUILLON, jamais une validation.
-// Les alarmes de capteurs ne sont pas encore reliées à MQTT : « alertes » reste vide ici ; les contrôles
-// automatiques de la réponse sortent dans « avertissements » (points à vérifier par le soignant).
+// Antwort an die Oberfläche für einen von der KI verfassten Text (Modus A und Modus B): ein ENTWURF, nie eine Bestätigung.
+// Die Sensoralarme sind noch nicht mit MQTT verbunden: « alertes » bleibt hier leer; die automatischen
+// Kontrollen der Antwort erscheinen in « avertissements » (von der Pflegekraft zu prüfende Punkte).
 const r = $input.first().json;
 return [
   {

@@ -1,6 +1,6 @@
 {
   "id": "aicarebrqenreg01",
-  "name": "AI-Care – Brique enregistrer (après validation)",
+  "name": "AI-Care – Baustein Speichern (nach Bestätigung)",
   "active": false,
   "nodes": [
     {
@@ -8,7 +8,7 @@
         "inputSource": "passthrough"
       },
       "id": "a1c3e000-0086-4000-8000-000000000086",
-      "name": "Entrée",
+      "name": "Eingang",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1.1,
       "position": [
@@ -18,10 +18,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Brique « enregistrer » – contrôle de la demande de validation.\n// On n'enregistre que le texte d'un BROUILLON existant (créé par « rédiger ») : le texte validé est celui que\n// le soignant a relu et éventuellement corrigé, rattaché à ce brouillon.\nconst e = $input.first().json ?? {};\nconst id = String(e.brouillon_id ?? '');\nif (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) throw new Error('brouillon_id invalide');\nconst texte = String(e.texte ?? '').trim();\nif (!texte || texte.length > 20000) throw new Error('texte vide ou trop long (20 000 caractères au maximum)');\nreturn [{ json: { brouillon_id: id, texte, valide_par: String(e.valide_par ?? 'soignant (non identifié)').slice(0, 80), soignant_id: String(e.soignant_id ?? '').slice(0, 40) } }];\n"
+        "jsCode": "// Baustein « Speichern » – Prüfung der Bestätigungsanfrage.\n// Gespeichert wird nur der Text eines bestehenden ENTWURFS (von « Verfassen » erstellt): Der bestätigte Text ist der, den\n// die Pflegekraft gelesen und gegebenenfalls korrigiert hat, zugeordnet zu diesem Entwurf.\nconst e = $input.first().json ?? {};\nconst id = String(e.brouillon_id ?? '');\nif (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) throw new Error('Ungültige brouillon_id');\nconst texte = String(e.texte ?? '').trim();\nif (!texte || texte.length > 20000) throw new Error('Text leer oder zu lang (höchstens 20 000 Zeichen)');\nreturn [{ json: { brouillon_id: id, texte, valide_par: String(e.valide_par ?? 'Pflegekraft (nicht identifiziert)').slice(0, 80), soignant_id: String(e.soignant_id ?? '').slice(0, 40) } }];\n"
       },
       "id": "a1c3e000-0087-4000-8000-000000000087",
-      "name": "Contrôler la validation",
+      "name": "Bestätigung prüfen",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -38,7 +38,7 @@
         }
       },
       "id": "a1c3e000-0088-4000-8000-000000000088",
-      "name": "Valider le brouillon",
+      "name": "Entwurf bestätigen",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
@@ -56,10 +56,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Brique « enregistrer » – résultat de la validation, et événement d'audit associé.\nconst c = $('Contrôler la validation').first().json;\nconst v = $('Valider le brouillon').first().json;\n\nconst resultat = v.validation_id\n  ? {\n      ok: true,\n      validation_id: v.validation_id,\n      brouillon_id: c.brouillon_id,\n      patient_id: v.patient_id,\n      mode: v.mode,\n      action: v.action,\n      modifiee: v.modifiee,\n      texte: c.texte,\n      valide_par: c.valide_par,\n      soignant_id: c.soignant_id,\n    }\n  : { ok: false, erreur: 'Brouillon introuvable ou déjà validé.', brouillon_id: c.brouillon_id };\n\nreturn [\n  {\n    json: {\n      ...resultat,\n      evenement_journal: {\n        evenement: resultat.ok ? 'validation' : 'validation_refusee',\n        patient_id: resultat.patient_id ?? null,\n        mode: resultat.mode ?? null,\n        action: resultat.action ?? null,\n        details: { brouillon_id: c.brouillon_id, modifiee: resultat.modifiee ?? null, valide_par: c.valide_par, soignant_id: c.soignant_id || null },\n      },\n    },\n  },\n];\n"
+        "jsCode": "// Baustein « Speichern » – Ergebnis der Bestätigung und zugehöriges Prüfereignis.\nconst c = $('Bestätigung prüfen').first().json;\nconst v = $('Entwurf bestätigen').first().json;\n\nconst resultat = v.validation_id\n  ? {\n      ok: true,\n      validation_id: v.validation_id,\n      brouillon_id: c.brouillon_id,\n      patient_id: v.patient_id,\n      mode: v.mode,\n      action: v.action,\n      modifiee: v.modifiee,\n      texte: c.texte,\n      valide_par: c.valide_par,\n      soignant_id: c.soignant_id,\n    }\n  : { ok: false, erreur: 'Entwurf nicht gefunden oder bereits bestätigt.', brouillon_id: c.brouillon_id };\n\nreturn [\n  {\n    json: {\n      ...resultat,\n      evenement_journal: {\n        evenement: resultat.ok ? 'validation' : 'validation_refusee',\n        patient_id: resultat.patient_id ?? null,\n        mode: resultat.mode ?? null,\n        action: resultat.action ?? null,\n        details: { brouillon_id: c.brouillon_id, modifiee: resultat.modifiee ?? null, valide_par: c.valide_par, soignant_id: c.soignant_id || null },\n      },\n    },\n  },\n];\n"
       },
       "id": "a1c3e000-0089-4000-8000-000000000089",
-      "name": "Résultat de la validation",
+      "name": "Ergebnis der Bestätigung",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -69,10 +69,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Brique « enregistrer » – entrée du sous-workflow « journal ».\nreturn [{ json: $input.first().json.evenement_journal }];\n"
+        "jsCode": "// Baustein « Speichern » – Eingang des Unter-Workflows « Protokoll ».\nreturn [{ json: $input.first().json.evenement_journal }];\n"
       },
       "id": "a1c3e000-0090-4000-8000-000000000090",
-      "name": "Événement",
+      "name": "Ereignis",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -94,7 +94,7 @@
         }
       },
       "id": "a1c3e000-0091-4000-8000-000000000091",
-      "name": "Journal",
+      "name": "Protokoll",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.2,
       "position": [
@@ -104,10 +104,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Brique « enregistrer » – sortie : le résultat de la validation (sans l'événement de journal).\nconst { evenement_journal, ...resultat } = $('Résultat de la validation').first().json;\nreturn [{ json: resultat }];\n"
+        "jsCode": "// Baustein « Speichern » – Ausgang: das Ergebnis der Bestätigung (ohne das Protokollereignis).\nconst { evenement_journal, ...resultat } = $('Ergebnis der Bestätigung').first().json;\nreturn [{ json: resultat }];\n"
       },
       "id": "a1c3e000-0092-4000-8000-000000000092",
-      "name": "Sortie",
+      "name": "Ausgabe",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -117,66 +117,66 @@
     }
   ],
   "connections": {
-    "Entrée": {
+    "Eingang": {
       "main": [
         [
           {
-            "node": "Contrôler la validation",
+            "node": "Bestätigung prüfen",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Contrôler la validation": {
+    "Bestätigung prüfen": {
       "main": [
         [
           {
-            "node": "Valider le brouillon",
+            "node": "Entwurf bestätigen",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Valider le brouillon": {
+    "Entwurf bestätigen": {
       "main": [
         [
           {
-            "node": "Résultat de la validation",
+            "node": "Ergebnis der Bestätigung",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Résultat de la validation": {
+    "Ergebnis der Bestätigung": {
       "main": [
         [
           {
-            "node": "Événement",
+            "node": "Ereignis",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Événement": {
+    "Ereignis": {
       "main": [
         [
           {
-            "node": "Journal",
+            "node": "Protokoll",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Journal": {
+    "Protokoll": {
       "main": [
         [
           {
-            "node": "Sortie",
+            "node": "Ausgabe",
             "type": "main",
             "index": 0
           }

@@ -1,4 +1,4 @@
-// Cotisations retraite – le dernier résultat enregistré d'un dossier, pour le revoir sans relancer l'agent.
+// Rentenbeiträge – das zuletzt gespeicherte Ergebnis einer Akte, um es erneut anzusehen, ohne den Agenten neu zu starten.
 const r = $input.first().json ?? {};
 if (!r.id) return [{ json: { ok: false, erreur: 'inconnu' } }];
 return [

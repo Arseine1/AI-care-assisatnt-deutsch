@@ -1,7 +1,7 @@
-// Vérifier le document – réponse au front (rapport rédigé par le code, rattaché à un brouillon) + événement d'audit.
-const f = $('Règles et fusion').first().json;
-const b = $('Créer le brouillon de vérification').first().json;
-const c = $('Choisir la lettre').first().json;
+// Dokument prüfen – Antwort an die Oberfläche (vom Code verfasster Bericht, einem Entwurf zugeordnet) + Prüfereignis.
+const f = $('Regeln und Zusammenführung').first().json;
+const b = $('Prüfentwurf erstellen').first().json;
+const c = $('Schreiben wählen').first().json;
 return [
   {
     json: {

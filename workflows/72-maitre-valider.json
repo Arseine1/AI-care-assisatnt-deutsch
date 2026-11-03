@@ -1,6 +1,6 @@
 {
   "id": "aicaremaitreval01",
-  "name": "AI-Care – Entrée Valider & Enregistrer",
+  "name": "AI-Care – Eingang Bestätigen & Speichern",
   "active": false,
   "nodes": [
     {
@@ -31,10 +31,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Valider & Enregistrer – le texte relu et le brouillon viennent de la requête ; le nom du soignant vient de sa SESSION (jeton), jamais du corps.\nconst b = $input.first().json?.body ?? {};\nconst s = $('Session').first().json.soignant;\nreturn [{ json: { brouillon_id: b.brouillon_id, texte: b.texte, valide_par: s.nom, soignant_id: s.identifiant } }];\n"
+        "jsCode": "// Bestätigen & Speichern – der gelesene Text und der Entwurf stammen aus der Anfrage; der Name der Pflegekraft stammt aus ihrer SITZUNG (Token), nie aus dem Body.\nconst b = $input.first().json?.body ?? {};\nconst s = $('Sitzung').first().json.soignant;\nreturn [{ json: { brouillon_id: b.brouillon_id, texte: b.texte, valide_par: s.nom, soignant_id: s.identifiant } }];\n"
       },
       "id": "a1c3e000-0131-4000-8000-000000000131",
-      "name": "Corps de la validation",
+      "name": "Inhalt der Bestätigung",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -56,7 +56,7 @@
         }
       },
       "id": "a1c3e000-0132-4000-8000-000000000132",
-      "name": "Enregistrer",
+      "name": "Speichern",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.2,
       "position": [
@@ -75,7 +75,7 @@
           },
           "conditions": [
             {
-              "id": "Rapport de garde ?",
+              "id": "Dienstbericht?",
               "leftValue": "={{ $json.ok === true && $json.action === 'generer_sbar' }}",
               "rightValue": "",
               "operator": {
@@ -90,7 +90,7 @@
         "options": {}
       },
       "id": "a1c3e000-0133-4000-8000-000000000133",
-      "name": "Rapport de garde ?",
+      "name": "Dienstbericht?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
@@ -100,10 +100,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Valider un rapport – seule une validation de RAPPORT DE GARDE est ajoutée au RAG et transmise à l'équipe suivante.\nconst v = $input.first().json;\nreturn [{ json: { portee: 'resident', validation_ids: [v.validation_id] } }];\n"
+        "jsCode": "// Bericht bestätigen – nur die Bestätigung eines DIENSTBERICHTS wird dem RAG hinzugefügt und an das nächste Team weitergegeben.\nconst v = $input.first().json;\nreturn [{ json: { portee: 'resident', validation_ids: [v.validation_id] } }];\n"
       },
       "id": "a1c3e000-0134-4000-8000-000000000134",
-      "name": "Vers après validation",
+      "name": "Zur Nachbearbeitung",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -125,7 +125,7 @@
         }
       },
       "id": "a1c3e000-0135-4000-8000-000000000135",
-      "name": "Après validation",
+      "name": "Nach der Bestätigung",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.2,
       "position": [
@@ -136,10 +136,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Valider un rapport – réponse à l'interface : la validation, puis ce qui a suivi (RAG, transmission).\n// La validation reste enregistrée même si l'étape suivante échoue : l'erreur est alors signalée, pas cachée.\nconst v = $('Enregistrer').first().json;\nconst a = $input.first().json ?? {};\nreturn [\n  {\n    json: {\n      ...v,\n      apres_validation: a.error ? { erreur: String(a.error.message ?? a.error).slice(0, 200) } : { rag: a.rag, transmission: a.transmission },\n    },\n  },\n];\n"
+        "jsCode": "// Bericht bestätigen – Antwort an die Oberfläche: die Bestätigung, dann was folgte (RAG, Übergabe).\n// Die Bestätigung bleibt gespeichert, auch wenn der nächste Schritt fehlschlägt: Der Fehler wird dann gemeldet, nicht verborgen.\nconst v = $('Speichern').first().json;\nconst a = $input.first().json ?? {};\nreturn [\n  {\n    json: {\n      ...v,\n      apres_validation: a.error ? { erreur: String(a.error.message ?? a.error).slice(0, 200) } : { rag: a.rag, transmission: a.transmission },\n    },\n  },\n];\n"
       },
       "id": "a1c3e000-0136-4000-8000-000000000136",
-      "name": "Réponse validation",
+      "name": "Antwort Bestätigung",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -158,7 +158,7 @@
           },
           "conditions": [
             {
-              "id": "Vérification validée ?",
+              "id": "Prüfung bestätigt?",
               "leftValue": "={{ $json.ok === true && $json.action === 'verifier_document' }}",
               "rightValue": "",
               "operator": {
@@ -173,7 +173,7 @@
         "options": {}
       },
       "id": "a1c3e000-0137-4000-8000-000000000137",
-      "name": "Vérification validée ?",
+      "name": "Prüfung bestätigt?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
@@ -183,10 +183,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Valider un rapport de vérification – seule la validation d'un rapport « Vérifier le document » peut faire entrer la lettre dans le RAG.\nreturn [{ json: { validation_id: $input.first().json.validation_id } }];\n"
+        "jsCode": "// Prüfbericht bestätigen – nur die Bestätigung eines Berichts « Dokument prüfen » kann das Schreiben in das RAG aufnehmen.\nreturn [{ json: { validation_id: $input.first().json.validation_id } }];\n"
       },
       "id": "a1c3e000-0138-4000-8000-000000000138",
-      "name": "Vers lettre validée",
+      "name": "Zum bestätigten Schreiben",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -208,7 +208,7 @@
         }
       },
       "id": "a1c3e000-0139-4000-8000-000000000139",
-      "name": "Lettre validée",
+      "name": "Bestätigtes Schreiben",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.2,
       "position": [
@@ -219,10 +219,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Valider un rapport de vérification – réponse à l'interface : la validation, puis ce qu'est devenue la lettre.\nconst v = $('Enregistrer').first().json;\nconst a = $input.first().json ?? {};\nreturn [{ json: { ...v, apres_validation: a.error ? { erreur: String(a.error.message ?? a.error).slice(0, 200) } : { lettre: a.lettre } } }];\n"
+        "jsCode": "// Prüfbericht bestätigen – Antwort an die Oberfläche: die Bestätigung, dann was aus dem Schreiben geworden ist.\nconst v = $('Speichern').first().json;\nconst a = $input.first().json ?? {};\nreturn [{ json: { ...v, apres_validation: a.error ? { erreur: String(a.error.message ?? a.error).slice(0, 200) } : { lettre: a.lettre } } }];\n"
       },
       "id": "a1c3e000-0140-4000-8000-000000000140",
-      "name": "Réponse validation (lettre)",
+      "name": "Antwort Bestätigung (Schreiben)",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -235,7 +235,7 @@
         "jsCode": "return [{ json: $input.first().json }];\n"
       },
       "id": "a1c3e000-0141-4000-8000-000000000141",
-      "name": "Réponse simple",
+      "name": "Einfache Antwort",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -245,10 +245,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Contrôle de session – le jeton « Bearer » de l'en-tête Authorization (43 caractères URL-safe) est haché (SHA-256) : seul le haché est en base.\nconst entetes = $input.first().json?.headers ?? {};\nconst m = String(entetes.authorization ?? '').match(/^Bearer ([A-Za-z0-9_-]{43})$/);\nif (!m) return [{ json: { hash: '' } }];\nreturn [{ json: { hash: require('crypto').createHash('sha256').update(m[1]).digest('hex') } }];\n"
+        "jsCode": "// Sitzungsprüfung – das « Bearer »-Token im Authorization-Header (43 URL-sichere Zeichen) wird gehasht (SHA-256): Nur der Hash steht in der Datenbank.\nconst entetes = $input.first().json?.headers ?? {};\nconst m = String(entetes.authorization ?? '').match(/^Bearer ([A-Za-z0-9_-]{43})$/);\nif (!m) return [{ json: { hash: '' } }];\nreturn [{ json: { hash: require('crypto').createHash('sha256').update(m[1]).digest('hex') } }];\n"
       },
       "id": "a1c3e000-0387-4000-8000-000000000387",
-      "name": "Session (jeton)",
+      "name": "Sitzung (Token)",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -265,7 +265,7 @@
         }
       },
       "id": "a1c3e000-0388-4000-8000-000000000388",
-      "name": "Session (base)",
+      "name": "Sitzung (Datenbank)",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
@@ -283,10 +283,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Contrôle de session – résultat : un soignant identifié (session ouverte, non expirée, compte actif) ou rien.\nconst r = $input.first().json ?? {};\nif (!r.identifiant) return [{ json: { ok: false } }];\nreturn [{ json: { ok: true, soignant: { identifiant: r.identifiant, nom: r.nom }, jeton_hash: r.jeton_hash } }];\n"
+        "jsCode": "// Sitzungsprüfung – Ergebnis: eine identifizierte Pflegekraft (Sitzung offen, nicht abgelaufen, Konto aktiv) oder nichts.\nconst r = $input.first().json ?? {};\nif (!r.identifiant) return [{ json: { ok: false } }];\nreturn [{ json: { ok: true, soignant: { identifiant: r.identifiant, nom: r.nom }, jeton_hash: r.jeton_hash } }];\n"
       },
       "id": "a1c3e000-0389-4000-8000-000000000389",
-      "name": "Session",
+      "name": "Sitzung",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -305,7 +305,7 @@
           },
           "conditions": [
             {
-              "id": "Session valide ?",
+              "id": "Sitzung gültig?",
               "leftValue": "={{ $json.ok === true }}",
               "rightValue": "",
               "operator": {
@@ -320,7 +320,7 @@
         "options": {}
       },
       "id": "a1c3e000-0390-4000-8000-000000000390",
-      "name": "Session valide ?",
+      "name": "Sitzung gültig?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
@@ -330,10 +330,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Contrôle de session – la session est valide : on rend aux nœuds suivants la requête d'origine (en-têtes, corps) telle que reçue.\nreturn [{ json: $('Webhook').first().json }];\n"
+        "jsCode": "// Sitzungsprüfung – die Sitzung ist gültig: Die ursprüngliche Anfrage (Header, Body) wird unverändert an die folgenden Knoten zurückgegeben.\nreturn [{ json: $('Webhook').first().json }];\n"
       },
       "id": "a1c3e000-0391-4000-8000-000000000391",
-      "name": "Requête",
+      "name": "Anfrage",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -343,10 +343,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Contrôle de session – refus : aucune donnée, seulement le motif. L'interface rouvre alors la page de connexion.\nreturn [{ json: { erreur: 'session' } }];\n"
+        "jsCode": "// Sitzungsprüfung – Ablehnung: keine Daten, nur der Grund. Die Oberfläche öffnet dann wieder die Anmeldeseite.\nreturn [{ json: { erreur: 'session' } }];\n"
       },
       "id": "a1c3e000-0392-4000-8000-000000000392",
-      "name": "Refus (session)",
+      "name": "Ablehnung (Sitzung)",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -360,171 +360,171 @@
       "main": [
         [
           {
-            "node": "Session (jeton)",
+            "node": "Sitzung (Token)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Corps de la validation": {
+    "Inhalt der Bestätigung": {
       "main": [
         [
           {
-            "node": "Enregistrer",
+            "node": "Speichern",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Enregistrer": {
+    "Speichern": {
       "main": [
         [
           {
-            "node": "Rapport de garde ?",
+            "node": "Dienstbericht?",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Rapport de garde ?": {
+    "Dienstbericht?": {
       "main": [
         [
           {
-            "node": "Vers après validation",
+            "node": "Zur Nachbearbeitung",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Vérification validée ?",
+            "node": "Prüfung bestätigt?",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Vérification validée ?": {
+    "Prüfung bestätigt?": {
       "main": [
         [
           {
-            "node": "Vers lettre validée",
+            "node": "Zum bestätigten Schreiben",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Réponse simple",
+            "node": "Einfache Antwort",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Vers lettre validée": {
+    "Zum bestätigten Schreiben": {
       "main": [
         [
           {
-            "node": "Lettre validée",
+            "node": "Bestätigtes Schreiben",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Lettre validée": {
+    "Bestätigtes Schreiben": {
       "main": [
         [
           {
-            "node": "Réponse validation (lettre)",
+            "node": "Antwort Bestätigung (Schreiben)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Vers après validation": {
+    "Zur Nachbearbeitung": {
       "main": [
         [
           {
-            "node": "Après validation",
+            "node": "Nach der Bestätigung",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Après validation": {
+    "Nach der Bestätigung": {
       "main": [
         [
           {
-            "node": "Réponse validation",
+            "node": "Antwort Bestätigung",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Session (jeton)": {
+    "Sitzung (Token)": {
       "main": [
         [
           {
-            "node": "Session (base)",
+            "node": "Sitzung (Datenbank)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Session (base)": {
+    "Sitzung (Datenbank)": {
       "main": [
         [
           {
-            "node": "Session",
+            "node": "Sitzung",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Session": {
+    "Sitzung": {
       "main": [
         [
           {
-            "node": "Session valide ?",
+            "node": "Sitzung gültig?",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Session valide ?": {
+    "Sitzung gültig?": {
       "main": [
         [
           {
-            "node": "Requête",
+            "node": "Anfrage",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Refus (session)",
+            "node": "Ablehnung (Sitzung)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Requête": {
+    "Anfrage": {
       "main": [
         [
           {
-            "node": "Corps de la validation",
+            "node": "Inhalt der Bestätigung",
             "type": "main",
             "index": 0
           }

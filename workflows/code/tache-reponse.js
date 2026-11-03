@@ -1,9 +1,9 @@
-// Avancement d'une tâche – réponse à l'interface.
-const demande = $('Contrôler la tâche').first().json;
+// Fortschritt einer Aufgabe – Antwort an die Oberfläche.
+const demande = $('Aufgabe prüfen').first().json;
 const t = $input.first().json ?? {};
 if (!t.id) {
-  if (demande.etage) return [{ json: { tache_id: null } }]; // « le dernier rapport de l'étage » : il n'y en a pas
-  throw new Error('Tâche introuvable');
+  if (demande.etage) return [{ json: { tache_id: null } }]; // « der letzte Bericht der Etage »: Es gibt keinen
+  throw new Error('Aufgabe nicht gefunden');
 }
 return [
   {

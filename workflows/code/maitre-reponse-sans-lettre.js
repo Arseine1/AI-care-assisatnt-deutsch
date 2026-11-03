@@ -1,10 +1,10 @@
-// Vérifier le document – aucune lettre en attente : réponse sans brouillon (rien à valider).
+// Dokument prüfen – kein Schreiben wartet: Antwort ohne Entwurf (nichts zu bestätigen).
 return [
   {
     json: {
       brouillon_id: null,
-      texte: 'information non disponible : aucune lettre de médecin n\'est en attente de vérification pour ce résident. [KIM (lettre de médecin)]',
-      sources: ['KIM (lettre de médecin)'],
+      texte: 'Information nicht verfügbar: Für diesen Bewohner wartet kein Arztbrief auf Prüfung. [KIM (Arztbrief)]',
+      sources: ['KIM (Arztbrief)'],
       alertes: [],
       avertissements: [],
     },

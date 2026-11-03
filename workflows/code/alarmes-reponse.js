@@ -1,4 +1,4 @@
-// Alarmes affichées – réponse à l'interface (les alarmes non acquittées des 12 dernières heures, la plus récente d'abord).
+// Angezeigte Alarme – Antwort an die Oberfläche (die nicht quittierten Alarme der letzten 12 Stunden, der neueste zuerst).
 const lignes = $input.all().map((i) => i.json).filter((r) => r.id);
 return [
   {

@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react';
 import { t } from '../i18n';
 import { CarteAlarme, heure } from './AlarmesCapteurs.jsx';
 
-// Page d'alertes : « alarmes » (capteurs) ou « documents » (courriers, ePA), chacune sur sa page, avec son propre jeu de textes ;
-// liste des alertes en attente et historique des 24 dernières heures.
+// Meldungsseite: „alarmes“ (Sensoren) oder „documents“ (Schreiben, ePA), jeweils auf eigener Seite mit eigenem Textsatz;
+// Liste der offenen Meldungen und Verlauf der letzten 24 Stunden.
 export default function PageAlertes({ jeu, alarmes, historique, onAcquitter, onOuvrir, observerHistorique }) {
   useEffect(() => {
     observerHistorique(true);

@@ -1,4 +1,4 @@
-// Connecteur « KIM » : une ligne par PDF joint (lettre de médecin).
+// KIM-Konnektor: eine Zeile je angehängtem PDF (Arztbrief).
 const sortie = [];
 for (const { json: m } of $input.all()) {
   for (const pj of m.Attachments ?? []) {

@@ -6,7 +6,7 @@ import residents from '../mock/residents.json';
 
 const ETAGES = [...new Set(residents.map((r) => r.etage))].sort((a, b) => a - b);
 
-// Actions rapides : l'identifiant est envoyé au webhook n8n, le prompt reste côté serveur.
+// Schnellaktionen: Die Kennung wird an den n8n-Webhook gesendet, der Prompt bleibt serverseitig.
 const ACTIONS = [
   { id: 'rapport_garde', cle: 'rapportGarde', icone: 'M6 3h9l4 4v14H6zM14 3v5h5M9 13h7M9 17h5' },
   { id: 'resume_epa', cle: 'resumeEpa', icone: 'M4 5h16v14H4zM4 9h16M8 13h4' },
@@ -15,7 +15,7 @@ const ACTIONS = [
 
 export default function ModeA({ chambre, onAction, onEtage, enCours }) {
   const [etage, setEtage] = useState('');
-  const [recent, setRecent] = useState(null); // rapport d'étage déjà préparé (automatique de 5h30)
+  const [recent, setRecent] = useState(null); // bereits vorbereiteter Stockwerksbericht (automatisch um 5:30 Uhr)
 
   useEffect(() => {
     setRecent(null);

@@ -1,18 +1,18 @@
-# Interface reliée à n8n
+# Mit n8n verbundene Oberfläche
 
-Passer l'interface du mode simulé au mode réel : mettre `VITE_MOCK=false` dans le fichier `.env` à la racine, puis relancer `npm run dev` dans `front/`. Tout passe par `front/src/api.js` ; aucun autre fichier de l'interface ne change selon le mode.
+Die Oberfläche vom simulierten in den realen Modus umschalten: `VITE_MOCK=false` in die Datei `.env` im Stammverzeichnis setzen und dann `npm run dev` in `front/` neu starten. Alles läuft über `front/src/api.js`; keine andere Datei der Oberfläche ändert sich je nach Modus.
 
-## Trois points d'entrée (webhooks n8n)
+## Drei Einstiegspunkte (n8n-Webhooks)
 
-| Webhook | Appelé par | Corps de la requête | Réponse |
+| Webhook | Aufgerufen von | Body der Anfrage | Antwort |
 |---|---|---|---|
-| `POST /webhook/aicare-action` | les 4 boutons du Mode A | `{ "action": "rapport_garde", "chambre": "12" }` | un brouillon (voir ci-dessous) |
-| `POST /webhook/aicare-consigne` | le Mode B | `{ "chambre": "12", "consigne": "…" }` (300 caractères au plus) | un brouillon, **ou** un refus |
-| `POST /webhook/aicare-valider` | le bouton « Valider & Enregistrer » | `{ "brouillon_id": "…", "texte": "…" }` | `{ "ok": true, … }` ou `{ "ok": false, "erreur": "…" }` |
+| `POST /webhook/aicare-action` | den 4 Schaltflächen des Modus A | `{ "action": "rapport_garde", "chambre": "12" }` | ein Entwurf (siehe unten) |
+| `POST /webhook/aicare-consigne` | Modus B | `{ "chambre": "12", "consigne": "…" }` (höchstens 300 Zeichen) | ein Entwurf **oder** eine Ablehnung |
+| `POST /webhook/aicare-valider` | der Schaltfläche « Bestätigen & Speichern » | `{ "brouillon_id": "…", "texte": "…" }` | `{ "ok": true, … }` oder `{ "ok": false, "erreur": "…" }` |
 
-Actions du Mode A : `rapport_garde` (SBAR), `resume_epa`, `points_vigilance`, `verifier_document`. L'action choisit un **prompt caché** (`prompts/*.md`) ; l'interface ne fournit aucun texte, ne choisit ni la période ni les mots de recherche.
+Aktionen des Modus A: `rapport_garde` (SBAR), `resume_epa`, `points_vigilance`, `verifier_document`. Die Aktion wählt einen **verborgenen Prompt** (`prompts/*.md`); die Oberfläche liefert keinen Text und wählt weder den Zeitraum noch die Suchwörter.
 
-### Réponse « brouillon »
+### Antwort « Entwurf »
 
 ```json
 {
@@ -24,137 +24,137 @@ Actions du Mode A : `rapport_garde` (SBAR), `resume_epa`, `points_vigilance`, `v
 }
 ```
 
-- `alertes` : bandeau rouge (contradictions entre documents ; alarmes de capteurs dès que MQTT sera relié).
-- `avertissements` : « À vérifier avant de valider », contrôles automatiques du texte (voir `docs/briques-ia.md`).
-- `brouillon_id` : `null` quand il n'y a rien à enregistrer (ex. aucune lettre à vérifier) ; le bouton de validation disparaît.
-- Le texte est un **brouillon** : rien n'est enregistré avant la validation.
+- `alertes`: roter Balken (Widersprüche zwischen Dokumenten; Sensoralarme, sobald MQTT angebunden ist).
+- `avertissements`: « Vor der Bestätigung prüfen », automatische Kontrollen des Textes (siehe `docs/briques-ia.md`).
+- `brouillon_id`: `null`, wenn nichts zu speichern ist (z. B. kein zu prüfender Brief); die Validierungsschaltfläche verschwindet.
+- Der Text ist ein **Entwurf**: Vor der Validierung wird nichts gespeichert.
 
-### Réponse « refus » (Mode B)
+### Antwort « Ablehnung » (Modus B)
 
 ```json
-{ "refuse": true, "motif": "regles", "message": "La consigne cherche à modifier les règles de l'assistant : elle est refusée." }
+{ "refuse": true, "motif": "regles", "message": "Die Anweisung versucht, die Regeln des Assistenten zu ändern: Sie wird abgelehnt." }
 ```
 
-Motifs : `longueur`, `format`, `regles`, `mots_interdits`, `autre_resident`. **Rien n'a été envoyé à l'IA.** Le journal garde le motif, la longueur et l'empreinte SHA-256 de la consigne, jamais son texte.
+Gründe: `longueur`, `format`, `regles`, `mots_interdits`, `autre_resident`. **Es wurde nichts an die KI gesendet.** Das Journal behält den Grund, die Länge und den SHA-256-Fingerabdruck der Anweisung, niemals ihren Text.
 
-## Ce que fait chaque point d'entrée
+## Was jeder Einstiegspunkt tut
 
 ```mermaid
 flowchart TD
-  A[aicare-action] --> A1[Contrôler action + chambre]
-  A1 --> T[chercher → template → rédiger]
-  V0[aicare-verifier] --> V[chercher → lettre la plus récente]
-  V --> R[RÈGLES de contrôle - code]
-  R --> BR[brouillon + RÉPONSE IMMÉDIATE]
-  BR --> G{analyse IA activée ?}
-  G -- oui --> TA[tâche d'analyse]
-  TA --> E[extraire_faits IA]
-  E --> C[comparer IA]
-  C --> F[fusion → remarques à confirmer]
-  F --> TR[résultat dans la tâche]
-  G -- non --> FIN[fin : règles seules]
-  B[aicare-consigne] --> B1[CONTRÔLE de la consigne]
-  B1 -- acceptée --> T
-  B1 -- refusée --> J[journal + refus]
-  W[aicare-valider] --> N[enregistrer]
+  A[aicare-action] --> A1[Aktion + Zimmer prüfen]
+  A1 --> T[Suchen → Vorlage → Verfassen]
+  V0[aicare-verifier] --> V[Suchen → jüngster Brief]
+  V --> R[Prüf-REGELN - Code]
+  R --> BR[Entwurf + SOFORTIGE ANTWORT]
+  BR --> G{KI-Analyse aktiviert?}
+  G -- ja --> TA[Analyse-Aufgabe]
+  TA --> E[extraire_faits KI]
+  E --> C[comparer KI]
+  C --> F[Zusammenführung → zu bestätigende Anmerkungen]
+  F --> TR[Ergebnis in der Aufgabe]
+  G -- nein --> FIN[Ende: nur Regeln]
+  B[aicare-consigne] --> B1[PRÜFUNG der Anweisung]
+  B1 -- akzeptiert --> T
+  B1 -- abgelehnt --> J[Journal + Ablehnung]
+  W[aicare-valider] --> N[Speichern]
 ```
 
-### « Vérifier le document » : les règles répondent tout de suite, l'IA suit en tâche de fond
+### « Dokument prüfen »: Die Regeln antworten sofort, die KI folgt als Hintergrundaufgabe
 
-| Webhook | Corps | Réponse |
+| Webhook | Body | Antwort |
 |---|---|---|
-| `POST /webhook/aicare-verifier` | `{ "chambre": "12" }` | **tout de suite** : un brouillon avec le rapport des règles, les alertes, et `analyse: { statut, tache_id }` |
+| `POST /webhook/aicare-verifier` | `{ "chambre": "12" }` | **sofort**: ein Entwurf mit dem Bericht der Regeln, den Warnungen und `analyse: { statut, tache_id }` |
 | `POST /webhook/aicare-tache` | `{ "tache_id": "…" }` | `{ statut, resultat: { remarques, alertes, avertissements, indisponible } }` |
-| `POST /webhook/aicare-reglage` | `{}` pour lire, `{ "valeur": false }` pour couper l'IA | `{ cle: "verification_ia", valeur: true \| false }` |
+| `POST /webhook/aicare-reglage` | `{}` zum Lesen, `{ "valeur": false }` zum Abschalten der KI | `{ cle: "verification_ia", valeur: true \| false }` |
 
-1. La lettre en attente la plus récente de la collection `a_verifier` est retrouvée pour le résident (sans lettre : réponse sans brouillon, aucune IA).
-2. **Filet de règles** (code, sans IA), appliqué sur le texte de la lettre et les faits du dossier **avant toute réponse** :
+1. Der jüngste wartende Brief der Collection `a_verifier` wird für die Person gefunden (ohne Brief: Antwort ohne Entwurf, keine KI).
+2. **Regelnetz** (Code, ohne KI), angewendet auf den Text des Briefs und die Fakten der Akte **vor jeder Antwort**:
 
-| Règle | Déclencheur |
+| Regel | Auslöser |
 |---|---|
-| `allergie` | un médicament de la lettre appartient à une famille dont une allergie est connue (pénicillines, sulfamides) |
-| `anticoagulation_double` | un anticoagulant de la lettre alors que le résident en prend déjà un autre, sans arrêt du premier mentionné |
-| `insuffisance_renale` | un anti-inflammatoire (AINS) alors que le dossier ou la lettre indique une insuffisance rénale |
+| `allergie` | ein Medikament des Briefs gehört zu einer Familie, für die eine Allergie bekannt ist (Penicilline, Sulfonamide) |
+| `anticoagulation_double` | ein Antikoagulans im Brief, obwohl die Person bereits ein anderes einnimmt, ohne dass das Absetzen des ersten erwähnt wird |
+| `insuffisance_renale` | ein Entzündungshemmer (NSAR), obwohl die Akte oder der Brief eine Niereninsuffizienz angibt |
 
-3. **Réponse immédiate** : le rapport est rédigé par le code, chaque ligne cite ses sources entre crochets, un brouillon est créé pour qu'il puisse être validé. Le bandeau rouge s'affiche tout de suite.
-4. **Analyse complémentaire (IA, en tâche de fond)**, si le réglage `verification_ia` est activé : extraction (`extraire_faits`) puis comparaison (`comparer`). Si une étape échoue, la suivante continue ; si les deux échouent, la tâche se termine en `termine_avec_erreurs` et l'interface dit que l'analyse est indisponible. Les règles ne changent jamais.
-5. **Fusion** : ce que l'IA ajoute est une **remarque « à confirmer »**, retenue seulement si elle s'appuie sur un fait réel du dossier et un passage réel de la lettre ; les autres sont écartées et comptées. Les remarques s'affichent à part (« Analyse complémentaire de l'assistant IA ») et leurs alertes s'ajoutent au bandeau ; elles ne modifient pas le texte du brouillon.
-6. **Couper l'IA** : `POST /webhook/aicare-reglage {"valeur": false}`, ou la case à cocher du Mode A de l'interface. Sans IA : réponse en quelques secondes, la réponse indique `analyse.statut = "desactivee"` et aucune étape d'IA ne tourne (vérifié par un test de graphe).
+3. **Sofortige Antwort**: Der Bericht wird vom Code verfasst, jede Zeile nennt ihre Quellen in eckigen Klammern, ein Entwurf wird angelegt, damit er validiert werden kann. Der rote Balken wird sofort angezeigt.
+4. **Ergänzende Analyse (KI, als Hintergrundaufgabe)**, wenn die Einstellung `verification_ia` aktiviert ist: Extraktion (`extraire_faits`), dann Vergleich (`comparer`). Schlägt ein Schritt fehl, läuft der nächste weiter; schlagen beide fehl, endet die Aufgabe mit `termine_avec_erreurs`, und die Oberfläche meldet, dass die Analyse nicht verfügbar ist. Die Regeln ändern sich nie.
+5. **Zusammenführung**: Was die KI hinzufügt, ist eine **Anmerkung « zu bestätigen »**, nur übernommen, wenn sie sich auf einen realen Fakt der Akte und eine reale Passage des Briefs stützt; die übrigen werden verworfen und gezählt. Die Anmerkungen werden gesondert angezeigt (« Zusätzliche Analyse des KI-Assistenten »), und ihre Warnungen werden dem Balken hinzugefügt; sie ändern den Text des Entwurfs nicht.
+6. **KI abschalten**: `POST /webhook/aicare-reglage {"valeur": false}` oder das Kontrollkästchen des Modus A in der Oberfläche. Ohne KI: Antwort in wenigen Sekunden, die Antwort enthält `analyse.statut = "desactivee"`, und es läuft kein KI-Schritt (durch einen Graphtest geprüft).
 
-Pourquoi des règles en plus de l'IA : Llama 3 (8 milliards de paramètres) a laissé passer l'amoxicilline prescrite à un résident allergique à la pénicilline (voir `docs/prompts-tests.md`).
-## Rapport de garde d'un étage, validation et transmission (jour 3, étape 4)
+Warum Regeln zusätzlich zur KI: Llama 3 (8 Milliarden Parameter) ließ Amoxicillin durchgehen, das einer Person mit Penicillinallergie verschrieben wurde (siehe `docs/prompts-tests.md`).
+## Dienstbericht einer Etage, Validierung und Übermittlung (Tag 3, Schritt 4)
 
-| Webhook | Corps de la requête | Réponse |
+| Webhook | Body der Anfrage | Antwort |
 |---|---|---|
-| `POST /webhook/aicare-etage` | `{ "etage": 2 }` | tout de suite : `{ "tache_id": "…", "total": 4 }` |
-| `POST /webhook/aicare-tache` | `{ "tache_id": "…" }` | `{ statut, total, fait, resultat: [ {chambre, resident, brouillon_id, texte, sources, avertissements} ou {chambre, resident, erreur} ] }` |
+| `POST /webhook/aicare-etage` | `{ "etage": 2 }` | sofort: `{ "tache_id": "…", "total": 4 }` |
+| `POST /webhook/aicare-tache` | `{ "tache_id": "…" }` | `{ statut, total, fait, resultat: [ {chambre, resident, brouillon_id, texte, sources, avertissements} oder {chambre, resident, erreur} ] }` |
 | `POST /webhook/aicare-valider-lot` | `{ "etage": 2, "rapports": [ {"brouillon_id": "…", "texte": "…"} ] }` | `{ ok, nb_valides, refuses: […], apres_validation: { rag: {ajoutes}, transmission: {statut, destinataire, …} } }` |
 
-`aicare-valider` (un résident) renvoie la même information dans `apres_validation` quand l'action validée est un rapport de garde.
+`aicare-valider` (eine Person) liefert dieselbe Information in `apres_validation`, wenn die validierte Aktion ein Dienstbericht ist.
 
-`statut` d'une tâche : `en_cours`, `termine`, `termine_avec_erreurs`. L'interface consulte `aicare-tache` toutes les 4 secondes et affiche chaque rapport dès qu'il est prêt ; elle ne propose « Valider l'étage » qu'une fois la tâche terminée.
+`statut` einer Aufgabe: `en_cours`, `termine`, `termine_avec_erreurs`. Die Oberfläche fragt `aicare-tache` alle 4 Sekunden ab und zeigt jeden Bericht an, sobald er bereit ist; « Etage bestätigen » wird erst angeboten, wenn die Aufgabe beendet ist.
 
 ```
-aicare-etage  → contrôle de l'étage → résidents de l'étage → crée la tâche → RÉPOND → (un résident après l'autre :
-                paramètres → chercher → template verrouillé → rédiger → brouillon → avance la tâche) → termine la tâche
+aicare-etage  → Prüfung der Etage → Bewohner der Etage → legt die Aufgabe an → ANTWORTET → (eine Person nach der anderen:
+                Parameter → Suchen → gesperrte Vorlage → Verfassen → Entwurf → Aufgabe schreitet fort) → beendet die Aufgabe
 
-aicare-valider-lot → enregistrer (un appel par rapport, brouillon exigé) → rassemble → APRÈS VALIDATION :
-                relit les textes validés (table des validations) → ajout au RAG (Indexeur) → message de transmission
-                (Mailpit) → note dans soins.transmissions → journal (ajout_rag, transmission)
+aicare-valider-lot → Speichern (ein Aufruf pro Bericht, Entwurf erforderlich) → sammelt → NACH DER VALIDIERUNG:
+                liest die validierten Texte erneut (Tabelle der Validierungen) → Aufnahme ins RAG (Indexeur) → Übermittlungsnachricht
+                (Mailpit) → Vermerk in soins.transmissions → Journal (ajout_rag, transmission)
 ```
 
-Où voir le résultat : le message dans **Mailpit** (`http://localhost:8025`, sujet « Transmission de garde – étage N »), les points de type `rapport_valide` dans **Qdrant** (collection `patients`), les tables `soins.validations`, `soins.transmissions`, `soins.taches` et `soins.journal_ia` dans **PostgreSQL**.
+Wo man das Ergebnis sieht: die Nachricht in **Mailpit** (`http://localhost:8025`, Betreff « Dienstübergabe – Etage N – … »), die Punkte vom Typ `rapport_valide` in **Qdrant** (Collection `patients`), die Tabellen `soins.validations`, `soins.transmissions`, `soins.taches` und `soins.journal_ia` in **PostgreSQL**.
 
-### Tâches de fond : statuts, annulation, reprise (jour 4, étape 4)
+### Hintergrundaufgaben: Status, Abbruch, Wiederaufnahme (Tag 4, Schritt 4)
 
-| Webhook | Corps | Réponse |
+| Webhook | Body | Antwort |
 |---|---|---|
-| `POST /webhook/aicare-annuler` | `{ "tache_id": "…" }` | `{ annulee: true \| false, statut }` (`inconnue` si l'identifiant n'existe pas) |
+| `POST /webhook/aicare-annuler` | `{ "tache_id": "…" }` | `{ annulee: true \| false, statut }` (`inconnue`, wenn die Kennung nicht existiert) |
 
-Statuts d'une tâche (`aicare-tache`) : `en_cours`, `termine`, `termine_avec_erreurs`, `interrompue`, `annulee`.
+Status einer Aufgabe (`aicare-tache`): `en_cours`, `termine`, `termine_avec_erreurs`, `interrompue`, `annulee`.
 
-- Un battement de coeur (`heartbeat`) est écrit à chaque étape. Au **démarrage de n8n**, toute tâche « en cours » devient « interrompue » ; toutes les 5 minutes, une tâche sans battement depuis 30 minutes aussi (workflow `80-reprise-taches`).
-- L'annulation est prise en compte avant le prochain résident ou la prochaine étape ; la génération déjà en cours chez Ollama se termine et son résultat est abandonné. Une tâche annulée ou interrompue n'est jamais réécrite par un résultat tardif.
-- Les rapports déjà préparés restent affichés et validables.
-## Garanties vérifiées par des tests
+- Bei jedem Schritt wird ein Herzschlag (`heartbeat`) geschrieben. Beim **Start von n8n** wird jede Aufgabe `en_cours` zu `interrompue`; alle 5 Minuten ebenso eine Aufgabe, die seit 30 Minuten keinen Herzschlag hatte (Workflow `80-reprise-taches`).
+- Der Abbruch wird vor der nächsten Person oder dem nächsten Schritt berücksichtigt; die bei Ollama bereits laufende Generierung endet, und ihr Ergebnis wird verworfen. Eine abgebrochene oder unterbrochene Aufgabe wird nie durch ein verspätetes Ergebnis überschrieben.
+- Die bereits vorbereiteten Berichte bleiben angezeigt und validierbar.
+## Durch Tests geprüfte Garantien
 
 | Garantie | Test |
 |---|---|
-| Aucun chemin n'envoie le texte du soignant à l'IA sans passer par le contrôle de la consigne, la porte « acceptée » et le template verrouillé | `node tests/chemins-ia.test.mjs` |
-| Le contrôle de la consigne refuse longueur, format, mots interdits, tentatives de changer les règles, autre résident | `node tests/consigne.test.mjs` |
-| Les contradictions graves sont détectées sans dépendre du modèle | `node tests/regles.test.mjs` |
-| « Valider & Enregistrer » n'atteint jamais l'IA ; un brouillon n'est validé qu'une fois | `node tests/chemins-ia.test.mjs`, `node tests/briques.test.mjs` |
-| Battement de coeur, annulation, reprise au démarrage, veilleur : une tâche arrêtée ne lance aucune génération et n'est jamais écrasée | `node tests/taches.test.mjs`, `node tests/taches-live.mjs` |
-| Seul un rapport de garde validé est ajouté au RAG et transmis ; le texte vient de la table des validations ; un rapport validé n'est pas relu comme fait ; l'étage est un nombre ; aucun nouvel appel à l'IA | `node tests/apres-validation.test.mjs` |
+| Kein Weg sendet den Text der Pflegekraft an die KI, ohne die Prüfung der Anweisung, das Tor « akzeptiert » und das gesperrte Template zu durchlaufen | `node tests/chemins-ia.test.mjs` |
+| Die Prüfung der Anweisung lehnt Länge, Format, verbotene Wörter, Versuche, die Regeln zu ändern, und andere Bewohner ab | `node tests/consigne.test.mjs` |
+| Schwere Widersprüche werden erkannt, ohne vom Modell abzuhängen | `node tests/regles.test.mjs` |
+| « Bestätigen & Speichern » erreicht nie die KI; ein Entwurf wird nur einmal validiert | `node tests/chemins-ia.test.mjs`, `node tests/briques.test.mjs` |
+| Herzschlag, Abbruch, Wiederaufnahme beim Start, Wächter: Eine angehaltene Aufgabe startet keine Generierung und wird nie überschrieben | `node tests/taches.test.mjs`, `node tests/taches-live.mjs` |
+| Nur ein validierter Dienstbericht wird ins RAG aufgenommen und übermittelt; der Text stammt aus der Tabelle der Validierungen; ein validierter Bericht wird nicht als Fakt erneut gelesen; die Etage ist eine Zahl; kein neuer Aufruf der KI | `node tests/apres-validation.test.mjs` |
 
-## Essais réels (Llama 3.2, poste de 8 Go sans carte graphique)
+## Praxisversuche (Llama 3.2, Rechner mit 8 GB ohne Grafikkarte)
 
-| Parcours | Durée | Résultat |
+| Ablauf | Dauer | Ergebnis |
 |---|---|---|
-| Points de vigilance, M. Wagner | 288 s | texte lisible mais phrase d'introduction interdite et puces sans source : 4 avertissements affichés |
-| Vérifier le document, M. Weber (jour 3, avant le jour 4) | 416 s dans le navigateur | **bandeau rouge** : amoxicilline / allergie à la pénicilline (règles) ; validation enregistrée |
-| Vérifier le document, Mme Schulz | 363 s | double anticoagulation (apixaban / Marcumar) détectée par les règles |
-| Vérifier le document, Mme Fischer | 305 s | une fausse alerte inventée par le modèle a été **écartée** (aucun fait du dossier ne l'appuyait) |
-| Consigne acceptée, M. Weber | 157 s | « information non disponible » : exact, la chute des données de test date de plus de 24 h |
-| 5 consignes refusées | 2 s au total | aucun appel au modèle, motif enregistré au journal |
-| **Jour 4** : Vérifier le document, M. Weber, règles puis analyse IA en tâche de fond | **réponse en 4,1 s** ; analyse IA terminée après 394 s | alerte amoxicilline affichée tout de suite, l'IA n'ajoute aucune remarque |
-| **Jour 4** : Vérifier le document, IA désactivée, 5 résidents avec lettre | 1,4 à 9,3 s | 4 contradictions détectées (Schulz, Weber, Wagner, Müller), aucune fausse alerte (Fischer) |
-| Rapport de garde, étage 2 (4 résidents), puis validation du lot | 16,3 min pour les 4 rapports (≈ 4 min chacun) | 4 rapports validés, **4 points `rapport_valide` dans Qdrant**, **un message dans Mailpit** (« Transmission de garde – étage 2 »), ligne `soins.transmissions` (envoyé, 4 validations), événements `ajout_rag` et `transmission` au journal ; **seconde validation du même lot refusée (4 refus)**. Qualité du texte : imparfaite (6 à 8 avertissements par rapport : phrases sans source, termes absents des sources, un jugement ajouté, structure SBAR incomplète chez Mme Fischer) : la relecture reste indispensable |
+| Aufmerksamkeitspunkte, Herr Wagner | 288 s | lesbarer Text, aber verbotener Einleitungssatz und Aufzählungspunkte ohne Quelle: 4 Warnungen angezeigt |
+| Dokument prüfen, Herr Weber (Tag 3, vor Tag 4) | 416 s im Browser | **roter Balken**: Amoxicillin / Penicillinallergie (Regeln); Validierung gespeichert |
+| Dokument prüfen, Frau Schulz | 363 s | doppelte Antikoagulation (Apixaban / Marcumar) von den Regeln erkannt |
+| Dokument prüfen, Frau Fischer | 305 s | ein vom Modell erfundener Fehlalarm wurde **verworfen** (kein Fakt der Akte stützte ihn) |
+| Anweisung akzeptiert, Herr Weber | 157 s | « Information nicht verfügbar »: korrekt, der Sturz der Testdaten liegt mehr als 24 h zurück |
+| 5 abgelehnte Anweisungen | 2 s insgesamt | kein Aufruf des Modells, Grund im Journal gespeichert |
+| **Tag 4**: Dokument prüfen, Herr Weber, Regeln, dann KI-Analyse als Hintergrundaufgabe | **Antwort in 4,1 s**; KI-Analyse nach 394 s beendet | Amoxicillin-Warnung sofort angezeigt, die KI fügt keine Anmerkung hinzu |
+| **Tag 4**: Dokument prüfen, KI deaktiviert, 5 Bewohner mit Brief | 1,4 bis 9,3 s | 4 Widersprüche erkannt (Schulz, Weber, Wagner, Müller), kein Fehlalarm (Fischer) |
+| Dienstbericht, Etage 2 (4 Bewohner), dann Validierung des Stapels | 16,3 Min. für die 4 Berichte (≈ 4 Min. je Bericht) | 4 Berichte validiert, **4 Punkte `rapport_valide` in Qdrant**, **eine Nachricht in Mailpit** (« Dienstübergabe – Etage 2 – … »), Zeile `soins.transmissions` (gesendet, 4 Validierungen), Ereignisse `ajout_rag` und `transmission` im Journal; **zweite Validierung desselben Stapels abgelehnt (4 Ablehnungen)**. Textqualität: unvollkommen (6 bis 8 Warnungen pro Bericht: Sätze ohne Quelle, in den Quellen fehlende Begriffe, ein hinzugefügtes Urteil, unvollständige SBAR-Struktur bei Frau Fischer): Das Gegenlesen bleibt unerlässlich |
 
-**Données de démonstration** : les notes et constantes fictives sont créées « il y a N heures » au moment du chargement. Pour retrouver une chute « cette nuit » ou des « 12 dernières heures », recharger les données : `cd data` puis `npm run postgres`.
+**Demonstrationsdaten**: Die fiktiven Notizen und Vitalwerte werden beim Laden « vor N Stunden » angelegt. Um einen Sturz « heute Nacht » oder die « letzten 12 Stunden » wiederzufinden, die Daten neu laden: `cd data`, dann `npm run postgres`.
 
-## Limites connues
+## Bekannte Grenzen
 
-- **Durée** : un rapport demande 1 à 6 minutes avec Llama 3.2 sur ce poste (sans carte graphique). L'interface attend jusqu'à 20 minutes ; un mécanisme d'attente asynchrone (réponse immédiate puis consultation du résultat) serait nécessaire avec un modèle plus lent.
-- **CORS ouvert** (`*`) pour le développement local ; à restreindre à l'adresse de l'interface en production.
-- **Pas d'authentification** des soignants : `valide_par` vaut « soignant (non identifié) » tant qu'un identifiant n'est pas fourni.
-- **Alarmes de capteurs** : le bandeau rouge est prêt, mais MQTT n'est pas encore relié ; `alertes` ne contient pour l'instant que des contradictions.
+- **Dauer**: Ein Bericht braucht mit Llama 3.2 auf diesem Rechner (ohne Grafikkarte) 1 bis 6 Minuten. Die Oberfläche wartet bis zu 20 Minuten; mit einem langsameren Modell wäre ein asynchroner Wartemechanismus (sofortige Antwort, dann Abfrage des Ergebnisses) nötig.
+- **CORS offen** (`*`) für die lokale Entwicklung; in der Produktion auf die Adresse der Oberfläche zu beschränken.
+- **Keine Authentifizierung** der Pflegekräfte: `valide_par` lautet « Pflegekraft (nicht identifiziert) », solange keine Kennung geliefert wird.
+- **Sensoralarme**: Der rote Balken ist bereit, aber MQTT ist noch nicht angebunden; `alertes` enthält derzeit nur Widersprüche.
 
-## Sécurité des appels (jour 4, étape 7)
+## Sicherheit der Aufrufe (Tag 4, Schritt 7)
 
-Depuis l'étape 7, **chaque appel** de l'interface vers n8n porte deux en-têtes :
+Seit Schritt 7 trägt **jeder Aufruf** der Oberfläche an n8n zwei Header:
 
-- `X-AICare-Cle` : la clé des webhooks (`VITE_N8N_CLE` dans `.env`). Elle filtre les appels qui ne viennent pas de l'interface ; elle est lisible dans le code de l'interface et ne protège donc pas les données à elle seule.
-- `Authorization: Bearer <jeton>` : le jeton de session remis à la connexion (`POST aicare-connexion` avec `{identifiant, pin}` → `{jeton, soignant, expire_le}`).
+- `X-AICare-Cle`: der Schlüssel der Webhooks (`VITE_N8N_CLE` in `.env`). Er filtert Aufrufe, die nicht aus der Oberfläche kommen; er ist im Code der Oberfläche lesbar und schützt die Daten daher nicht allein.
+- `Authorization: Bearer <jeton>`: das bei der Anmeldung ausgestellte Sitzungstoken (`POST aicare-connexion` mit `{identifiant, pin}` → `{jeton, soignant, expire_le}`).
 
-Sans session valide, n8n répond `{ "erreur": "session" }` **avant tout traitement** ; l'interface efface le jeton et rouvre la page de connexion. Le nom du soignant qui valide (`valide_par`) n'est plus envoyé par l'interface : n8n le lit dans la session. Deux points d'entrée s'ajoutent : `aicare-connexion` (clé seule) et `aicare-moi` (soignant de la session ; `{ "deconnexion": true }` ferme la session). Détail, limites : [securite.md](securite.md).
+Ohne gültige Sitzung antwortet n8n `{ "erreur": "session" }` **vor jeder Verarbeitung**; die Oberfläche löscht das Token und öffnet die Anmeldeseite erneut. Der Name der validierenden Pflegekraft (`valide_par`) wird von der Oberfläche nicht mehr gesendet: n8n liest ihn aus der Sitzung. Zwei Einstiegspunkte kommen hinzu: `aicare-connexion` (nur Schlüssel) und `aicare-moi` (Pflegekraft der Sitzung; `{ "deconnexion": true }` schließt die Sitzung). Details, Grenzen: [securite.md](securite.md).

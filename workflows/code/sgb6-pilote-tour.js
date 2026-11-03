@@ -1,6 +1,6 @@
-// Cotisations retraite, agent piloté – UN TOUR (sous-workflow) : la garde contrôle l'appel d'outil choisi par le modèle, puis le code l'exécute
-// sur l'état du dossier. Le modèle ne passe ni montant, ni degré, ni résultat de règle ; il n'a aucun outil « valider » ni « refuser ».
-// Seule l'extraction par l'IA (outil extraire_champs_par_ia) appelle un modèle ici : Ollama /api/generate, température 0, schéma JSON imposé.
+// Rentenbeiträge, gesteuerter Agent – EINE RUNDE (Unterworkflow): Der Wächter prüft den vom Modell gewählten Werkzeugaufruf, dann führt der Code ihn
+// auf dem Zustand der Akte aus. Das Modell übergibt weder Betrag noch Pflegegrad noch Regelergebnis; es hat kein Werkzeug « valider » oder « refuser ».
+// Nur die Extraktion durch die KI (Werkzeug extraire_champs_par_ia) ruft hier ein Modell auf: Ollama /api/generate, Temperatur 0, JSON-Schema vorgegeben.
 const CAISSE = __CAISSE__;
 const { reponse, sess } = $input.first().json;
 const appelerIA = async (corps) => {

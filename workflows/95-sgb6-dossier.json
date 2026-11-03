@@ -1,6 +1,6 @@
 {
   "id": "aicaresgb6dossier1",
-  "name": "AI-Care – Cotisations : dernier résultat d'un dossier",
+  "name": "AI-Care – Rentenbeiträge: letztes Ergebnis einer Akte",
   "active": false,
   "nodes": [
     {
@@ -31,10 +31,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Cotisations retraite – dernier résultat d'un dossier : { id }.\nconst id = String($input.first().json?.body?.id ?? '');\nif (!/^[a-z0-9][a-z0-9-]{2,63}$/.test(id)) throw new Error('id de dossier invalide');\nreturn [{ json: { id } }];\n"
+        "jsCode": "// Rentenbeiträge – letztes Ergebnis einer Akte: { id }.\nconst id = String($input.first().json?.body?.id ?? '');\nif (!/^[a-z0-9][a-z0-9-]{2,63}$/.test(id)) throw new Error('Ungültige Akten-ID');\nreturn [{ json: { id } }];\n"
       },
       "id": "a1c3e000-9142-4000-8000-000000009142",
-      "name": "Contrôler le dossier",
+      "name": "Akte prüfen",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -51,7 +51,7 @@
         }
       },
       "id": "a1c3e000-9143-4000-8000-000000009143",
-      "name": "Dossier",
+      "name": "Akte",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
@@ -69,10 +69,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Cotisations retraite – le dernier résultat enregistré d'un dossier, pour le revoir sans relancer l'agent.\nconst r = $input.first().json ?? {};\nif (!r.id) return [{ json: { ok: false, erreur: 'inconnu' } }];\nreturn [\n  {\n    json: {\n      ok: true,\n      id: r.id,\n      aidant: r.aidant,\n      personne_soignee: r.personne,\n      recu_le: r.recu_le,\n      statut: r.statut,\n      revue: r.revue === true,\n      resultat: r.resultat ?? null,\n      derniere_decision: r.derniere_decision ?? null,\n    },\n  },\n];\n"
+        "jsCode": "// Rentenbeiträge – das zuletzt gespeicherte Ergebnis einer Akte, um es erneut anzusehen, ohne den Agenten neu zu starten.\nconst r = $input.first().json ?? {};\nif (!r.id) return [{ json: { ok: false, erreur: 'inconnu' } }];\nreturn [\n  {\n    json: {\n      ok: true,\n      id: r.id,\n      aidant: r.aidant,\n      personne_soignee: r.personne,\n      recu_le: r.recu_le,\n      statut: r.statut,\n      revue: r.revue === true,\n      resultat: r.resultat ?? null,\n      derniere_decision: r.derniere_decision ?? null,\n    },\n  },\n];\n"
       },
       "id": "a1c3e000-9144-4000-8000-000000009144",
-      "name": "Réponse",
+      "name": "Antwort",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -82,10 +82,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Contrôle de session – le jeton « Bearer » de l'en-tête Authorization (43 caractères URL-safe) est haché (SHA-256) : seul le haché est en base.\nconst entetes = $input.first().json?.headers ?? {};\nconst m = String(entetes.authorization ?? '').match(/^Bearer ([A-Za-z0-9_-]{43})$/);\nif (!m) return [{ json: { hash: '' } }];\nreturn [{ json: { hash: require('crypto').createHash('sha256').update(m[1]).digest('hex') } }];\n"
+        "jsCode": "// Sitzungsprüfung – das « Bearer »-Token im Authorization-Header (43 URL-sichere Zeichen) wird gehasht (SHA-256): Nur der Hash steht in der Datenbank.\nconst entetes = $input.first().json?.headers ?? {};\nconst m = String(entetes.authorization ?? '').match(/^Bearer ([A-Za-z0-9_-]{43})$/);\nif (!m) return [{ json: { hash: '' } }];\nreturn [{ json: { hash: require('crypto').createHash('sha256').update(m[1]).digest('hex') } }];\n"
       },
       "id": "a1c3e000-0474-4000-8000-000000000474",
-      "name": "Session (jeton)",
+      "name": "Sitzung (Token)",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -102,7 +102,7 @@
         }
       },
       "id": "a1c3e000-0475-4000-8000-000000000475",
-      "name": "Session (base)",
+      "name": "Sitzung (Datenbank)",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
@@ -120,10 +120,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Contrôle de session – résultat : un soignant identifié (session ouverte, non expirée, compte actif) ou rien.\nconst r = $input.first().json ?? {};\nif (!r.identifiant) return [{ json: { ok: false } }];\nreturn [{ json: { ok: true, soignant: { identifiant: r.identifiant, nom: r.nom }, jeton_hash: r.jeton_hash } }];\n"
+        "jsCode": "// Sitzungsprüfung – Ergebnis: eine identifizierte Pflegekraft (Sitzung offen, nicht abgelaufen, Konto aktiv) oder nichts.\nconst r = $input.first().json ?? {};\nif (!r.identifiant) return [{ json: { ok: false } }];\nreturn [{ json: { ok: true, soignant: { identifiant: r.identifiant, nom: r.nom }, jeton_hash: r.jeton_hash } }];\n"
       },
       "id": "a1c3e000-0476-4000-8000-000000000476",
-      "name": "Session",
+      "name": "Sitzung",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -142,7 +142,7 @@
           },
           "conditions": [
             {
-              "id": "Session valide ?",
+              "id": "Sitzung gültig?",
               "leftValue": "={{ $json.ok === true }}",
               "rightValue": "",
               "operator": {
@@ -157,7 +157,7 @@
         "options": {}
       },
       "id": "a1c3e000-0477-4000-8000-000000000477",
-      "name": "Session valide ?",
+      "name": "Sitzung gültig?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
@@ -167,10 +167,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Contrôle de session – la session est valide : on rend aux nœuds suivants la requête d'origine (en-têtes, corps) telle que reçue.\nreturn [{ json: $('Webhook').first().json }];\n"
+        "jsCode": "// Sitzungsprüfung – die Sitzung ist gültig: Die ursprüngliche Anfrage (Header, Body) wird unverändert an die folgenden Knoten zurückgegeben.\nreturn [{ json: $('Webhook').first().json }];\n"
       },
       "id": "a1c3e000-0478-4000-8000-000000000478",
-      "name": "Requête",
+      "name": "Anfrage",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -180,10 +180,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Contrôle de session – refus : aucune donnée, seulement le motif. L'interface rouvre alors la page de connexion.\nreturn [{ json: { erreur: 'session' } }];\n"
+        "jsCode": "// Sitzungsprüfung – Ablehnung: keine Daten, nur der Grund. Die Oberfläche öffnet dann wieder die Anmeldeseite.\nreturn [{ json: { erreur: 'session' } }];\n"
       },
       "id": "a1c3e000-0479-4000-8000-000000000479",
-      "name": "Refus (session)",
+      "name": "Ablehnung (Sitzung)",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -197,91 +197,91 @@
       "main": [
         [
           {
-            "node": "Session (jeton)",
+            "node": "Sitzung (Token)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Contrôler le dossier": {
+    "Akte prüfen": {
       "main": [
         [
           {
-            "node": "Dossier",
+            "node": "Akte",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Dossier": {
+    "Akte": {
       "main": [
         [
           {
-            "node": "Réponse",
+            "node": "Antwort",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Session (jeton)": {
+    "Sitzung (Token)": {
       "main": [
         [
           {
-            "node": "Session (base)",
+            "node": "Sitzung (Datenbank)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Session (base)": {
+    "Sitzung (Datenbank)": {
       "main": [
         [
           {
-            "node": "Session",
+            "node": "Sitzung",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Session": {
+    "Sitzung": {
       "main": [
         [
           {
-            "node": "Session valide ?",
+            "node": "Sitzung gültig?",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Session valide ?": {
+    "Sitzung gültig?": {
       "main": [
         [
           {
-            "node": "Requête",
+            "node": "Anfrage",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Refus (session)",
+            "node": "Ablehnung (Sitzung)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Requête": {
+    "Anfrage": {
       "main": [
         [
           {
-            "node": "Contrôler le dossier",
+            "node": "Akte prüfen",
             "type": "main",
             "index": 0
           }

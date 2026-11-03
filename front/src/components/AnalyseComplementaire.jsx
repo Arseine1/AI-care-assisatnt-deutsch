@@ -5,8 +5,8 @@ import Avertissements from './Avertissements.jsx';
 
 const INTERVALLE_MS = 4000;
 
-// « Vérifier le document » : les règles de contrôle ont déjà répondu (texte ci-dessus). L'assistant IA fait une analyse
-// complémentaire en tâche de fond ; ses remarques s'ajoutent ici, marquées « à confirmer », et n'enlèvent rien aux règles.
+// „Dokument prüfen“: Die Kontrollregeln haben bereits geantwortet (Text oben). Der KI-Assistent führt im Hintergrund eine
+// ergänzende Analyse durch; seine Anmerkungen erscheinen hier, als „zu bestätigen“ gekennzeichnet, und nehmen den Regeln nichts weg.
 export default function AnalyseComplementaire({ analyse, onAlertes }) {
   const [etat, setEtat] = useState(null);
 
@@ -37,7 +37,7 @@ export default function AnalyseComplementaire({ analyse, onAlertes }) {
       await annulerTache(analyse);
       setEtat({ statut: 'annulee' });
     } catch {
-      /* l'analyse continue : on réessaiera au prochain clic */
+      /* Die Analyse läuft weiter: Beim nächsten Klick wird es erneut versucht */
     }
   }
 

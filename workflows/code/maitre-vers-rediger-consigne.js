@@ -1,5 +1,5 @@
-// Mode B – du template vers « rédiger » : le prompt assemblé + le contexte nécessaire au contrôle de la réponse.
+// Modus B – von der Vorlage zu « Verfassen »: der zusammengesetzte Prompt + der für die Prüfung der Antwort nötige Kontext.
 const t = $input.first().json;
-const c = $('Chercher').first().json;
-const consigne = $('Contrôler la consigne').first().json.consigne;
+const c = $('Suchen').first().json;
+const consigne = $('Anweisung prüfen').first().json.consigne;
 return [{ json: { ...t, faits: c.faits, patient: c.patient, autres: c.autres, mode: 'b', action: 'consigne_guidee', consigne } }];

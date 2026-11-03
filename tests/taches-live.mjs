@@ -1,9 +1,9 @@
-// Essai RÉEL des tâches de fond fiables (n8n, PostgreSQL et modèle de langue démarrés) :
-//   1. le veilleur (requête réelle du workflow 80) interrompt une tâche sans battement de coeur, pas une tâche vivante ;
-//   2. l'annulation (webhook réel) : une seule fois, tâche inconnue signalée, événement au journal ;
-//   3. le redémarrage de n8n interrompt toute tâche « en cours » ;
-//   4. l'annulation d'un vrai rapport d'étage en cours : les résidents suivants ne sont pas traités.
-// Lancer : node tests/taches-live.mjs        (environ 10 minutes : il redémarre n8n et lance une vraie génération)
+// ECHTER Test der zuverlässigen Hintergrundaufgaben (n8n, PostgreSQL und Sprachmodell gestartet):
+//   1. der Wächter (echte Abfrage des Workflows 80) unterbricht eine Aufgabe ohne Lebenszeichen, nicht eine lebende Aufgabe;
+//   2. der Abbruch (echter Webhook): nur einmal, unbekannte Aufgabe wird gemeldet, Ereignis im Protokoll;
+//   3. der Neustart von n8n unterbricht jede laufende Aufgabe („en_cours“);
+//   4. der Abbruch eines echten laufenden Etagenberichts: die folgenden Bewohner werden nicht bearbeitet.
+// Start: node tests/taches-live.mjs        (etwa 10 Minuten: er startet n8n neu und löst eine echte Erzeugung aus)
 import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
@@ -14,7 +14,7 @@ const racine = join(dirname(fileURLToPath(import.meta.url)), '..');
 const N8N = 'http://localhost:5679';
 let echecs = 0;
 const verifier = (condition, message) => {
-  console.log(`${condition ? 'OK  ' : 'ÉCHEC'} ${message}`);
+  console.log(`${condition ? 'OK  ' : 'FEHLER'} ${message}`);
   if (!condition) echecs++;
 };
 const pause = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -23,7 +23,7 @@ const sql = (requete) => {
   if (r.status !== 0) throw new Error(r.stderr);
   return r.stdout.trim();
 };
-// n8n peut perdre un instant sa propre base (poste de 8 Go presque saturé) : on réessaie quelques fois avant de conclure.
+// n8n kann kurzzeitig seine eigene Datenbank verlieren (Rechner mit 8 GB fast ausgelastet): Wir versuchen es einige Male erneut, bevor wir ein Ergebnis ziehen.
 const post = async (chemin, corps) => {
   for (let essai = 1; ; essai++) {
     try {
@@ -42,49 +42,49 @@ const nouvelle = (heartbeat) => sql(`insert into soins.taches (type, parametres,
 
 sql("delete from soins.taches where type = 'essai';");
 
-const seulementEtage = process.argv.includes('--etage'); // rejouer seulement la partie 4
+const seulementEtage = process.argv.includes('--etage'); // nur Teil 4 wiederholen
 if (!seulementEtage) {
-// ---- 1. veilleur ----
+// ---- 1. Wächter ----
 const perdue = nouvelle("now() - interval '40 minutes'");
 const vivante = nouvelle('now()');
-sql(requeteDe('80-reprise-taches.json', 'Tâches sans signe de vie'));
-verifier(statut(perdue) === 'interrompue', 'veilleur : la tâche sans battement depuis 40 minutes est « interrompue »');
-verifier(statut(vivante) === 'en_cours', 'veilleur : la tâche vivante n\'est pas touchée');
+sql(requeteDe('80-reprise-taches.json', 'Aufgaben ohne Lebenszeichen'));
+verifier(statut(perdue) === 'interrompue', 'Wächter: die Aufgabe ohne Lebenszeichen seit 40 Minuten ist „interrompue“');
+verifier(statut(vivante) === 'en_cours', 'Wächter: die lebende Aufgabe bleibt unberührt');
 
-// ---- 2. annulation ----
+// ---- 2. Abbruch ----
 const a = nouvelle('now()');
 const r1 = await post('aicare-annuler', { tache_id: a });
-verifier(r1.annulee === true && r1.statut === 'annulee' && statut(a) === 'annulee', 'annulation : une tâche en cours passe à « annulee »');
+verifier(r1.annulee === true && r1.statut === 'annulee' && statut(a) === 'annulee', 'Abbruch: eine laufende Aufgabe wechselt zu „annulee“');
 const r2 = await post('aicare-annuler', { tache_id: a });
-verifier(r2.annulee === false && r2.statut === 'annulee', 'annulation : une seconde demande ne fait rien');
+verifier(r2.annulee === false && r2.statut === 'annulee', 'Abbruch: eine zweite Anfrage bewirkt nichts');
 const r3 = await post('aicare-annuler', { tache_id: perdue });
-verifier(r3.annulee === false && r3.statut === 'interrompue', 'annulation : une tâche déjà interrompue n\'est pas modifiée');
+verifier(r3.annulee === false && r3.statut === 'interrompue', 'Abbruch: eine bereits unterbrochene Aufgabe wird nicht verändert');
 const r4 = await post('aicare-annuler', { tache_id: 'a1c3e000-0001-4000-8000-0000000000ff' });
-verifier(r4.annulee === false && r4.statut === 'inconnue', 'annulation : une tâche inconnue est signalée');
-verifier(sql(`select count(*) from soins.journal_ia where evenement = 'tache_annulee' and details->>'tache_id' = '${a}';`) === '1', 'annulation : événement « tache_annulee » au journal d\'audit');
+verifier(r4.annulee === false && r4.statut === 'inconnue', 'Abbruch: eine unbekannte Aufgabe wird gemeldet');
+verifier(sql(`select count(*) from soins.journal_ia where evenement = 'tache_annulee' and details->>'tache_id' = '${a}';`) === '1', 'Abbruch: Ereignis „tache_annulee“ im Prüfprotokoll');
 
-// ---- 3. redémarrage de n8n ----
+// ---- 3. Neustart von n8n ----
 const enCours = nouvelle('now()');
-console.log('redémarrage de n8n…');
+console.log('Neustart von n8n …');
 spawnSync('docker', ['compose', 'restart', 'n8n'], { cwd: join(racine, 'compose'), encoding: 'utf8' });
 for (let i = 0; i < 60; i++) {
   await pause(5000);
-  try { if ((await fetch(`${N8N}/healthz`)).ok) break; } catch { /* pas encore prêt */ }
+  try { if ((await fetch(`${N8N}/healthz`)).ok) break; } catch { /* noch nicht bereit */ }
 }
 let interrompue = false;
 for (let i = 0; i < 24 && !interrompue; i++) {
   interrompue = statut(enCours) === 'interrompue';
   if (!interrompue) await pause(5000);
 }
-verifier(interrompue, 'redémarrage : la tâche « en cours » est passée à « interrompue » au démarrage de n8n');
-verifier(Number(sql(`select count(*) from soins.journal_ia where evenement = 'tache_interrompue' and details->>'tache_id' = '${enCours}' and details->>'cause' = 'redemarrage';`)) === 1, 'redémarrage : événement « tache_interrompue » (cause redemarrage) au journal');
+verifier(interrompue, 'Neustart: die laufende Aufgabe („en_cours“) wurde beim Start von n8n zu „interrompue“');
+verifier(Number(sql(`select count(*) from soins.journal_ia where evenement = 'tache_interrompue' and details->>'tache_id' = '${enCours}' and details->>'cause' = 'redemarrage';`)) === 1, 'Neustart: Ereignis „tache_interrompue“ (Ursache redemarrage) im Protokoll');
 sql("delete from soins.taches where type = 'essai';");
 
 }
-// ---- 4. annulation d'un vrai rapport d'étage ----
+// ---- 4. Abbruch eines echten Etagenberichts ----
 await pause(20000);
 const { tache_id, total } = await post('aicare-etage', { etage: 2 });
-console.log(`rapport d'étage lancé (${total} résidents) ; je l'annule dès que le premier est prêt…`);
+console.log(`Etagenbericht gestartet (${total} Bewohner); ich breche ihn ab, sobald der erste fertig ist …`);
 let fait = 0;
 for (let i = 0; i < 90 && fait < 1; i++) {
   await pause(10000);
@@ -92,17 +92,17 @@ for (let i = 0; i < 90 && fait < 1; i++) {
 }
 const t0 = Date.now();
 const annulation = await post('aicare-annuler', { tache_id });
-verifier(annulation.annulee === true, `annulation réelle : demandée après ${fait} résident(s) prêt(s)`);
-// la génération en cours se termine, puis plus rien ne doit être lancé
+verifier(annulation.annulee === true, `echter Abbruch: nach ${fait} fertigen Bewohner(n) angefordert`);
+// die laufende Erzeugung wird beendet, danach darf nichts mehr gestartet werden
 const generations = () => Number(sql("select count(*) from soins.journal_ia where evenement = 'generation';"));
 await pause(240000);
 const avant = generations();
 await pause(120000);
 const finale = await post('aicare-tache', { tache_id });
-verifier(finale.statut === 'annulee', `annulation réelle : statut final « ${finale.statut} »`);
-verifier(finale.fait < total, `annulation réelle : ${finale.fait} résident(s) sur ${total} traités, les suivants ignorés`);
-verifier(generations() === avant, 'annulation réelle : plus aucune génération lancée après l\'annulation');
-console.log(`(annulée ${Math.round((Date.now() - t0) / 1000)} s avant la fin de l'observation)`);
+verifier(finale.statut === 'annulee', `echter Abbruch: Endstatus „${finale.statut}“`);
+verifier(finale.fait < total, `echter Abbruch: ${finale.fait} von ${total} Bewohnern bearbeitet, die folgenden übersprungen`);
+verifier(generations() === avant, 'echter Abbruch: nach dem Abbruch wird keine Erzeugung mehr gestartet');
+console.log(`(abgebrochen ${Math.round((Date.now() - t0) / 1000)} s vor Ende der Beobachtung)`);
 
-console.log(echecs ? `\n${echecs} échec(s).` : '\nTout est réussi.');
+console.log(echecs ? `\n${echecs} Fehler.` : '\nAlles erfolgreich.');
 process.exit(echecs ? 1 : 0);

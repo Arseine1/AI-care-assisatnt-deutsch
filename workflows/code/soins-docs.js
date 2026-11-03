@@ -1,17 +1,17 @@
-// Connecteur « logiciel de soins » : transforme les notes et les fiches résidents en documents à indexer.
-// Une note courte reste un morceau entier (garder sa date exacte permet de filtrer « les 12 dernières heures ») ;
-// le découpage 300–500 mots de l'Indexeur ne s'applique qu'aux textes plus longs.
+// Konnektor « Pflegesoftware »: wandelt die Notizen und Bewohnerakten in zu indexierende Dokumente um.
+// Eine kurze Notiz bleibt ein ganzer Abschnitt (das genaue Datum zu behalten erlaubt das Filtern nach „den letzten 12 Stunden“);
+// die Zerlegung des Indexers in 300–500 Wörter gilt nur für längere Texte.
 const iso = (d) => new Date(d).toISOString();
-const etiquette = (r) => `${r.civilite} ${r.prenom} ${r.nom} (chambre ${r.chambre})`;
-const base = { source: 'logiciel_soins', source_label: 'Logiciel de soins', collection: 'patients' };
+const etiquette = (r) => `${r.civilite} ${r.prenom} ${r.nom} (Zimmer ${r.chambre})`;
+const base = { source: 'logiciel_soins', source_label: 'Pflegesoftware', collection: 'patients' };
 
 const docs = [];
 
-for (const { json: n } of $('Notes récentes').all()) {
+for (const { json: n } of $('Aktuelle Notizen').all()) {
   docs.push({
     ...base,
     type: 'note',
-    titre: `Note de soins (${n.categorie}) par ${n.auteur}`,
+    titre: `Pflegenotiz (${n.categorie}) von ${n.auteur}`,
     texte: n.texte,
     source_ref: `note-${n.id}`,
     patient_id: n.patient_id,
@@ -22,21 +22,21 @@ for (const { json: n } of $('Notes récentes').all()) {
   });
 }
 
-for (const { json: f } of $('Fiches résidents').all()) {
+for (const { json: f } of $('Bewohnerakten').all()) {
   const liste = (a, vide) => (a && a.length ? a.join(' ; ') : vide);
   const texte = [
-    `Fiche résident : ${etiquette(f)}, né(e) le ${f.naissance}, étage ${f.etage}.`,
-    `Diagnostics : ${liste(f.diagnostics, 'aucun')}.`,
-    `Allergies : ${liste(f.allergies, 'aucune connue')}.`,
-    `Régime : ${(f.regime ?? 'non précisé').replace(/\.\s*$/, '')}.`,
-    `Risques : ${liste(f.risques, 'aucun signalé')}.`,
-    `Plan de médication : ${f.medication ?? 'aucun'}.`,
-    `Dernières constantes : ${f.vitaux ?? 'aucune'}.`,
+    `Bewohnerakte: ${etiquette(f)}, geboren am ${f.naissance}, Etage ${f.etage}.`,
+    `Diagnosen: ${liste(f.diagnostics, 'keine')}.`,
+    `Allergien: ${liste(f.allergies, 'keine bekannt')}.`,
+    `Ernährung: ${(f.regime ?? 'nicht angegeben').replace(/\.\s*$/, '')}.`,
+    `Risiken: ${liste(f.risques, 'keine gemeldet')}.`,
+    `Medikationsplan: ${f.medication ?? 'keiner'}.`,
+    `Letzte Vitalwerte: ${f.vitaux ?? 'keine'}.`,
   ].join('\n');
   docs.push({
     ...base,
     type: 'fiche',
-    titre: 'Fiche résident (logiciel de soins)',
+    titre: 'Bewohnerakte (Pflegesoftware)',
     texte,
     source_ref: `fiche-${f.patient_id}`,
     patient_id: f.patient_id,

@@ -1,17 +1,17 @@
-// Courrier reçu – alerte d'un courrier NON rattaché : nom et date de naissance ne correspondent à aucun résident, ou à plusieurs.
-// Le courrier reste dans « à vérifier », sans résident : on ne devine jamais.
+// Eingegangene Post – Meldung zu einem NICHT zugeordneten Schreiben: Name und Geburtsdatum passen zu keinem oder zu mehreren Bewohnern.
+// Das Schreiben bleibt in « a_verifier », ohne Bewohner: Es wird nie geraten.
 const alertes = $input.all().map((i) => i.json).map((l) => ({
   topic: `courrier/${l.source_ref}`,
   chambre: '',
-  libelle: 'Courrier non identifié',
+  libelle: 'Schreiben nicht zugeordnet',
   patient_id: '',
   faits: {
     gravite: 'attention',
     courrier: { titre: l.titre, expediteur: l.expediteur, date: l.date, ref: l.source_ref },
     avertissement: l.motif === 'identite_ambigue'
-      ? 'Le nom et la date de naissance du courrier correspondent à plusieurs résidents : le courrier n\'est rattaché à personne.'
-      : 'Le nom et la date de naissance du courrier ne correspondent à aucun résident : le courrier n\'est rattaché à personne.',
-    source: 'KIM (lettre de médecin)',
+      ? 'Name und Geburtsdatum des Schreibens passen zu mehreren Bewohnern: Das Schreiben ist niemandem zugeordnet.'
+      : 'Name und Geburtsdatum des Schreibens passen zu keinem Bewohner: Das Schreiben ist niemandem zugeordnet.',
+    source: 'KIM (Arztbrief)',
   },
 }));
 return [{ json: { alertes } }];

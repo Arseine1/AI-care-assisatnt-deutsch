@@ -1,20 +1,20 @@
-// Essais des prompts avec le VRAI modèle (Ollama) : lent (3 à 6 minutes par cas avec Llama 3.2 sur un petit poste).
-// Chaque cas de prompts/tests/*.json passe par le même template et les mêmes contrôles que la production ;
-// le texte est généré avec les mêmes réglages que le nœud « rédiger » (température 0,1, graine fixe, pénalité de répétition).
+// Versuche der Prompts mit dem ECHTEN Modell (Ollama): langsam (3 bis 6 Minuten pro Fall mit Llama 3.2 auf einem kleinen Rechner).
+// Jeder Fall aus prompts/tests/*.json durchläuft dieselbe Vorlage und dieselben Kontrollen wie die Produktion;
+// der Text wird mit denselben Einstellungen erzeugt wie der Knoten « Verfassen » (Temperatur 0,1, feste Zufallszahl, Wiederholungsstrafe).
 //
-// Usage : node tests/prompts-live.mjs [prompt_id] [numéro de cas 1-3]
-//         node tests/prompts-live.mjs generer_sbar 1        un seul cas
-//         node tests/prompts-live.mjs                       les 18 cas (très long)
-// Modèle : AICARE_MODELE (défaut : celui intégré aux workflows).
-// Verdict : le cas est RÉUSSI si le texte contient ce qu'il doit, ne contient pas ce qu'il ne doit pas, et
-// (pour les JSON) respecte les chemins attendus. Les avertissements des contrôles sont rapportés, sans faire échouer.
+// Aufruf: node tests/prompts-live.mjs [prompt_id] [Fallnummer 1-3]
+//         node tests/prompts-live.mjs generer_sbar 1        nur ein Fall
+//         node tests/prompts-live.mjs                       alle 18 Fälle (sehr lang)
+// Modell: AICARE_MODELE (Standard: das in die Workflows eingebettete).
+// Urteil: Der Fall ist BESTANDEN, wenn der Text enthält, was er enthalten muss, nicht enthält, was er nicht enthalten darf, und
+// (bei JSON) die erwarteten Pfade einhält. Die Warnungen der Kontrollen werden berichtet, ohne den Fall scheitern zu lassen.
 import http from 'node:http';
 import { IDS_PROMPTS, chargerCas, assembler, controler, verifierAttendu, lancer, jsCode, entreeTemplate } from './lib/prompts-harness.mjs';
 
 const OLLAMA = process.env.OLLAMA_URL_HOTE || 'http://localhost:11434';
 const [idDemande, numero] = process.argv.slice(2);
 
-// Requête POST sans délai d'attente : le fetch de Node abandonne après 5 minutes, ce que Llama 3 (8 milliards) dépasse sur un petit poste.
+// POST-Anfrage ohne Zeitlimit: Das fetch von Node bricht nach 5 Minuten ab, was Llama 3 (8 Milliarden) auf einem kleinen Rechner überschreitet.
 function postJson(url, corps) {
   return new Promise((resolve, reject) => {
     const req = http.request(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, timeout: 0 }, (res) => {
@@ -22,7 +22,7 @@ function postJson(url, corps) {
       res.on('data', (m) => morceaux.push(m));
       res.on('end', () => {
         const texte = Buffer.concat(morceaux).toString('utf8');
-        if (res.statusCode !== 200) return reject(new Error(`Ollama : HTTP ${res.statusCode} ${texte.slice(0, 200)}`));
+        if (res.statusCode !== 200) return reject(new Error(`Ollama: HTTP ${res.statusCode} ${texte.slice(0, 200)}`));
         resolve(JSON.parse(texte));
       });
     });
@@ -40,10 +40,10 @@ for (const id of ids) {
     if (numero && Number(numero) !== i + 1) continue;
     const c = cas[i];
     const t = assembler(c, id);
-    // même corps de requête que le nœud « Préparer appel »
+    // derselbe Anfragerumpf wie im Knoten « Aufruf vorbereiten »
     const e = entreeTemplate(c, id);
-    const appel = lancer(jsCode('62-brique-rediger.json', 'Préparer appel'), { entree: { ...t, faits: e.faits, patient: e.patient, autres: e.autres } })[0];
-    if (process.env.AICARE_MODELE) appel.body.model = process.env.AICARE_MODELE; // essai avec un autre modèle
+    const appel = lancer(jsCode('62-brique-rediger.json', 'Aufruf vorbereiten'), { entree: { ...t, faits: e.faits, patient: e.patient, autres: e.autres } })[0];
+    if (process.env.AICARE_MODELE) appel.body.model = process.env.AICARE_MODELE; // Versuch mit einem anderen Modell
     const debut = Date.now();
     const rep = await postJson(`${OLLAMA}/api/generate`, appel.body);
     const texte = String(rep.response ?? '').trim();
@@ -52,11 +52,11 @@ for (const id of ids) {
     total++;
     if (!echecs.length) reussis++;
     console.log(`\n=== ${id} v${t.prompt_version} / ${c.type} : ${c.nom}`);
-    console.log(`    modèle ${appel.body.model} | ${Math.round((Date.now() - debut) / 1000)} s | ${rep.eval_count} tokens`);
-    console.log(`    verdict : ${echecs.length ? 'ÉCHEC – ' + echecs.join(' | ') : 'RÉUSSI'}`);
-    console.log(`    avertissements des contrôles : ${controle.avertissements.length ? controle.avertissements.map((a) => a.type).join(', ') : 'aucun'}`);
+    console.log(`    Modell ${appel.body.model} | ${Math.round((Date.now() - debut) / 1000)} s | ${rep.eval_count} Tokens`);
+    console.log(`    Urteil: ${echecs.length ? 'FEHLGESCHLAGEN – ' + echecs.join(' | ') : 'BESTANDEN'}`);
+    console.log(`    Warnungen der Kontrollen: ${controle.avertissements.length ? controle.avertissements.map((a) => a.type).join(', ') : 'keine'}`);
     console.log(texte.split('\n').map((l) => `    | ${l}`).join('\n'));
   }
 }
-console.log(`\n${reussis}/${total} cas réussis avec le modèle.`);
+console.log(`\n${reussis}/${total} Fälle mit dem Modell bestanden.`);
 process.exit(reussis === total ? 0 : 1);

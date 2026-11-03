@@ -1,21 +1,21 @@
-# Protocole : prévention et prise en charge des escarres
+# Protokoll: Vorbeugung und Versorgung von Dekubitus
 
-*Document fictif de démonstration – Haus Sonnenhof.*
+*Fiktives Demonstrationsdokument – Haus Sonnenhof.*
 
-## Évaluer le risque
-- Évaluer l'échelle de risque (Braden) à l'admission, puis une fois par semaine et à chaque changement d'état.
-- Facteurs : mobilité réduite, dénutrition, incontinence, peau fragile, démence avancée.
+## Risiko einschätzen
+- Die Risikoskala (Braden) bei der Aufnahme, danach einmal pro Woche und bei jeder Zustandsänderung erheben.
+- Faktoren: eingeschränkte Mobilität, Mangelernährung, Inkontinenz, empfindliche Haut, fortgeschrittene Demenz.
 
-## Prévention
-- **Changements de position** toutes les 2 à 3 heures selon le risque, notés dans le dossier.
-- Matelas ou coussin adapté au niveau de risque ; talons libérés de toute pression.
-- Peau propre et sèche, soin de la peau sans massage des zones rouges.
-- Alimentation et hydratation : apport en protéines et en calories suffisant, compléments nutritionnels si nécessaire.
+## Vorbeugung
+- **Lagewechsel** alle 2 bis 3 Stunden je nach Risiko, in der Akte dokumentiert.
+- Matratze oder Kissen entsprechend dem Risikograd; Fersen frei von Druck.
+- Saubere und trockene Haut, Hautpflege ohne Massage gerötete Stellen.
+- Ernährung und Flüssigkeitszufuhr: ausreichende Eiweiß- und Kalorienzufuhr, bei Bedarf Trinknahrung.
 
-## Stades
-1. **Stade 1** : rougeur persistante qui ne blanchit pas à la pression, peau intacte → supprimer la pression, surveiller à chaque soin.
-2. **Stade 2** : phlyctène ou perte de peau superficielle → pansement adapté, informer l'infirmier référent.
-3. **Stade 3 et 4** : plaie profonde → avis médical immédiat, prise en charge spécialisée.
+## Stadien
+1. **Stadium 1**: anhaltende Rötung, die auf Druck nicht verblasst, Haut intakt → Druck entlasten, bei jeder Pflegemaßnahme beobachten.
+2. **Stadium 2**: Blase oder oberflächlicher Hautverlust → geeigneter Verband, die zuständige Pflegefachkraft informieren.
+3. **Stadium 3 und 4**: tiefe Wunde → sofortige ärztliche Beurteilung, spezialisierte Versorgung.
 
-## Signaler
-Toute rougeur persistante, nouvelle plaie ou aggravation est notée dans le dossier et transmise à l'équipe et au médecin.
+## Melden
+Jede anhaltende Rötung, neue Wunde oder Verschlechterung wird in der Akte vermerkt und an das Team und den Arzt weitergegeben.

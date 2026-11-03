@@ -1,6 +1,6 @@
 {
   "id": "aicaresgb6tache001",
-  "name": "AI-Care – Cotisations : avancement de l'agent",
+  "name": "AI-Care – Rentenbeiträge: Fortschritt des Agenten",
   "active": false,
   "nodes": [
     {
@@ -31,10 +31,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Cotisations retraite – avancement : { tache_id } (UUID).\nconst id = String($input.first().json?.body?.tache_id ?? '');\nif (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) throw new Error('tache_id invalide');\nreturn [{ json: { tache_id: id } }];\n"
+        "jsCode": "// Rentenbeiträge – Fortschritt: { tache_id } (UUID).\nconst id = String($input.first().json?.body?.tache_id ?? '');\nif (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) throw new Error('Ungültige tache_id');\nreturn [{ json: { tache_id: id } }];\n"
       },
       "id": "a1c3e000-9138-4000-8000-000000009138",
-      "name": "Contrôler la tâche",
+      "name": "Aufgabe prüfen",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -51,7 +51,7 @@
         }
       },
       "id": "a1c3e000-9139-4000-8000-000000009139",
-      "name": "Lire la tâche",
+      "name": "Aufgabe lesen",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
@@ -69,10 +69,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Cotisations retraite – avancement de l'agent : statut, étapes ou tours déjà faits (journal) et, une fois terminé, le résultat.\nconst t = $input.first().json ?? {};\nif (!t.id) throw new Error('Tâche introuvable');\nconst termine = ['termine', 'termine_avec_erreurs'].includes(t.statut);\nreturn [\n  {\n    json: {\n      tache_id: t.id,\n      dossier: t.dossier,\n      pilote: t.pilote ?? 'guidee',\n      statut: t.statut,\n      fait: t.fait,\n      total: t.total,\n      etapes: t.etapes ?? [],\n      resultat: termine && t.resultat && !Array.isArray(t.resultat) ? t.resultat : null,\n    },\n  },\n];\n"
+        "jsCode": "// Rentenbeiträge – Fortschritt des Agenten: Status, bereits erledigte Schritte oder Runden (Protokoll) und, nach dem Ende, das Ergebnis.\nconst t = $input.first().json ?? {};\nif (!t.id) throw new Error('Aufgabe nicht gefunden');\nconst termine = ['termine', 'termine_avec_erreurs'].includes(t.statut);\nreturn [\n  {\n    json: {\n      tache_id: t.id,\n      dossier: t.dossier,\n      pilote: t.pilote ?? 'guidee',\n      statut: t.statut,\n      fait: t.fait,\n      total: t.total,\n      etapes: t.etapes ?? [],\n      resultat: termine && t.resultat && !Array.isArray(t.resultat) ? t.resultat : null,\n    },\n  },\n];\n"
       },
       "id": "a1c3e000-9140-4000-8000-000000009140",
-      "name": "Réponse",
+      "name": "Antwort",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -82,10 +82,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Contrôle de session – le jeton « Bearer » de l'en-tête Authorization (43 caractères URL-safe) est haché (SHA-256) : seul le haché est en base.\nconst entetes = $input.first().json?.headers ?? {};\nconst m = String(entetes.authorization ?? '').match(/^Bearer ([A-Za-z0-9_-]{43})$/);\nif (!m) return [{ json: { hash: '' } }];\nreturn [{ json: { hash: require('crypto').createHash('sha256').update(m[1]).digest('hex') } }];\n"
+        "jsCode": "// Sitzungsprüfung – das « Bearer »-Token im Authorization-Header (43 URL-sichere Zeichen) wird gehasht (SHA-256): Nur der Hash steht in der Datenbank.\nconst entetes = $input.first().json?.headers ?? {};\nconst m = String(entetes.authorization ?? '').match(/^Bearer ([A-Za-z0-9_-]{43})$/);\nif (!m) return [{ json: { hash: '' } }];\nreturn [{ json: { hash: require('crypto').createHash('sha256').update(m[1]).digest('hex') } }];\n"
       },
       "id": "a1c3e000-0468-4000-8000-000000000468",
-      "name": "Session (jeton)",
+      "name": "Sitzung (Token)",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -102,7 +102,7 @@
         }
       },
       "id": "a1c3e000-0469-4000-8000-000000000469",
-      "name": "Session (base)",
+      "name": "Sitzung (Datenbank)",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
@@ -120,10 +120,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Contrôle de session – résultat : un soignant identifié (session ouverte, non expirée, compte actif) ou rien.\nconst r = $input.first().json ?? {};\nif (!r.identifiant) return [{ json: { ok: false } }];\nreturn [{ json: { ok: true, soignant: { identifiant: r.identifiant, nom: r.nom }, jeton_hash: r.jeton_hash } }];\n"
+        "jsCode": "// Sitzungsprüfung – Ergebnis: eine identifizierte Pflegekraft (Sitzung offen, nicht abgelaufen, Konto aktiv) oder nichts.\nconst r = $input.first().json ?? {};\nif (!r.identifiant) return [{ json: { ok: false } }];\nreturn [{ json: { ok: true, soignant: { identifiant: r.identifiant, nom: r.nom }, jeton_hash: r.jeton_hash } }];\n"
       },
       "id": "a1c3e000-0470-4000-8000-000000000470",
-      "name": "Session",
+      "name": "Sitzung",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -142,7 +142,7 @@
           },
           "conditions": [
             {
-              "id": "Session valide ?",
+              "id": "Sitzung gültig?",
               "leftValue": "={{ $json.ok === true }}",
               "rightValue": "",
               "operator": {
@@ -157,7 +157,7 @@
         "options": {}
       },
       "id": "a1c3e000-0471-4000-8000-000000000471",
-      "name": "Session valide ?",
+      "name": "Sitzung gültig?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
@@ -167,10 +167,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Contrôle de session – la session est valide : on rend aux nœuds suivants la requête d'origine (en-têtes, corps) telle que reçue.\nreturn [{ json: $('Webhook').first().json }];\n"
+        "jsCode": "// Sitzungsprüfung – die Sitzung ist gültig: Die ursprüngliche Anfrage (Header, Body) wird unverändert an die folgenden Knoten zurückgegeben.\nreturn [{ json: $('Webhook').first().json }];\n"
       },
       "id": "a1c3e000-0472-4000-8000-000000000472",
-      "name": "Requête",
+      "name": "Anfrage",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -180,10 +180,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Contrôle de session – refus : aucune donnée, seulement le motif. L'interface rouvre alors la page de connexion.\nreturn [{ json: { erreur: 'session' } }];\n"
+        "jsCode": "// Sitzungsprüfung – Ablehnung: keine Daten, nur der Grund. Die Oberfläche öffnet dann wieder die Anmeldeseite.\nreturn [{ json: { erreur: 'session' } }];\n"
       },
       "id": "a1c3e000-0473-4000-8000-000000000473",
-      "name": "Refus (session)",
+      "name": "Ablehnung (Sitzung)",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -197,91 +197,91 @@
       "main": [
         [
           {
-            "node": "Session (jeton)",
+            "node": "Sitzung (Token)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Contrôler la tâche": {
+    "Aufgabe prüfen": {
       "main": [
         [
           {
-            "node": "Lire la tâche",
+            "node": "Aufgabe lesen",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Lire la tâche": {
+    "Aufgabe lesen": {
       "main": [
         [
           {
-            "node": "Réponse",
+            "node": "Antwort",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Session (jeton)": {
+    "Sitzung (Token)": {
       "main": [
         [
           {
-            "node": "Session (base)",
+            "node": "Sitzung (Datenbank)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Session (base)": {
+    "Sitzung (Datenbank)": {
       "main": [
         [
           {
-            "node": "Session",
+            "node": "Sitzung",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Session": {
+    "Sitzung": {
       "main": [
         [
           {
-            "node": "Session valide ?",
+            "node": "Sitzung gültig?",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Session valide ?": {
+    "Sitzung gültig?": {
       "main": [
         [
           {
-            "node": "Requête",
+            "node": "Anfrage",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Refus (session)",
+            "node": "Ablehnung (Sitzung)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Requête": {
+    "Anfrage": {
       "main": [
         [
           {
-            "node": "Contrôler la tâche",
+            "node": "Aufgabe prüfen",
             "type": "main",
             "index": 0
           }

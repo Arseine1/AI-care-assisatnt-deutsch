@@ -1,13 +1,13 @@
-// Vérifier le document – RÉPONSE IMMÉDIATE : le rapport des règles de contrôle (code, sans IA), rattaché à un brouillon.
-// L'analyse complémentaire de l'assistant IA, si elle est activée, continue ensuite en tâche de fond (tache_id).
-const f = $('Règles seules').first().json;
-const b = $('Créer le brouillon de vérification').first().json;
-const c = $('Choisir la lettre').first().json;
+// Dokument prüfen – SOFORTIGE ANTWORT: der Bericht der Kontrollregeln (Code, ohne KI), einem Entwurf zugeordnet.
+// Die zusätzliche Analyse des KI-Assistenten läuft, falls aktiviert, anschließend als Hintergrundaufgabe weiter (tache_id).
+const f = $('Nur Regeln').first().json;
+const b = $('Prüfentwurf erstellen').first().json;
+const c = $('Schreiben wählen').first().json;
 let tache = null;
 try {
-  tache = $('Créer la tâche d\'analyse').first().json.id ?? null;
+  tache = $('Analyseaufgabe erstellen').first().json.id ?? null;
 } catch {
-  /* analyse IA désactivée : pas de tâche */
+  /* KI-Analyse deaktiviert: keine Aufgabe */
 }
 return [
   {

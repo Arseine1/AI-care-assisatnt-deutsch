@@ -1,2 +1,2 @@
-// Vérifier le document – événement d'audit de l'analyse complémentaire.
-return [{ json: $('Analyse complémentaire').first().json.evenement_journal }];
+// Dokument prüfen – Prüfereignis der zusätzlichen Analyse.
+return [{ json: $('Zusätzliche Analyse').first().json.evenement_journal }];

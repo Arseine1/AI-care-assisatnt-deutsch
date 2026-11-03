@@ -1,6 +1,6 @@
-// Cotisations retraite – dépôt d'un PDF : seul un PDF qui contient déjà du texte est accepté. Un scan (le service d'extraction
-// a dû faire de l'OCR) est refusé : on ne lit pas une image.
+// Rentenbeiträge – Upload eines PDFs: Nur ein PDF, das bereits Text enthält, wird akzeptiert. Ein Scan (der Extraktionsdienst
+// musste OCR einsetzen) wird abgelehnt: Ein Bild wird nicht gelesen.
 const r = $input.first().json ?? {};
-if (r.error || typeof r.texte !== 'string') return [{ json: { refus: 'lecture', message: "Le texte du PDF n'a pas pu être lu." } }];
-if (r.methode !== 'texte') return [{ json: { refus: 'scan', message: 'Ce PDF est un scan (image sans texte) : il est refusé. Déposez un PDF contenant du texte.' } }];
-return [{ json: { nom: $('Contrôler le dépôt').first().json.nom, texte: r.texte } }];
+if (r.error || typeof r.texte !== 'string') return [{ json: { refus: 'lecture', message: 'Der Text des PDFs konnte nicht gelesen werden.' } }];
+if (r.methode !== 'texte') return [{ json: { refus: 'scan', message: 'Dieses PDF ist ein Scan (Bild ohne Text) und wird abgelehnt. Laden Sie ein PDF mit Text hoch.' } }];
+return [{ json: { nom: $('Upload prüfen').first().json.nom, texte: r.texte } }];

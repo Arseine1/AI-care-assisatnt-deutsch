@@ -1,88 +1,88 @@
 # AI-Care Assistant
 
-Assistant IA pour les équipes soignantes d'une maison de soins en Allemagne, fonctionnant en local.
+KI-Assistent für die Pflegeteams einer Pflegeeinrichtung in Deutschland, der lokal läuft.
 
-L'interface est hybride : aucun chat direct avec l'IA.
+Die Oberfläche ist hybrid: kein direkter Chat mit der KI.
 
-- **Mode A** : boutons qui envoient `{action, chambre}` à un webhook n8n (le prompt reste caché derrière le bouton).
-- **Mode B** : le soignant choisit un résident (obligatoire) et écrit une consigne guidée ; n8n contrôle le texte puis l'insère dans un template verrouillé.
-- Chaque réponse est modifiable, cite ses sources entre crochets et doit passer par **[Valider & Enregistrer]**.
+- **Modus A**: Schaltflächen, die `{action, chambre}` an einen n8n-Webhook senden (der Prompt bleibt hinter der Schaltfläche verborgen).
+- **Modus B**: Die Pflegekraft wählt eine Bewohnerin bzw. einen Bewohner (Pflicht) und schreibt eine geführte Anweisung; n8n prüft den Text und fügt ihn dann in ein gesperrtes Template ein.
+- Jede Antwort ist bearbeitbar, nennt ihre Quellen in eckigen Klammern und muss über **[Bestätigen & Speichern]** laufen.
 
-Les données utilisées dans ce dépôt sont exclusivement fictives.
+Die in diesem Repository verwendeten Daten sind ausschließlich fiktiv.
 
-## Vue d'ensemble
+## Überblick
 
 ```mermaid
 flowchart LR
-  UI["Interface React<br/>connexion PIN, 3 pages"] --> N8N
+  UI["React-Oberfläche<br/>Anmeldung PIN, 3 Seiten"] --> N8N
   subgraph N8N["n8n"]
-    S["Session + clé"] --> C["Contrôle de la consigne"] --> CH["chercher"] --> T["template verrouillé"] --> R["rédiger"] --> F["filtre anti-invention"] --> V["valider (signé)"]
+    S["Sitzung + Schlüssel"] --> C["Prüfung der Anweisung"] --> CH["Suchen"] --> T["Gesperrte Vorlage"] --> R["Verfassen"] --> F["Anti-Erfindungs-Filter"] --> V["Bestätigen (signiert)"]
   end
-  CH --> PG[("PostgreSQL<br/>logiciel de soins")]
+  CH --> PG[("PostgreSQL<br/>Pflegesoftware")]
   CH --> QD[("Qdrant<br/>RAG")]
   R --> OL["Ollama<br/>llama3.2"]
-  MQ["Capteurs MQTT / TTN"] --> N8N
-  KIM["Courriers (Mailpit / KIM)"] --> N8N
-  FHIR["FHIR hôpital, ePA, fichiers"] --> QD
+  MQ["Sensoren MQTT / TTN"] --> N8N
+  KIM["Briefe (Mailpit / KIM)"] --> N8N
+  FHIR["FHIR Krankenhaus, ePA, Dateien"] --> QD
 ```
 
-Schémas détaillés, garanties et tests : [docs/architecture.md](docs/architecture.md). Bilan des quatre jours, chiffres et limites : [docs/RAPPORT.md](docs/RAPPORT.md).
+Detaillierte Schemata, Garantien und Tests: [docs/architecture.md](docs/architecture.md). Bilanz der vier Tage, Zahlen und Grenzen: [docs/RAPPORT.md](docs/RAPPORT.md).
 
-**Ce qu'il faut savoir avant d'aller plus loin** : le texte de l'IA est toujours un brouillon ; un filtre codé retire toute phrase qui n'est pas appuyée par son fait, mais le soignant relit et valide. Avec le petit modèle de ce poste (`llama3.2`, sans carte graphique), un texte prend 2 à 5 minutes et la batterie de 30 questions donne 25/30 mesuré (17/30 avant les corrections de l'étape 9 ; voir [docs/batterie.md](docs/batterie.md)).
+**Was man wissen sollte, bevor man weitergeht**: Der Text der KI ist immer ein Entwurf; ein programmierter Filter entfernt jeden Satz, der nicht durch seinen Fakt gestützt ist, aber die Pflegekraft liest und validiert. Mit dem kleinen Modell dieses Rechners (`llama3.2`, ohne Grafikkarte) dauert ein Text 2 bis 5 Minuten, und die Batterie von 30 Fragen ergibt gemessene 25/30 (17/30 vor den Korrekturen von Schritt 9; siehe [docs/batterie.md](docs/batterie.md)).
 
-## Sources d'intelligence
+## Intelligenzquellen
 
-Logiciel de soins, base de données de l'hôpital (FHIR), fichiers, capteurs, Télématique Infrastructure (système de santé allemand) et RAG (Qdrant). Le RAG n'est qu'une source parmi d'autres.
+Pflegesoftware, Krankenhausdatenbank (FHIR), Dateien, Sensoren, Telematikinfrastruktur (Gesundheitswesen in Deutschland) und RAG (Qdrant). Das RAG ist nur eine Quelle unter mehreren.
 
-## Documentation
+## Dokumentation
 
-- [Schéma du RAG : collections Qdrant et payloads](docs/schema-rag.md)
-- [Briques IA : chercher, template verrouillé, rédiger, enregistrer, journal](docs/briques-ia.md)
-- [Interface reliée à n8n : contrat, parcours, garanties, rapport de garde d'un étage et transmission](docs/interface-n8n.md)
-- [Prompts versionnés (7 prompts, 21 cas de test)](prompts/README.md)
-- [Essais des prompts avec le vrai modèle](docs/prompts-tests.md)
-- [Données de test](data/README.md)
-- [Alarmes de capteurs (MQTT) : sujets, délais, réglages](docs/alarmes.md)
-- [Documents en automatique : courriers, OCR, identification, validation, ePA](docs/documents.md)
-- [Installer le projet sur un autre poste et rejouer les tests](docs/INSTALLATION.md)
-- [Cotisations retraite des aidants familiaux : agent, webhooks, tables, tests](docs/cotisations.md)
-- [Vitesse : mesures avant / après](docs/vitesse.md)
-- [Sécurité : connexion du soignant, sessions, clés, limites](docs/securite.md)
-- [Batterie de tests : 30 questions, consignes malveillantes, homonymes, panne, temps de réponse](docs/batterie.md)
-- [Architecture : schémas, garanties, services](docs/architecture.md)
-- [Rapport des jours 1 à 4 : résultats, erreurs, limites](docs/RAPPORT.md)
-- [Dernière démonstration (nuit fictive)](docs/demo-derniere.md)
-- [Décisions techniques](DECISIONS.md)
+- [Schema des RAG: Qdrant-Collections und Payloads](docs/schema-rag.md)
+- [KI-Bausteine: Suchen, gesperrte Vorlage, Verfassen, Speichern, Protokoll](docs/briques-ia.md)
+- [Mit n8n verbundene Oberfläche: Vertrag, Ablauf, Garantien, Dienstbericht einer Etage und Übermittlung](docs/interface-n8n.md)
+- [Versionierte Prompts (7 Prompts, 21 Testfälle)](prompts/README.md)
+- [Praxistests der Prompts mit dem echten Modell](docs/prompts-tests.md)
+- [Testdaten](data/README.md)
+- [Sensoralarme (MQTT): Themen, Fristen, Einstellungen](docs/alarmes.md)
+- [Dokumente automatisch: Briefe, OCR, Identifizierung, Validierung, ePA](docs/documents.md)
+- [Das Projekt auf einem anderen Rechner installieren und die Tests wiederholen](docs/INSTALLATION.md)
+- [Rentenbeiträge pflegender Angehöriger: Agent, Webhooks, Tabellen, Tests](docs/cotisations.md)
+- [Geschwindigkeit: Messungen vorher / nachher](docs/vitesse.md)
+- [Sicherheit: Anmeldung der Pflegekraft, Sitzungen, Schlüssel, Grenzen](docs/securite.md)
+- [Testbatterie: 30 Fragen, bösartige Anweisungen, Namensvettern, Ausfall, Antwortzeit](docs/batterie.md)
+- [Architektur: Schemata, Garantien, Dienste](docs/architecture.md)
+- [Bericht der Tage 1 bis 4: Ergebnisse, Fehler, Grenzen](docs/RAPPORT.md)
+- [Letzte Demonstration (fiktive Nacht)](docs/demo-derniere.md)
+- [Technische Entscheidungen](DECISIONS.md)
 
-## Structure
+## Struktur
 
-| Dossier | Contenu |
+| Ordner | Inhalt |
 |---|---|
-| `front/` | Interface React (Vite) |
-| `compose/` | Socle docker-compose |
-| `data/` | Données fictives |
-| `prompts/` | Prompts et templates verrouillés |
-| `workflows/` | Workflows n8n exportés |
-| `docs/` | Documentation |
+| `front/` | React-Oberfläche (Vite) |
+| `compose/` | docker-compose-Basis |
+| `data/` | Fiktive Daten |
+| `prompts/` | Prompts und gesperrte Templates |
+| `workflows/` | Exportierte n8n-Workflows |
+| `docs/` | Dokumentation |
 | `tests/` | Tests |
 
-## Prérequis
+## Voraussetzungen
 
-Git, Node.js LTS, Docker Desktop (avec Docker Compose).
+Git, Node.js LTS, Docker Desktop (mit Docker Compose).
 
-## Mise en route complète (pile vierge)
+## Vollständige Inbetriebnahme (leerer Stack)
 
-**Installation guidée en une commande : `node scripts/installer.mjs --modeles`**, puis `node scripts/installer.mjs --verifier`. Guide pour un autre poste, durées des tests et dépannage : [docs/INSTALLATION.md](docs/INSTALLATION.md). Les étapes manuelles ci-dessous font la même chose.
+**Geführte Installation mit einem Befehl: `node scripts/installer.mjs --modeles`**, danach `node scripts/installer.mjs --verifier`. Anleitung für einen anderen Rechner, Dauer der Tests und Fehlerbehebung: [docs/INSTALLATION.md](docs/INSTALLATION.md). Die manuellen Schritte unten tun dasselbe.
 
-Dans l'ordre, depuis la racine du projet. Compter environ 25 minutes sur un poste de 8 Go (l'import des workflows est lent).
+In dieser Reihenfolge, vom Projektstamm aus. Auf einem Rechner mit 8 GB etwa 25 Minuten einplanen (der Import der Workflows ist langsam).
 
-1. **Secrets** : `cp .env.exemple .env`, puis les créer au hasard (aucune valeur n'est écrite dans le dépôt) :
+1. **Secrets**: `cp .env.exemple .env`, dann zufällig erzeugen (im Repository wird kein Wert gespeichert):
 
 ```bash
 node scripts/generer-secrets.mjs
 ```
 
-2. **Services Docker** :
+2. **Docker-Dienste**:
 
 ```bash
 cd compose
@@ -91,37 +91,37 @@ cd compose
 docker compose up -d
 ```
 
-3. **Modèles Ollama** (sur le poste, voir plus bas) : `llama3.2` et `nomic-embed-text`.
-4. **Données fictives et Qdrant** : `cd data`, `npm install`, `npm run tout`, `npm run qdrant` (voir « Workflows n8n »).
-5. **Workflows n8n** (crée aussi les credentials, publie les déclencheurs, redémarre n8n ; environ 15 minutes) :
+3. **Ollama-Modelle** (auf dem Rechner, siehe weiter unten): `llama3.2` und `nomic-embed-text`.
+4. **Fiktive Daten und Qdrant**: `cd data`, `npm install`, `npm run tout`, `npm run qdrant` (siehe « Workflows n8n »).
+5. **n8n-Workflows** (legt auch die Credentials an, veröffentlicht die Trigger, startet n8n neu; etwa 15 Minuten):
 
 ```bash
 node workflows/importer.mjs
 ```
 
-6. **Comptes des soignants** (codes PIN dans `.env`) :
+6. **Konten der Pflegekräfte** (PIN-Codes in `.env`):
 
 ```bash
 node scripts/creer-soignants.mjs
 ```
 
-7. **Interface** : voir « Interface (front) » ; mettre `VITE_MOCK=false` dans `.env` pour utiliser n8n.
-8. **Indexer le RAG** une première fois (sinon attendre 06:00) : `node tests/test-du-soir.mjs 1`.
-9. **Démonstration** : voir plus bas.
+7. **Oberfläche**: siehe « Oberfläche (Front) »; `VITE_MOCK=false` in `.env` setzen, um n8n zu verwenden.
+8. **Das RAG erstmals indexieren** (sonst bis 06:00 warten): `node tests/test-du-soir.mjs 1`.
+9. **Demonstration**: siehe weiter unten.
 
-### Démonstration : une nuit fictive
+### Demonstration: eine fiktive Nacht
 
-Rejoue de bout en bout une nuit de la maison Sonnenhof, avec le compte `arsene` (ou `AICARE_COMPTE_TEST=martin`) :
+Spielt eine Nacht im Haus Sonnenhof von Anfang bis Ende nach, mit dem Konto `arsene` (oder `AICARE_COMPTE_TEST=martin`):
 
 ```bash
 node scripts/demo-nuit.mjs
 ```
 
-Scènes : connexion par PIN ; 02 h 10 alarme de chute chambre 12 (capteur MQTT) ; 03 h 30 lettre de médecin dans la boîte KIM (OCR, identification d'un Müller par nom et date de naissance) ; rapport de garde et question libre (Llama, 3 à 10 minutes) ; consigne malveillante refusée avant toute IA ; validation signée par le compte connecté ; contrôle « aucune phrase sans source ». Sans Llama (moins de 5 minutes, sauf si d'anciens travaux de fond tournent encore) : `node scripts/demo-nuit.mjs --rapide`. Le résultat est écrit dans [docs/demo-derniere.md](docs/demo-derniere.md).
+Szenen: Anmeldung per PIN; 02:10 Sturzalarm in Zimmer 12 (MQTT-Sensor); 03:30 Arztbrief im KIM-Postfach (OCR, Identifizierung eines Müller anhand von Name und Geburtsdatum); Dienstbericht und freie Frage (Llama, 3 bis 10 Minuten); bösartige Anweisung vor jeder KI abgelehnt; signierte Validierung durch das angemeldete Konto; Kontrolle « kein Satz ohne Quelle ». Ohne Llama (weniger als 5 Minuten, außer wenn noch alte Hintergrundaufgaben laufen): `node scripts/demo-nuit.mjs --rapide`. Das Ergebnis wird in [docs/demo-derniere.md](docs/demo-derniere.md) geschrieben.
 
-Avant une démonstration, recharger les horodatages (les « 12 dernières heures » vieillissent) : `cd data && npm run postgres`.
+Vor einer Demonstration die Zeitstempel neu laden (die « letzten 12 Stunden » veralten): `cd data && npm run postgres`.
 
-**Repartir d'une pile entièrement vierge** (efface les volumes Docker : base, Qdrant, n8n, comptes) :
+**Von einem vollständig leeren Stack neu beginnen** (löscht die Docker-Volumes: Datenbank, Qdrant, n8n, Konten):
 
 ```bash
 cd compose
@@ -130,11 +130,11 @@ cd compose
 docker compose down -v
 ```
 
-puis reprendre les étapes 2 à 9. Le script de démonstration ne fait pas cette remise à zéro lui-même : elle détruit des données et se décide à la main.
+danach die Schritte 2 bis 9 wiederholen. Das Demonstrationsskript führt diese Rücksetzung nicht selbst durch: Sie zerstört Daten und wird von Hand entschieden.
 
 ### Ollama (Llama)
 
-Ollama n'est pas dans le docker-compose : on réutilise celui installé sur le poste (port 11434), afin de ne pas avoir deux copies du modèle. Les conteneurs l'appellent via `http://host.docker.internal:11434`. Le modèle de rédaction est `llama3.2` (réglage `AICARE_MODELE`). Installer les modèles sur le poste :
+Ollama ist nicht im docker-compose enthalten: Es wird die auf dem Rechner installierte Instanz (Port 11434) wiederverwendet, um nicht zwei Kopien des Modells zu haben. Die Container rufen es über `http://host.docker.internal:11434` auf. Das Modell für die Textgenerierung ist `llama3.2` (Einstellung `AICARE_MODELE`). Die Modelle auf dem Rechner installieren:
 
 ```bash
 ollama pull llama3.2
@@ -144,26 +144,26 @@ ollama pull llama3.2
 ollama pull nomic-embed-text
 ```
 
-> Pour un serveur sans Ollama installé, ajouter un service `ollama` au compose et lancer ces deux commandes avec `docker compose exec ollama ollama pull …`.
+> Für einen Server ohne installiertes Ollama einen Dienst `ollama` zum Compose hinzufügen und diese beiden Befehle mit `docker compose exec ollama ollama pull …` ausführen.
 
-### Adresses (poste → conteneur)
+### Adressen (Rechner → Container)
 
-| Service | Depuis le poste | Depuis un conteneur |
+| Dienst | Vom Rechner aus | Aus einem Container |
 |---|---|---|
 | n8n | http://localhost:5679 | http://n8n:5678 |
 | Qdrant | http://localhost:6335 | http://qdrant:6333 |
 | Mosquitto (MQTT) | localhost:1884 | mosquitto:1883 |
-| Mailpit (interface) | http://localhost:8025 | mailpit:1025 |
+| Mailpit (Oberfläche) | http://localhost:8025 | mailpit:1025 |
 | HAPI FHIR | http://localhost:8090/fhir | http://hapi-fhir:8080/fhir |
 | PostgreSQL | — | postgres:5432 |
 | Ollama | http://localhost:11434 | http://host.docker.internal:11434 |
-| ePA – médication (FHIR) | http://localhost:8084/fhir | http://host.docker.internal:8084/fhir |
-| ePA – rendu de l'eML | http://localhost:8085 | http://host.docker.internal:8085 |
-| ePA – information | http://localhost:8082 | http://host.docker.internal:8082 |
+| ePA – Medikation (FHIR) | http://localhost:8084/fhir | http://host.docker.internal:8084/fhir |
+| ePA – Darstellung der eML | http://localhost:8085 | http://host.docker.internal:8085 |
+| ePA – Information | http://localhost:8082 | http://host.docker.internal:8082 |
 
-### Test Llama 3 via n8n
+### Test von Llama 3 über n8n
 
-Importer `workflows/test-llama3.json` (déjà fait par la commande ci-dessous), puis :
+`workflows/test-llama3.json` importieren (bereits durch den folgenden Befehl erledigt), dann:
 
 ```bash
 docker compose exec n8n n8n import:workflow --input=/tmp/test-llama3.json
@@ -173,11 +173,11 @@ docker compose exec n8n n8n import:workflow --input=/tmp/test-llama3.json
 curl -X POST http://localhost:5679/webhook/test-llama3
 ```
 
-La réponse est un JSON `{"reponse": "..."}` généré par Llama 3. Llama 3 (8B) demande environ 5 Go de mémoire libre.
+Die Antwort ist ein von Llama 3 erzeugtes JSON `{"reponse": "..."}`. Llama 3 (8B) benötigt etwa 5 GB freien Arbeitsspeicher.
 
-### Télématique Infrastructure (système de santé allemand) de test : ePA de gematik
+### Test-Telematikinfrastruktur (Gesundheitswesen in Deutschland): ePA von gematik
 
-Les mocks officiels de gematik simulent l'ePA (dossier patient électronique). Dépôt tiers, ignoré par Git :
+Die offiziellen Mocks von gematik simulieren die ePA (elektronische Patientenakte). Drittanbieter-Repository, von Git ignoriert:
 
 ```bash
 cd compose
@@ -186,15 +186,15 @@ cd compose
 git clone https://github.com/gematik/epa-deployment
 ```
 
-> Si `git clone` est bloqué sur le poste, télécharger l'archive https://codeload.github.com/gematik/epa-deployment/zip/refs/heads/main et l'extraire dans `compose/epa-deployment/`.
+> Ist `git clone` auf dem Rechner blockiert, das Archiv https://codeload.github.com/gematik/epa-deployment/zip/refs/heads/main herunterladen und in `compose/epa-deployment/` entpacken.
 
-Démarrage **allégé** (3 services, ~1,5 Go de RAM) : service de médication (FHIR), rendu de l'eML et service d'information. Le fichier `epa-mocks.override.yml` plafonne la mémoire de chaque JVM et agrandit la page de résultats FHIR :
+**Schlanker** Start (3 Dienste, ~1,5 GB RAM): Medikationsdienst (FHIR), Darstellung der eML und Informationsdienst. Die Datei `epa-mocks.override.yml` begrenzt den Speicher jeder JVM und vergrößert die FHIR-Ergebnisseite:
 
 ```bash
 docker compose -f epa-deployment/dc-mocks.yml -f epa-mocks.override.yml up -d medication-service medication-render-service information-service
 ```
 
-Le service de médication met environ 5 minutes à démarrer. Ensuite, charger l'ePA des résidents fictifs :
+Der Medikationsdienst braucht etwa 5 Minuten zum Starten. Danach die ePA der fiktiven Bewohner laden:
 
 ```bash
 cd ../data
@@ -203,28 +203,28 @@ cd ../data
 npm run epa
 ```
 
-Lire l'eML d'un résident (M. Weber, KVNR fictif Z000000012) :
+Die eML einer Bewohnerin bzw. eines Bewohners lesen (Herr Weber, fiktive KVNR Z000000012):
 
 ```bash
 curl -H "x-insurantid: Z000000012" -H "Accept: text/html" http://localhost:8085/epa/medication/render/v1/eml/xhtml
 ```
 
-Démarrage **complet** de gematik (ajoute tiger-proxy sur le port 443, vau-proxy, authorization, entitlement ; ~4 Go de RAM au total) : `docker compose -f epa-deployment/dc-mocks.yml -f epa-mocks.override.yml up -d`.
-La KIM reste simulée par Mailpit.
-## Workflows n8n (connecteurs vers les sources d'intelligence)
+**Vollständiger** Start von gematik (fügt tiger-proxy auf Port 443, vau-proxy, authorization, entitlement hinzu; insgesamt ~4 GB RAM): `docker compose -f epa-deployment/dc-mocks.yml -f epa-mocks.override.yml up -d`.
+KIM bleibt durch Mailpit simuliert.
+## n8n-Workflows (Konnektoren zu den Intelligenzquellen)
 
-Les workflows sont dans `workflows/` (JSON versionnés, générés depuis `workflows/code/*.js`) :
+Die Workflows liegen in `workflows/` (versionierte JSON-Dateien, erzeugt aus `workflows/code/*.js`):
 
-| Fichier | Rôle |
+| Datei | Aufgabe |
 |---|---|
-| `00-indexeur.json` | sous-workflow commun : découpage 300–500 mots, embedding `nomic-embed-text`, écriture dans Qdrant |
-| `10-connecteur-logiciel-soins.json` | notes de soins et fiches résidents (PostgreSQL) |
-| `20-connecteur-fhir-hopital.json` | base de l'hôpital (HAPI FHIR) |
-| `30-connecteur-fichiers.json` | `data/fichiers/` (protocoles, documents scannés par OCR) |
-| `40-connecteur-epa.json` | ePA de test (diagnostics et eML) |
-| `50-connecteur-kim.json` | boîte KIM simulée (lettres de médecin, avec OCR) vers la collection `a_verifier` |
+| `00-indexeur.json` | gemeinsamer Unter-Workflow: Aufteilung in 300–500 Wörter, Embedding `nomic-embed-text`, Schreiben in Qdrant |
+| `10-connecteur-logiciel-soins.json` | Pflegenotizen und Bewohnerakten (PostgreSQL) |
+| `20-connecteur-fhir-hopital.json` | Krankenhausdatenbank (HAPI FHIR) |
+| `30-connecteur-fichiers.json` | `data/fichiers/` (Protokolle, per OCR gelesene Dokumente) |
+| `40-connecteur-epa.json` | Test-ePA (Diagnosen und eML) |
+| `50-connecteur-kim.json` | simuliertes KIM-Postfach (Arztbriefe, mit OCR) in die Collection `a_verifier` |
 
-Préparer, puis importer dans n8n (le credential PostgreSQL est créé depuis le `.env`) :
+Vorbereiten, dann in n8n importieren (das PostgreSQL-Credential wird aus der `.env` angelegt):
 
 ```bash
 cd compose
@@ -245,16 +245,16 @@ cd ..
 node workflows/importer.mjs
 ```
 
-Lancer un connecteur à la main (réponse : nombre de morceaux indexés) :
+Einen Konnektor von Hand starten (Antwort: Anzahl der indexierten Abschnitte):
 
 ```bash
 curl -X POST http://localhost:5679/webhook/import-soins
 ```
 
-**Planification automatique : 4 fois par jour** (00:00, 06:00, 12:00 et 18:00, heure de Berlin ; soins à :00, FHIR à :10, fichiers à :20, ePA à :30, KIM à :40). L'anti-doublon (empreinte SHA-256) et le journal `soins.journal_imports` évitent de ré-importer ce qui n'a pas changé.
+**Automatische Planung: 4-mal täglich** (00:00, 06:00, 12:00 und 18:00, Berliner Zeit; Pflege um :00, FHIR um :10, Dateien um :20, ePA um :30, KIM um :40). Die Duplikatsperre (SHA-256-Fingerabdruck) und das Journal `soins.journal_imports` verhindern, dass Unverändertes erneut importiert wird.
 
-Webhooks (import à la demande) : `import-soins`, `import-fhir`, `import-fichiers`, `import-epa`, `import-kim`. Après une modification de `workflows/code/`, régénérer avec `node workflows/generer.mjs` puis réimporter. Test hors n8n du découpage : `node tests/indexeur-decoupage.test.mjs`. Test du soir (3 passages, aucun doublon, recherche « M. Weber chute ») : `node tests/test-du-soir.mjs`.
-## Interface (front)
+Webhooks (Import auf Abruf): `import-soins`, `import-fhir`, `import-fichiers`, `import-epa`, `import-kim`. Nach einer Änderung in `workflows/code/` mit `node workflows/generer.mjs` neu erzeugen und erneut importieren. Test der Aufteilung außerhalb von n8n: `node tests/indexeur-decoupage.test.mjs`. Abendtest (3 Durchläufe, keine Duplikate, Suche « Herr Weber Sturz »): `node tests/test-du-soir.mjs`.
+## Oberfläche (Front)
 
 ```bash
 cd front
@@ -266,9 +266,9 @@ npm install
 npm run dev
 ```
 
-Puis ouvrir http://localhost:5173 (ou l'adresse « Network » affichée, depuis une tablette). Tous les textes sont dans `front/src/i18n/fr.json`.
+Dann http://localhost:5173 öffnen (oder die angezeigte « Network »-Adresse, von einem Tablet aus). Alle Texte stehen in `front/src/i18n/de.json`.
 
-**Connexion.** L'interface s'ouvre sur une page de connexion (identifiant + code PIN). En mode simulé (par défaut) : identifiant `demo`, code PIN `123456`. Avec n8n (`VITE_MOCK=false` dans `.env`) : comptes fictifs `martin`, `keller`, `roth`, dont les PIN sont dans `.env` (`DEMO_PIN_*`). Première mise en route de la sécurité :
+**Anmeldung.** Die Oberfläche öffnet sich mit einer Anmeldeseite (Kennung + PIN-Code). Im simulierten Modus (Standard): Kennung `demo`, PIN-Code `123456`. Mit n8n (`VITE_MOCK=false` in `.env`): fiktive Konten `martin`, `keller`, `roth`, deren PINs in `.env` stehen (`DEMO_PIN_*`). Erste Inbetriebnahme der Sicherheit:
 
 ```bash
 node scripts/generer-secrets.mjs
@@ -280,74 +280,74 @@ node scripts/creer-soignants.mjs
 node workflows/importer.mjs
 ```
 
-Détail, limites : [docs/securite.md](docs/securite.md).
+Details, Grenzen: [docs/securite.md](docs/securite.md).
 
-**Créer un compte soignant** (identifiant + PIN), sans toucher au code : `node scripts/creer-compte.mjs` (mode guidé). Changer un PIN, désactiver un compte, lister : voir [docs/securite.md](docs/securite.md#créer-et-gérer-les-comptes).
+**Ein Pflegekraft-Konto anlegen** (Kennung + PIN), ohne den Code anzufassen: `node scripts/creer-compte.mjs` (geführter Modus). PIN ändern, Konto deaktivieren, auflisten: siehe [docs/securite.md](docs/securite.md#konten-anlegen-und-verwalten).
 
 
-## Cotisations retraite des aidants familiaux (démonstration)
+## Rentenbeiträge pflegender Angehöriger (Demonstration)
 
-4e page de l'interface : un agent IA traite les questionnaires des aidants familiaux (cotisations retraite payées par la caisse de dépendance, § 3 et § 166 SGB VI, § 44 SGB XI). **Données entièrement fictives.** Fonctionne en mode simulé (`VITE_MOCK=true`) et **de bout en bout par n8n** (`VITE_MOCK=false` : 6 webhooks, tâche de fond, PostgreSQL, journal, dépôt de fichiers, lecture facultative par llama3.2) : voir [docs/cotisations.md](docs/cotisations.md).
+4. Seite der Oberfläche: Ein KI-Agent bearbeitet die Fragebögen pflegender Angehöriger (Rentenbeiträge, die von der Pflegekasse gezahlt werden, § 3 und § 166 SGB VI, § 44 SGB XI). **Vollständig fiktive Daten.** Funktioniert im simulierten Modus (`VITE_MOCK=true`) und **durchgängig über n8n** (`VITE_MOCK=false`: 6 Webhooks, Hintergrundaufgabe, PostgreSQL, Journal, Dateiablage, optionales Lesen durch llama3.2): siehe [docs/cotisations.md](docs/cotisations.md).
 
-| Fichier | Rôle |
+| Datei | Aufgabe |
 |---|---|
-| `workflows/code/sgb6/regles.js` | Moteur de règles en JavaScript pur : lecture du questionnaire, contrôle des champs (numéro d'assurance retraite avec son chiffre de contrôle), règles R1 à R6, calcul, brouillon de déclaration |
-| `data/sgb6/valeurs-legales.json` | Bezugsgröße, taux et pourcentages par année (une année absente = erreur, jamais de valeur par défaut) |
-| `data/sgb6/caisse.json`, `questionnaires/*.txt`, `attendus.json` | Caisse simulée, 9 questionnaires fictifs, résultat attendu de chacun |
-| `front/src/components/PageCotisations.jsx` | La page : dossiers, étapes de l'agent, règles, calcul, déclaration, décision humaine |
+| `workflows/code/sgb6/regles.js` | Regelwerk in reinem JavaScript: Lesen des Fragebogens, Prüfung der Felder (Rentenversicherungsnummer mit ihrer Prüfziffer), Regeln R1 bis R6, Berechnung, Entwurf der Meldung |
+| `data/sgb6/valeurs-legales.json` | Bezugsgröße, Beitragssätze und Prozentsätze je Jahr (ein fehlendes Jahr = Fehler, niemals ein Standardwert) |
+| `data/sgb6/caisse.json`, `questionnaires/*.txt`, `attendus.json` | Simulierte Kasse, 9 fiktive Fragebögen, erwartetes Ergebnis jedes einzelnen |
+| `front/src/components/PageCotisations.jsx` | Die Seite: Vorgänge, Schritte des Agenten, Regeln, Berechnung, Meldung, menschliche Entscheidung |
 
-L'agent ne valide et ne refuse jamais seul : « Valider » (toutes les règles ok), « Créer une tâche de revue » et « Refuser » (motif obligatoire, après une exception) sont réservés à la personne. Captures : `docs/captures/cotisations-*.jpg`. Tests : `node --test tests/sgb6-regles.test.mjs tests/sgb6-attendus.test.mjs`, `node tests/sgb6-n8n.test.mjs`, et avec n8n démarré `node tests/sgb6-live.mjs` (`--ia` pour la lecture par l'IA, 20 à 40 minutes).
+Der Agent validiert oder lehnt niemals allein ab: « Meldung bestätigen » (alle Regeln ok), « Prüfaufgabe erstellen » und « Ablehnen » (Begründung Pflicht, nach einer Ausnahme) sind der Person vorbehalten. Screenshots: `docs/captures/cotisations-*.jpg`. Tests: `node --test tests/sgb6-regles.test.mjs tests/sgb6-attendus.test.mjs`, `node tests/sgb6-n8n.test.mjs`, und bei gestartetem n8n `node tests/sgb6-live.mjs` (`--ia` für das Lesen durch die KI, 20 bis 40 Minuten).
 
 ## Tests
 
-Sans IA (instantanés) :
+Ohne KI (sofort):
 
 ```bash
-node tests/briques.test.mjs        # briques : template, contrôle de la réponse, enregistrer
+node tests/briques.test.mjs        # Bausteine: Template, Kontrolle der Antwort, Speichern
 ```
 ```bash
-node tests/prompts.test.mjs        # 7 prompts, 21 cas, réponses de référence
+node tests/prompts.test.mjs        # 7 Prompts, 21 Fälle, Referenzantworten
 ```
 ```bash
-node tests/consigne.test.mjs       # contrôle de la consigne du Mode B
+node tests/consigne.test.mjs       # Kontrolle der Anweisung in Modus B
 ```
 ```bash
-node tests/regles.test.mjs         # filet de règles des contradictions
+node tests/regles.test.mjs         # Regelnetz für Widersprüche
 ```
 ```bash
-node tests/chemins-ia.test.mjs     # aucun chemin du texte du soignant vers l'IA sans contrôle
+node tests/chemins-ia.test.mjs     # kein Weg vom Text der Pflegekraft zur KI ohne Kontrolle
 ```
 ```bash
-node tests/apres-validation.test.mjs   # rapport d'étage, ajout au RAG et transmission après validation
+node tests/apres-validation.test.mjs   # Etagenbericht, Aufnahme ins RAG und Übermittlung nach der Validierung
 ```
 ```bash
-node tests/taches.test.mjs             # tâches de fond : battement de coeur, annulation, reprise au démarrage
+node tests/taches.test.mjs             # Hintergrundaufgaben: Herzschlag, Abbruch, Wiederaufnahme beim Start
 ```
 ```bash
-node tests/courriers.test.mjs          # documents en automatique : identification, alertes, validation, rattrapage
+node tests/courriers.test.mjs          # Dokumente automatisch: Identifizierung, Warnungen, Validierung, Nachholen
 ```
 ```bash
-node tests/alarmes.test.mjs            # alarmes de capteurs : sujet, faits codés, ordre des étapes
+node tests/alarmes.test.mjs            # Sensoralarme: Thema, codierte Fakten, Reihenfolge der Schritte
 ```
 ```bash
-node tests/i18n.test.mjs               # textes de l'interface : pas de clé en double, aucune clé manquante
+node tests/i18n.test.mjs               # Texte der Oberfläche: kein doppelter Schlüssel, kein fehlender Schlüssel
 ```
 ```bash
-node tests/securite.test.mjs          # sécurité : session avant tout traitement, PIN haché, signature, aucun secret dans le dépôt
+node tests/securite.test.mjs          # Sicherheit: Sitzung vor jeder Verarbeitung, gehashte PIN, Signatur, kein Secret im Repository
 ```
 ```bash
-node tests/anti-invention.test.mjs     # filtre anti-invention : fausses réponses du modèle, aucune phrase non sourcée ne passe
+node tests/anti-invention.test.mjs     # Anti-Erfindungs-Filter: falsche Antworten des Modells, kein Satz ohne Quelle gelangt durch
 ```
 ```bash
-node tests/pertinence.test.mjs         # « chercher » : faits classés selon la demande, « information non disponible » si le dossier n'en parle pas
+node tests/pertinence.test.mjs         # « Suchen »: nach der Anfrage geordnete Fakten, « Information nicht verfügbar », wenn die Akte das Thema nicht behandelt
 ```
 
-**Batterie complète (étape 8)** : `node tests/batterie.mjs` (partie rapide, sans IA, quelques minutes) puis `node tests/batterie.mjs --reel` (30 questions avec Llama, environ 75 minutes, reprenable avec `--reprendre`). Résultats lisibles dans `tests/resultats/batterie-derniere.md`. Détail : [docs/batterie.md](docs/batterie.md).
+**Vollständige Batterie (Schritt 8)**: `node tests/batterie.mjs` (schneller Teil, ohne KI, einige Minuten), danach `node tests/batterie.mjs --reel` (30 Fragen mit Llama, etwa 75 Minuten, mit `--reprendre` fortsetzbar). Lesbare Ergebnisse in `tests/resultats/batterie-derniere.md`. Details: [docs/batterie.md](docs/batterie.md).
 
-Avec les services démarrés : `node tests/test-du-soir.mjs` (indexation, sans doublon). Avec le vrai modèle (lent) : `node tests/prompts-live.mjs`, et `node tests/alarme-live.mjs` pour les alarmes de capteurs (MQTT, délais), `node tests/taches-live.mjs` pour les tâches de fond, `node tests/securite-live.mjs` pour la sécurité contre n8n (clé, session, verrouillage, CORS, signature), et `node tests/etage-live.mjs 2` pour le rapport de garde d'un étage jusqu'à la transmission (10 à 25 minutes).
+Mit gestarteten Diensten: `node tests/test-du-soir.mjs` (Indexierung, ohne Duplikate). Mit dem echten Modell (langsam): `node tests/prompts-live.mjs`, und `node tests/alarme-live.mjs` für Sensoralarme (MQTT, Fristen), `node tests/taches-live.mjs` für die Hintergrundaufgaben, `node tests/securite-live.mjs` für die Sicherheit gegenüber n8n (Schlüssel, Sitzung, Sperrung, CORS, Signatur) und `node tests/etage-live.mjs 2` für den Dienstbericht einer Etage bis zur Übermittlung (10 bis 25 Minuten).
 
-Après une retouche d'un workflow, `node workflows/generer.mjs` puis `node workflows/importer.mjs --seulement=66,74` (numéros des workflows à réimporter).
+Nach der Änderung eines Workflows `node workflows/generer.mjs`, dann `node workflows/importer.mjs --seulement=66,74` (Nummern der erneut zu importierenden Workflows).
 
-## Décisions techniques
+## Technische Entscheidungen
 
-Voir [DECISIONS.md](DECISIONS.md).
+Siehe [DECISIONS.md](DECISIONS.md).

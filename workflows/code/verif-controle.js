@@ -1,8 +1,8 @@
-// Vérifier le document – contrôle de la demande {chambre}. Aucun texte libre : seule la chambre est lue, l'action est fixée ici.
+// Dokument prüfen – Prüfung der Anfrage {chambre}. Kein Freitext: Nur das Zimmer wird gelesen, die Aktion wird hier festgelegt.
 const e = $input.first().json?.body ?? {};
 const chambre = String(e.chambre ?? '');
-if (!/^\d{1,3}$/.test(chambre)) throw new Error(`Chambre invalide : « ${chambre} »`);
-// ref (facultatif) : le courrier précis à vérifier (kim/<expéditeur>/<fichier>) ; sans lui, le plus récent en attente.
+if (!/^\d{1,3}$/.test(chambre)) throw new Error(`Ungültiges Zimmer: „${chambre}“`);
+// ref (optional): das genau zu prüfende Schreiben (kim/<Absender>/<Datei>); ohne ref das neueste wartende.
 const ref = e.ref === undefined ? '' : String(e.ref);
-if (ref && !/^kim\/[^\s]{1,200}$/.test(ref)) throw new Error('ref invalide');
+if (ref && !/^kim\/[^\s]{1,200}$/.test(ref)) throw new Error('Ungültige ref');
 return [{ json: { action: 'verifier_document', chambre, prompt_id: 'comparer', verification: true, ref } }];

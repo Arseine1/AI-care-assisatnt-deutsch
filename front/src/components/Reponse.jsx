@@ -27,20 +27,20 @@ export function ApresValidation({ info }) {
   );
 }
 
-// Réponse de l'assistant IA : texte modifiable, sources entre crochets, validation.
-// `key` côté parent : une nouvelle réponse remet le composant à zéro.
+// Antwort des KI-Assistenten: bearbeitbarer Text, Quellen in eckigen Klammern, Bestätigung.
+// `key` auf Elternseite: Eine neue Antwort setzt die Komponente zurück.
 export default function Reponse({ reponse, contexte, onValider, onAlertes }) {
   const [texte, setTexte] = useState(reponse.texte);
-  const [valide, setValide] = useState(null); // heure de validation, ou null
+  const [valide, setValide] = useState(null); // Uhrzeit der Bestätigung oder null
   const [erreur, setErreur] = useState(false);
-  const [suite, setSuite] = useState(null); // ajout au RAG et transmission, après un rapport de garde
+  const [suite, setSuite] = useState(null); // Aufnahme ins RAG und Weitergabe, nach einem Übergabebericht
 
   const modifiee = texte !== reponse.texte;
-  const validable = reponse.brouillon_id !== null && reponse.brouillon_id !== undefined; // sans brouillon, rien à enregistrer
+  const validable = reponse.brouillon_id !== null && reponse.brouillon_id !== undefined; // ohne Entwurf gibt es nichts zu speichern
 
   function modifier(e) {
     setTexte(e.target.value);
-    setValide(null); // toute modification annule la validation précédente
+    setValide(null); // jede Änderung hebt die vorherige Bestätigung auf
   }
 
   async function valider() {
@@ -50,7 +50,7 @@ export default function Reponse({ reponse, contexte, onValider, onAlertes }) {
       setSuite(r?.apres_validation ?? null);
       setValide(heure());
     } catch {
-      setErreur(true); // le texte saisi est conservé
+      setErreur(true); // der eingegebene Text bleibt erhalten
     }
   }
 

@@ -1,2 +1,2 @@
-// Valider un rapport de vérification – seule la validation d'un rapport « Vérifier le document » peut faire entrer la lettre dans le RAG.
+// Prüfbericht bestätigen – nur die Bestätigung eines Berichts « Dokument prüfen » kann das Schreiben in das RAG aufnehmen.
 return [{ json: { validation_id: $input.first().json.validation_id } }];

@@ -1,18 +1,20 @@
-// Brique « rédiger » – préparation de l'appel au modèle de langue (Ollama), température 0,1.
-// L'entrée est la sortie du template (champ « prompt ») : aucun autre texte n'est envoyé à l'IA.
+// Baustein „Verfassen“ – Vorbereitung des Aufrufs des Sprachmodells (Ollama), Temperatur 0,1.
+// Eingabe ist die Ausgabe der Vorlage (Feld „prompt“): Es wird kein anderer Text an die KI gesendet.
 const e = $input.first().json;
-if (typeof e.prompt !== 'string' || !e.prompt.includes('[RÔLE ET RÈGLES]') || !e.prompt.includes('[FORMAT DE SORTIE]')) {
-  throw new Error('Prompt non verrouillé : seul le template peut fournir le texte envoyé à l\'IA.');
+// Die Blockmarker der Vorlage: deutsche und (alte) französische Schreibweise werden akzeptiert.
+const hatMarker = (...marker) => marker.some((m) => e.prompt.includes(m));
+if (typeof e.prompt !== 'string' || !hatMarker('[ROLLE UND REGELN]', '[RÔLE ET RÈGLES]') || !hatMarker('[AUSGABEFORMAT]', '[FORMAT DE SORTIE]')) {
+  throw new Error('Prompt nicht gesperrt: Nur die Vorlage darf den an die KI gesendeten Text liefern.');
 }
-// Modèle intégré à la génération (workflows/generer.mjs, variable d'environnement AICARE_MODELE).
+// In die Generierung eingebettetes Modell (workflows/generer.mjs, Umgebungsvariable AICARE_MODELE).
 const MODELE = __MODELE__;
-// Nombre de threads de calcul laissés à Ollama (AICARE_THREADS, 3 par défaut) : sur un poste de 4 coeurs, en garder au moins un libre pour n8n et PostgreSQL
-// évite qu'une alarme de capteur attende la fin d'une génération (voir docs/vitesse.md).
+// Anzahl der Rechenthreads für Ollama (AICARE_THREADS, Standard 3): Auf einem Rechner mit 4 Kernen sollte mindestens einer für n8n und PostgreSQL frei bleiben,
+// damit ein Sensoralarm nicht auf das Ende einer Generierung warten muss (siehe docs/vitesse.md).
 const THREADS = __THREADS__;
 
-// Sortie « phrases » : Ollama IMPOSE ce schéma JSON à la génération (sortie structurée), pas seulement le prompt.
-// source_id est limité aux identifiants des faits réellement fournis ; minItems oblige à écrire plusieurs phrases
-// (sans cela, un petit modèle s'arrête après la première). Le filtre retire ensuite tout ce qui n'est pas appuyé.
+// Ausgabe „phrases“: Ollama ERZWINGT dieses JSON-Schema bei der Generierung (strukturierte Ausgabe), nicht nur der Prompt.
+// source_id ist auf die Kennungen der tatsächlich gelieferten Fakten beschränkt; minItems zwingt zu mehreren Sätzen
+// (sonst hört ein kleines Modell nach dem ersten auf). Der Filter entfernt anschließend alles, was nicht belegt ist.
 const idsFaits = (e.faits ?? []).map((f) => f.id);
 const schemaPhrases = {
   type: 'object',
@@ -23,11 +25,11 @@ const schemaPhrases = {
       maxItems: e.max_phrases ?? 8,
       items: {
         type: 'object',
-        // clés d'une lettre : chaque clé est réécrite à chaque phrase, et le modèle écrit ~3 mots par seconde sur ce poste
-        // r = rubrique, t = texte de la phrase, f = identifiant du fait
+        // Schlüssel aus einem Buchstaben: Jeder Schlüssel wird bei jedem Satz neu geschrieben, und das Modell schreibt auf diesem Rechner ca. 3 Wörter pro Sekunde
+        // r = Rubrik, t = Text des Satzes, f = Kennung des Fakts
         properties: {
           r: { type: 'string', enum: (e.sections ?? []).length ? e.sections.map((s) => s.cle) : ['-'] },
-          t: { type: 'string', maxLength: e.longueur_phrase ?? 220 }, // 140 coupait des phrases en plein mot
+          t: { type: 'string', maxLength: e.longueur_phrase ?? 220 }, // 140 schnitt Sätze mitten im Wort ab
           f: idsFaits.length ? { type: 'string', enum: idsFaits } : { type: 'string' },
         },
         required: ['r', 't', 'f'],
@@ -42,9 +44,9 @@ const body = {
   model: MODELE,
   prompt: e.prompt,
   stream: false,
-  keep_alive: '30m', // le modèle reste chargé 30 minutes : pas de rechargement entre deux rapports d'un même étage
-  // repeat_penalty : sans lui, un petit modèle à température basse peut boucler en répétant les mêmes lignes.
-  // num_predict : une réponse en phrases JSON est plus longue qu'un texte brut (clés répétées).
+  keep_alive: '30m', // das Modell bleibt 30 Minuten geladen: kein Neuladen zwischen zwei Berichten derselben Etage
+  // repeat_penalty: Ohne ihn kann ein kleines Modell bei niedriger Temperatur in eine Schleife geraten und dieselben Zeilen wiederholen.
+  // num_predict: Eine Antwort aus JSON-Sätzen ist länger als ein reiner Text (wiederholte Schlüssel).
   options: { temperature: e.temperature ?? 0.1, num_thread: THREADS, num_ctx: 4096, num_predict: e.sortie === 'phrases' ? 450 : 500, seed: 42, repeat_penalty: 1.2, repeat_last_n: 128 },
   ...(format ? { format } : {}),
 };

@@ -3,8 +3,8 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
-  // Les variables VITE_* (ex. VITE_MOCK) se règlent dans le .env à la racine du dépôt.
+  // Die VITE_*-Variablen (z. B. VITE_MOCK) werden in der .env im Stammverzeichnis des Repositorys gesetzt.
   envDir: '..',
-  // Le moteur de règles (workflows/code/sgb6) et les données fictives (data/sgb6) sont hors du dossier front.
+  // Die Regel-Engine (workflows/code/sgb6) und die fiktiven Daten (data/sgb6) liegen außerhalb des Ordners front.
   server: { port: 5173, fs: { allow: ['..'] } },
 });

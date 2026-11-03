@@ -1,7 +1,7 @@
-// Brique « rédiger » – résultat renvoyé à l'appelant : le brouillon (jamais une validation).
-const ctx = $('Préparer appel').first().json;
-const c = $('Contrôler la réponse').first().json;
-const b = $('Créer le brouillon').first().json;
+// Baustein „Verfassen“ – an den Aufrufer zurückgegebenes Ergebnis: der Entwurf (niemals eine Bestätigung).
+const ctx = $('Aufruf vorbereiten').first().json;
+const c = $('Antwort prüfen').first().json;
+const b = $('Entwurf erstellen').first().json;
 return [
   {
     json: {

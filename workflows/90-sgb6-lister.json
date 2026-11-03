@@ -1,6 +1,6 @@
 {
   "id": "aicaresgb6lister01",
-  "name": "AI-Care – Cotisations : lister les dossiers",
+  "name": "AI-Care – Rentenbeiträge: Akten auflisten",
   "active": false,
   "nodes": [
     {
@@ -38,7 +38,7 @@
         }
       },
       "id": "a1c3e000-9002-4000-8000-000000009002",
-      "name": "Dossiers",
+      "name": "Akten",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
@@ -63,7 +63,7 @@
         }
       },
       "id": "a1c3e000-9003-4000-8000-000000009003",
-      "name": "Modèles installés (Ollama)",
+      "name": "Installierte Modelle (Ollama)",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
@@ -75,7 +75,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Cotisations retraite – liste des dossiers pour l'interface : identifiant, aidant, personne soignée, date de réception, statut.\n// Ni le texte du questionnaire ni le résultat ne partent dans la liste.\nconst lignes = $('Dossiers').all().map((i) => i.json).filter((r) => r.id);\n// modèles permis par la page, et lesquels sont installés dans Ollama (liste /api/tags ; si Ollama ne répond pas : aucun n'est marqué installé)\nconst installes = ($input.first().json?.models ?? []).map((m) => m.name);\nconst modeles = [\"qwen2.5:7b\",\"qwen3:8b\",\"llama3.1:8b\",\"llama3.2\"].map((nom) => ({ nom, installe: installes.some((n) => n === nom || n === `${nom}:latest`) }));\nreturn [\n  {\n    json: {\n      modele: \"qwen2.5:7b\",\n      modeles, // le modèle local qui pilote l'agent (variable d'environnement SGB6_MODELE à la génération)\n      dossiers: lignes.map((r) => ({ id: r.id, aidant: r.aidant, personne_soignee: r.personne, recu_le: r.recu_le, statut: r.statut, revue: r.revue === true, traite: r.traite === true })),\n    },\n  },\n];\n"
+        "jsCode": "// Rentenbeiträge – Liste der Akten für die Oberfläche: Kennung, Pflegeperson, pflegebedürftige Person, Eingangsdatum, Status.\n// Weder der Text des Fragebogens noch das Ergebnis gehen in die Liste.\nconst lignes = $('Akten').all().map((i) => i.json).filter((r) => r.id);\n// von der Seite zugelassene Modelle und welche davon in Ollama installiert sind (Liste /api/tags; antwortet Ollama nicht: keines gilt als installiert)\nconst installes = ($input.first().json?.models ?? []).map((m) => m.name);\nconst modeles = [\"qwen2.5:7b\",\"qwen3:8b\",\"llama3.1:8b\",\"llama3.2\"].map((nom) => ({ nom, installe: installes.some((n) => n === nom || n === `${nom}:latest`) }));\nreturn [\n  {\n    json: {\n      modele: \"qwen2.5:7b\",\n      modeles, // das lokale Modell, das den Agenten steuert (Umgebungsvariable SGB6_MODELE bei der Generierung)\n      dossiers: lignes.map((r) => ({ id: r.id, aidant: r.aidant, personne_soignee: r.personne, recu_le: r.recu_le, statut: r.statut, revue: r.revue === true, traite: r.traite === true })),\n    },\n  },\n];\n"
       },
       "id": "a1c3e000-9004-4000-8000-000000009004",
       "name": "Liste",
@@ -88,10 +88,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Contrôle de session – le jeton « Bearer » de l'en-tête Authorization (43 caractères URL-safe) est haché (SHA-256) : seul le haché est en base.\nconst entetes = $input.first().json?.headers ?? {};\nconst m = String(entetes.authorization ?? '').match(/^Bearer ([A-Za-z0-9_-]{43})$/);\nif (!m) return [{ json: { hash: '' } }];\nreturn [{ json: { hash: require('crypto').createHash('sha256').update(m[1]).digest('hex') } }];\n"
+        "jsCode": "// Sitzungsprüfung – das « Bearer »-Token im Authorization-Header (43 URL-sichere Zeichen) wird gehasht (SHA-256): Nur der Hash steht in der Datenbank.\nconst entetes = $input.first().json?.headers ?? {};\nconst m = String(entetes.authorization ?? '').match(/^Bearer ([A-Za-z0-9_-]{43})$/);\nif (!m) return [{ json: { hash: '' } }];\nreturn [{ json: { hash: require('crypto').createHash('sha256').update(m[1]).digest('hex') } }];\n"
       },
       "id": "a1c3e000-0449-4000-8000-000000000449",
-      "name": "Session (jeton)",
+      "name": "Sitzung (Token)",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -108,7 +108,7 @@
         }
       },
       "id": "a1c3e000-0450-4000-8000-000000000450",
-      "name": "Session (base)",
+      "name": "Sitzung (Datenbank)",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
@@ -126,10 +126,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Contrôle de session – résultat : un soignant identifié (session ouverte, non expirée, compte actif) ou rien.\nconst r = $input.first().json ?? {};\nif (!r.identifiant) return [{ json: { ok: false } }];\nreturn [{ json: { ok: true, soignant: { identifiant: r.identifiant, nom: r.nom }, jeton_hash: r.jeton_hash } }];\n"
+        "jsCode": "// Sitzungsprüfung – Ergebnis: eine identifizierte Pflegekraft (Sitzung offen, nicht abgelaufen, Konto aktiv) oder nichts.\nconst r = $input.first().json ?? {};\nif (!r.identifiant) return [{ json: { ok: false } }];\nreturn [{ json: { ok: true, soignant: { identifiant: r.identifiant, nom: r.nom }, jeton_hash: r.jeton_hash } }];\n"
       },
       "id": "a1c3e000-0451-4000-8000-000000000451",
-      "name": "Session",
+      "name": "Sitzung",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -148,7 +148,7 @@
           },
           "conditions": [
             {
-              "id": "Session valide ?",
+              "id": "Sitzung gültig?",
               "leftValue": "={{ $json.ok === true }}",
               "rightValue": "",
               "operator": {
@@ -163,7 +163,7 @@
         "options": {}
       },
       "id": "a1c3e000-0452-4000-8000-000000000452",
-      "name": "Session valide ?",
+      "name": "Sitzung gültig?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
@@ -173,10 +173,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Contrôle de session – la session est valide : on rend aux nœuds suivants la requête d'origine (en-têtes, corps) telle que reçue.\nreturn [{ json: $('Webhook').first().json }];\n"
+        "jsCode": "// Sitzungsprüfung – die Sitzung ist gültig: Die ursprüngliche Anfrage (Header, Body) wird unverändert an die folgenden Knoten zurückgegeben.\nreturn [{ json: $('Webhook').first().json }];\n"
       },
       "id": "a1c3e000-0453-4000-8000-000000000453",
-      "name": "Requête",
+      "name": "Anfrage",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -186,10 +186,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Contrôle de session – refus : aucune donnée, seulement le motif. L'interface rouvre alors la page de connexion.\nreturn [{ json: { erreur: 'session' } }];\n"
+        "jsCode": "// Sitzungsprüfung – Ablehnung: keine Daten, nur der Grund. Die Oberfläche öffnet dann wieder die Anmeldeseite.\nreturn [{ json: { erreur: 'session' } }];\n"
       },
       "id": "a1c3e000-0454-4000-8000-000000000454",
-      "name": "Refus (session)",
+      "name": "Ablehnung (Sitzung)",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -203,25 +203,25 @@
       "main": [
         [
           {
-            "node": "Session (jeton)",
+            "node": "Sitzung (Token)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Dossiers": {
+    "Akten": {
       "main": [
         [
           {
-            "node": "Modèles installés (Ollama)",
+            "node": "Installierte Modelle (Ollama)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Modèles installés (Ollama)": {
+    "Installierte Modelle (Ollama)": {
       "main": [
         [
           {
@@ -232,62 +232,62 @@
         ]
       ]
     },
-    "Session (jeton)": {
+    "Sitzung (Token)": {
       "main": [
         [
           {
-            "node": "Session (base)",
+            "node": "Sitzung (Datenbank)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Session (base)": {
+    "Sitzung (Datenbank)": {
       "main": [
         [
           {
-            "node": "Session",
+            "node": "Sitzung",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Session": {
+    "Sitzung": {
       "main": [
         [
           {
-            "node": "Session valide ?",
+            "node": "Sitzung gültig?",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Session valide ?": {
+    "Sitzung gültig?": {
       "main": [
         [
           {
-            "node": "Requête",
+            "node": "Anfrage",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Refus (session)",
+            "node": "Ablehnung (Sitzung)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Requête": {
+    "Anfrage": {
       "main": [
         [
           {
-            "node": "Dossiers",
+            "node": "Akten",
             "type": "main",
             "index": 0
           }

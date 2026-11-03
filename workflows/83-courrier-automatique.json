@@ -1,6 +1,6 @@
 {
   "id": "aicarecourrier001",
-  "name": "AI-Care – Courrier reçu (notification de Mailpit)",
+  "name": "AI-Care – Eingegangene Post (Benachrichtigung von Mailpit)",
   "active": false,
   "nodes": [
     {
@@ -22,10 +22,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Courrier reçu – contrôle de la notification de Mailpit. Seul l'identifiant du message est lu ; le contenu de la notification est\n// ignoré : le message est relu par l'API de Mailpit (même source que le connecteur KIM).\nconst b = $input.first().json?.body ?? {};\nconst id = String(b.ID ?? '');\nif (!/^[A-Za-z0-9]{6,40}$/.test(id)) throw new Error('identifiant de message invalide');\nreturn [{ json: { id } }];\n"
+        "jsCode": "// Eingegangene Post – Prüfung der Mailpit-Benachrichtigung. Nur die Nachrichtenkennung wird gelesen; der Inhalt der Benachrichtigung wird\n// ignoriert: Die Nachricht wird erneut über die Mailpit-API gelesen (dieselbe Quelle wie der KIM-Konnektor).\nconst b = $input.first().json?.body ?? {};\nconst id = String(b.ID ?? '');\nif (!/^[A-Za-z0-9]{6,40}$/.test(id)) throw new Error('Ungültige Nachrichtenkennung');\nreturn [{ json: { id } }];\n"
       },
       "id": "a1c3e000-0298-4000-8000-000000000298",
-      "name": "Contrôler le courrier",
+      "name": "Post kontrollieren",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -47,7 +47,7 @@
         }
       },
       "id": "a1c3e000-0299-4000-8000-000000000299",
-      "name": "Traiter le courrier",
+      "name": "Post verarbeiten",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.2,
       "position": [
@@ -62,18 +62,18 @@
       "main": [
         [
           {
-            "node": "Contrôler le courrier",
+            "node": "Post kontrollieren",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Contrôler le courrier": {
+    "Post kontrollieren": {
       "main": [
         [
           {
-            "node": "Traiter le courrier",
+            "node": "Post verarbeiten",
             "type": "main",
             "index": 0
           }

@@ -1,6 +1,6 @@
-// Valider un rapport – réponse à l'interface : la validation, puis ce qui a suivi (RAG, transmission).
-// La validation reste enregistrée même si l'étape suivante échoue : l'erreur est alors signalée, pas cachée.
-const v = $('Enregistrer').first().json;
+// Bericht bestätigen – Antwort an die Oberfläche: die Bestätigung, dann was folgte (RAG, Übergabe).
+// Die Bestätigung bleibt gespeichert, auch wenn der nächste Schritt fehlschlägt: Der Fehler wird dann gemeldet, nicht verborgen.
+const v = $('Speichern').first().json;
 const a = $input.first().json ?? {};
 return [
   {

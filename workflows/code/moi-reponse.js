@@ -1,2 +1,2 @@
-// Session – « qui suis-je » : le soignant de la session en cours (l'interface s'en sert au rechargement de la page).
-return [{ json: { soignant: $('Session').first().json.soignant } }];
+// Sitzung – « Wer bin ich »: die Pflegekraft der laufenden Sitzung (die Oberfläche nutzt dies beim Neuladen der Seite).
+return [{ json: { soignant: $('Sitzung').first().json.soignant } }];

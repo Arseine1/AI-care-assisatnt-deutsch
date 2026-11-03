@@ -1,20 +1,20 @@
-# Protocole : résidents sous anticoagulant
+# Protokoll: Bewohner unter Antikoagulation
 
-*Document fictif de démonstration – Haus Sonnenhof.*
+*Fiktives Demonstrationsdokument – Haus Sonnenhof.*
 
-## Principes
-- Les anticoagulants (Marcumar/phenprocoumon, apixaban, rivaroxaban, dabigatran, héparines) augmentent le risque de saignement.
-- **Ne jamais associer deux anticoagulants** sans avis médical écrit. Un changement de traitement (par exemple du Marcumar vers apixaban) doit préciser **quand arrêter l'ancien traitement** et quand commencer le nouveau.
-- Toute lettre de médecin qui prescrit un nouvel anticoagulant chez un résident déjà sous Marcumar doit être **clarifiée avec le médecin avant la première prise**.
+## Grundsätze
+- Antikoagulanzien (Marcumar/Phenprocoumon, Apixaban, Rivaroxaban, Dabigatran, Heparine) erhöhen das Blutungsrisiko.
+- **Niemals zwei Antikoagulanzien kombinieren** ohne schriftliche ärztliche Anweisung. Eine Therapieumstellung (zum Beispiel von Marcumar auf Apixaban) muss angeben, **wann das alte Medikament abzusetzen** und wann das neue zu beginnen ist.
+- Jeder Arztbrief, der bei einem Bewohner, der bereits Marcumar erhält, ein neues Antikoagulans verordnet, muss **vor der ersten Einnahme mit dem Arzt geklärt werden**.
 
-## Marcumar (phenprocoumon)
-- Contrôle de l'**INR** régulier (cible habituelle 2,0–3,0 dans la fibrillation auriculaire). Dose adaptée par le médecin.
-- Alimentation : apport régulier en vitamine K (légumes verts en quantité constante).
-- Attention aux interactions (antibiotiques, AINS, aspirine) : toute nouvelle prescription est vérifiée.
+## Marcumar (Phenprocoumon)
+- Regelmäßige Kontrolle des **INR** (üblicher Zielbereich 2,0–3,0 bei Vorhofflimmern). Dosis wird vom Arzt angepasst.
+- Ernährung: regelmäßige Vitamin-K-Zufuhr (grünes Gemüse in gleichbleibender Menge).
+- Vorsicht bei Wechselwirkungen (Antibiotika, NSAR, Aspirin): Jede neue Verordnung wird geprüft.
 
-## Surveillance
-- Rechercher chaque jour : saignements des gencives ou du nez, hématomes, urines ou selles foncées.
-- **Chute avec choc à la tête** : avis médical le jour même, surveillance neurologique renforcée.
+## Überwachung
+- Täglich auf Zahnfleisch- oder Nasenbluten, Hämatome, dunklen Urin oder Stuhl achten.
+- **Sturz mit Kopfanprall**: ärztliche Beurteilung noch am selben Tag, verstärkte neurologische Überwachung.
 
-## Quand appeler le médecin ou le 112
-- Saignement qui ne s'arrête pas, selles noires, vomissements de sang, maux de tête violents, confusion soudaine.
+## Wann Arzt oder 112 rufen
+- Blutung, die nicht aufhört, schwarzer Stuhl, Bluterbrechen, heftige Kopfschmerzen, plötzliche Verwirrtheit.

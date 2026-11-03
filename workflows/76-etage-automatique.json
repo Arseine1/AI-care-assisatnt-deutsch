@@ -1,6 +1,6 @@
 {
   "id": "aicaremaitreaut01",
-  "name": "AI-Care – Rapports d'étage automatiques (5h30)",
+  "name": "AI-Care – Automatische Etagenberichte (5:30 Uhr)",
   "active": false,
   "nodes": [
     {
@@ -15,7 +15,7 @@
         }
       },
       "id": "a1c3e000-0191-4000-8000-000000000191",
-      "name": "Planification 5h30",
+      "name": "Zeitplan 5:30 Uhr",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
       "position": [
@@ -26,7 +26,7 @@
     {
       "parameters": {},
       "id": "a1c3e000-0192-4000-8000-000000000192",
-      "name": "Démarrage manuel",
+      "name": "Manueller Start",
       "type": "n8n-nodes-base.manualTrigger",
       "typeVersion": 1,
       "position": [
@@ -69,7 +69,7 @@
         }
       },
       "id": "a1c3e000-0194-4000-8000-000000000194",
-      "name": "Créer les tâches",
+      "name": "Aufgaben erstellen",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
@@ -87,10 +87,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Rapport d'étage automatique (5h30) – un élément par étage dont la tâche vient d'être créée.\n// Aucun étage n'est créé deux fois en 3 heures (relance de n8n, déclenchement manuel) : la requête les écarte déjà.\nreturn $input.all().map((i) => i.json).filter((r) => r.id).map((r) => ({ json: { etage: Number(r.etage), task_id: r.id } }));\n"
+        "jsCode": "// Automatischer Etagenbericht (5:30 Uhr) – ein Element je Etage, deren Aufgabe soeben erstellt wurde.\n// Keine Etage wird innerhalb von 3 Stunden zweimal angelegt (Neustart von n8n, manuelle Auslösung): Die Abfrage schließt sie bereits aus.\nreturn $input.all().map((i) => i.json).filter((r) => r.id).map((r) => ({ json: { etage: Number(r.etage), task_id: r.id } }));\n"
       },
       "id": "a1c3e000-0195-4000-8000-000000000195",
-      "name": "Étages à traiter",
+      "name": "Zu bearbeitende Etagen",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -112,7 +112,7 @@
         }
       },
       "id": "a1c3e000-0196-4000-8000-000000000196",
-      "name": "Étage complet",
+      "name": "Vollständiger Etagenbericht",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.2,
       "position": [
@@ -123,10 +123,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Contrôle de session – le jeton « Bearer » de l'en-tête Authorization (43 caractères URL-safe) est haché (SHA-256) : seul le haché est en base.\nconst entetes = $input.first().json?.headers ?? {};\nconst m = String(entetes.authorization ?? '').match(/^Bearer ([A-Za-z0-9_-]{43})$/);\nif (!m) return [{ json: { hash: '' } }];\nreturn [{ json: { hash: require('crypto').createHash('sha256').update(m[1]).digest('hex') } }];\n"
+        "jsCode": "// Sitzungsprüfung – das « Bearer »-Token im Authorization-Header (43 URL-sichere Zeichen) wird gehasht (SHA-256): Nur der Hash steht in der Datenbank.\nconst entetes = $input.first().json?.headers ?? {};\nconst m = String(entetes.authorization ?? '').match(/^Bearer ([A-Za-z0-9_-]{43})$/);\nif (!m) return [{ json: { hash: '' } }];\nreturn [{ json: { hash: require('crypto').createHash('sha256').update(m[1]).digest('hex') } }];\n"
       },
       "id": "a1c3e000-0412-4000-8000-000000000412",
-      "name": "Session (jeton)",
+      "name": "Sitzung (Token)",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -143,7 +143,7 @@
         }
       },
       "id": "a1c3e000-0413-4000-8000-000000000413",
-      "name": "Session (base)",
+      "name": "Sitzung (Datenbank)",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
@@ -161,10 +161,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Contrôle de session – résultat : un soignant identifié (session ouverte, non expirée, compte actif) ou rien.\nconst r = $input.first().json ?? {};\nif (!r.identifiant) return [{ json: { ok: false } }];\nreturn [{ json: { ok: true, soignant: { identifiant: r.identifiant, nom: r.nom }, jeton_hash: r.jeton_hash } }];\n"
+        "jsCode": "// Sitzungsprüfung – Ergebnis: eine identifizierte Pflegekraft (Sitzung offen, nicht abgelaufen, Konto aktiv) oder nichts.\nconst r = $input.first().json ?? {};\nif (!r.identifiant) return [{ json: { ok: false } }];\nreturn [{ json: { ok: true, soignant: { identifiant: r.identifiant, nom: r.nom }, jeton_hash: r.jeton_hash } }];\n"
       },
       "id": "a1c3e000-0414-4000-8000-000000000414",
-      "name": "Session",
+      "name": "Sitzung",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -183,7 +183,7 @@
           },
           "conditions": [
             {
-              "id": "Session valide ?",
+              "id": "Sitzung gültig?",
               "leftValue": "={{ $json.ok === true }}",
               "rightValue": "",
               "operator": {
@@ -198,7 +198,7 @@
         "options": {}
       },
       "id": "a1c3e000-0415-4000-8000-000000000415",
-      "name": "Session valide ?",
+      "name": "Sitzung gültig?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
@@ -208,10 +208,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Contrôle de session – la session est valide : on rend aux nœuds suivants la requête d'origine (en-têtes, corps) telle que reçue.\nreturn [{ json: $('Webhook').first().json }];\n"
+        "jsCode": "// Sitzungsprüfung – die Sitzung ist gültig: Die ursprüngliche Anfrage (Header, Body) wird unverändert an die folgenden Knoten zurückgegeben.\nreturn [{ json: $('Webhook').first().json }];\n"
       },
       "id": "a1c3e000-0416-4000-8000-000000000416",
-      "name": "Requête",
+      "name": "Anfrage",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -221,10 +221,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Contrôle de session – refus : aucune donnée, seulement le motif. L'interface rouvre alors la page de connexion.\nreturn [{ json: { erreur: 'session' } }];\n"
+        "jsCode": "// Sitzungsprüfung – Ablehnung: keine Daten, nur der Grund. Die Oberfläche öffnet dann wieder die Anmeldeseite.\nreturn [{ json: { erreur: 'session' } }];\n"
       },
       "id": "a1c3e000-0417-4000-8000-000000000417",
-      "name": "Refus (session)",
+      "name": "Ablehnung (Sitzung)",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -234,22 +234,22 @@
     }
   ],
   "connections": {
-    "Planification 5h30": {
+    "Zeitplan 5:30 Uhr": {
       "main": [
         [
           {
-            "node": "Créer les tâches",
+            "node": "Aufgaben erstellen",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Démarrage manuel": {
+    "Manueller Start": {
       "main": [
         [
           {
-            "node": "Créer les tâches",
+            "node": "Aufgaben erstellen",
             "type": "main",
             "index": 0
           }
@@ -260,91 +260,91 @@
       "main": [
         [
           {
-            "node": "Session (jeton)",
+            "node": "Sitzung (Token)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Créer les tâches": {
+    "Aufgaben erstellen": {
       "main": [
         [
           {
-            "node": "Étages à traiter",
+            "node": "Zu bearbeitende Etagen",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Étages à traiter": {
+    "Zu bearbeitende Etagen": {
       "main": [
         [
           {
-            "node": "Étage complet",
+            "node": "Vollständiger Etagenbericht",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Session (jeton)": {
+    "Sitzung (Token)": {
       "main": [
         [
           {
-            "node": "Session (base)",
+            "node": "Sitzung (Datenbank)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Session (base)": {
+    "Sitzung (Datenbank)": {
       "main": [
         [
           {
-            "node": "Session",
+            "node": "Sitzung",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Session": {
+    "Sitzung": {
       "main": [
         [
           {
-            "node": "Session valide ?",
+            "node": "Sitzung gültig?",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Session valide ?": {
+    "Sitzung gültig?": {
       "main": [
         [
           {
-            "node": "Requête",
+            "node": "Anfrage",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Refus (session)",
+            "node": "Ablehnung (Sitzung)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Requête": {
+    "Anfrage": {
       "main": [
         [
           {
-            "node": "Créer les tâches",
+            "node": "Aufgaben erstellen",
             "type": "main",
             "index": 0
           }

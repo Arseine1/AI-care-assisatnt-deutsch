@@ -1,6 +1,6 @@
 {
   "id": "aicarebrqapres01",
-  "name": "AI-Care – Brique après validation (RAG + transmission)",
+  "name": "AI-Care – Baustein nach Bestätigung (RAG + Übergabe)",
   "active": false,
   "nodes": [
     {
@@ -8,7 +8,7 @@
         "inputSource": "passthrough"
       },
       "id": "a1c3e000-0142-4000-8000-000000000142",
-      "name": "Entrée",
+      "name": "Eingang",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1.1,
       "position": [
@@ -21,11 +21,11 @@
         "operation": "executeQuery",
         "query": "SELECT v.id AS validation_id, v.patient_id, v.texte, v.sources, v.valide_par, v.valide_le, r.civilite, r.prenom, r.nom, r.chambre, r.etage FROM soins.validations v JOIN soins.residents r ON r.patient_id = v.patient_id WHERE v.id = ANY($1::bigint[]) AND v.action = 'generer_sbar' ORDER BY r.chambre",
         "options": {
-          "queryReplacement": "={{ [ '{' + ($('Entrée').first().json.validation_ids ?? []).map(Number).filter(Number.isInteger).join(',') + '}' ] }}"
+          "queryReplacement": "={{ [ '{' + ($('Eingang').first().json.validation_ids ?? []).map(Number).filter(Number.isInteger).join(',') + '}' ] }}"
         }
       },
       "id": "a1c3e000-0143-4000-8000-000000000143",
-      "name": "Rapports validés",
+      "name": "Bestätigte Berichte",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
@@ -43,10 +43,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Après validation – documents à ajouter au RAG : le texte VALIDÉ par le soignant (relu, éventuellement corrigé),\n// lu dans la table des validations (source de vérité), jamais le texte brut de l'IA ni un texte reçu de l'extérieur.\n// Un rapport validé est indexé avec la source « Rapport validé » et le type « rapport_valide » : les nouveaux rapports\n// SBAR ne le relisent pas comme un fait (voir « chercher »), il reste consultable par le Mode B.\nconst fmt = (d) => {\n  const p = new Intl.DateTimeFormat('fr-FR', { timeZone: 'Europe/Berlin', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date(d));\n  const g = (t) => p.find((x) => x.type === t).value;\n  return `${g('day')}.${g('month')}. ${g('hour')}h${g('minute')}`;\n};\nconst lignes = $input.all().map((i) => i.json).filter((r) => r.validation_id);\nreturn lignes.map((r) => ({\n  json: {\n    collection: 'patients',\n    texte: r.texte,\n    titre: `Rapport de garde validé (SBAR), ${fmt(r.valide_le)}`,\n    source: 'validation',\n    source_label: 'Rapport validé',\n    source_ref: `validation-${r.validation_id}`,\n    type: 'rapport_valide',\n    patient_id: r.patient_id,\n    chambre: r.chambre,\n    patient_label: `${r.civilite} ${r.prenom} ${r.nom} (chambre ${r.chambre})`,\n    date: new Date(r.valide_le).toISOString(),\n  },\n}));\n"
+        "jsCode": "// Nach der Bestätigung – Dokumente, die dem RAG hinzugefügt werden: der von der Pflegekraft BESTÄTIGTE Text (gelesen, gegebenenfalls korrigiert),\n// gelesen in der Tabelle der Bestätigungen (maßgebliche Quelle), nie der rohe Text der KI und nie ein von außen empfangener Text.\n// Ein bestätigter Bericht wird mit der Quelle « Bestätigter Bericht » und dem Typ « rapport_valide » indexiert: Neue\n// SBAR-Berichte lesen ihn nicht als Fakt erneut (siehe « Suchen »), er bleibt aber für den Modus B abrufbar.\nconst fmt = (d) => {\n  const p = new Intl.DateTimeFormat('de-DE', { timeZone: 'Europe/Berlin', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date(d));\n  const g = (t) => p.find((x) => x.type === t).value;\n  return `${g('day')}.${g('month')}. ${g('hour')}:${g('minute')} Uhr`;\n};\nconst lignes = $input.all().map((i) => i.json).filter((r) => r.validation_id);\nreturn lignes.map((r) => ({\n  json: {\n    collection: 'patients',\n    texte: r.texte,\n    titre: `Bestätigter Dienstbericht (SBAR), ${fmt(r.valide_le)}`,\n    source: 'validation',\n    source_label: 'Bestätigter Bericht',\n    source_ref: `validation-${r.validation_id}`,\n    type: 'rapport_valide',\n    patient_id: r.patient_id,\n    chambre: r.chambre,\n    patient_label: `${r.civilite} ${r.prenom} ${r.nom} (Zimmer ${r.chambre})`,\n    date: new Date(r.valide_le).toISOString(),\n  },\n}));\n"
       },
       "id": "a1c3e000-0144-4000-8000-000000000144",
-      "name": "Documents RAG",
+      "name": "RAG-Dokumente",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -68,7 +68,7 @@
         }
       },
       "id": "a1c3e000-0145-4000-8000-000000000145",
-      "name": "Indexer (RAG)",
+      "name": "Indizieren (RAG)",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.2,
       "position": [
@@ -78,10 +78,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Après validation – message de transmission à l'équipe suivante : les textes VALIDÉS (lus dans la table des\n// validations), avec leurs sources et le nom du soignant qui les a validés.\nconst DESTINATAIRE = 'equipe-suivante@sonnenhof.example.test';\nconst entree = $('Entrée').first().json;\nconst rapports = $('Rapports validés').all().map((i) => i.json).filter((r) => r.validation_id);\nif (!rapports.length) throw new Error('Aucun rapport validé à transmettre.');\n\nconst fmt = (d) => {\n  const p = new Intl.DateTimeFormat('fr-FR', { timeZone: 'Europe/Berlin', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date(d));\n  const g = (t) => p.find((x) => x.type === t).value;\n  return { jour: `${g('day')}.${g('month')}.${g('year')}`, heure: `${g('hour')}h${g('minute')}` };\n};\nconst portee = entree.portee === 'etage' ? 'etage' : 'resident';\nconst etage = portee === 'etage' ? Number(entree.etage) : null;\nconst maintenant = fmt(new Date());\nconst sujet = portee === 'etage'\n  ? `Transmission de garde – étage ${etage} – ${maintenant.jour} ${maintenant.heure}`\n  : `Transmission de garde – chambre ${rapports[0].chambre} (${rapports[0].civilite} ${rapports[0].nom}) – ${maintenant.jour} ${maintenant.heure}`;\n\nconst blocs = rapports.map((r) => {\n  const v = fmt(r.valide_le);\n  const sources = (Array.isArray(r.sources) ? r.sources : []).map((s) => `[${s}]`).join(' ');\n  return [\n    `=== Chambre ${r.chambre} – ${r.civilite} ${r.prenom} ${r.nom} (étage ${r.etage}) ===`,\n    r.texte.trim(),\n    `Sources : ${sources || 'aucune'}`,\n    `Validé par ${r.valide_par} le ${v.jour} à ${v.heure}.`,\n  ].join('\\n');\n});\nconst texte = [\n  sujet,\n  '',\n  'Ce message reprend les rapports de garde des 12 dernières heures, relus et validés par un soignant. Ils ont été rédigés avec l\\'aide d\\'un assistant IA pour les équipes soignantes ; en cas de doute, se reporter au dossier de soins.',\n  '',\n  blocs.join('\\n\\n'),\n].join('\\n');\n\nreturn [\n  {\n    json: {\n      sujet,\n      texte,\n      destinataire: DESTINATAIRE,\n      portee,\n      etage,\n      patient_ids: rapports.map((r) => r.patient_id),\n      validation_ids: rapports.map((r) => r.validation_id),\n      mailpit: {\n        From: { Email: 'transmission@sonnenhof.example.test', Name: 'AI-Care – Transmission de garde' },\n        To: [{ Email: DESTINATAIRE, Name: 'Équipe suivante' }],\n        Subject: sujet,\n        Text: texte,\n      },\n    },\n  },\n];\n"
+        "jsCode": "// Nach der Bestätigung – Übergabenachricht an das nächste Team: die BESTÄTIGTEN Texte (gelesen in der Tabelle der\n// Bestätigungen), mit ihren Quellen und dem Namen der Pflegekraft, die sie bestätigt hat.\nconst DESTINATAIRE = 'equipe-suivante@sonnenhof.example.test';\nconst entree = $('Eingang').first().json;\nconst rapports = $('Bestätigte Berichte').all().map((i) => i.json).filter((r) => r.validation_id);\nif (!rapports.length) throw new Error('Kein bestätigter Bericht zur Weitergabe.');\n\nconst fmt = (d) => {\n  const p = new Intl.DateTimeFormat('de-DE', { timeZone: 'Europe/Berlin', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date(d));\n  const g = (t) => p.find((x) => x.type === t).value;\n  return { jour: `${g('day')}.${g('month')}.${g('year')}`, heure: `${g('hour')}:${g('minute')} Uhr` };\n};\nconst portee = entree.portee === 'etage' ? 'etage' : 'resident';\nconst etage = portee === 'etage' ? Number(entree.etage) : null;\nconst maintenant = fmt(new Date());\nconst sujet = portee === 'etage'\n  ? `Dienstübergabe – Etage ${etage} – ${maintenant.jour} ${maintenant.heure}`\n  : `Dienstübergabe – Zimmer ${rapports[0].chambre} (${rapports[0].civilite} ${rapports[0].nom}) – ${maintenant.jour} ${maintenant.heure}`;\n\nconst blocs = rapports.map((r) => {\n  const v = fmt(r.valide_le);\n  const sources = (Array.isArray(r.sources) ? r.sources : []).map((s) => `[${s}]`).join(' ');\n  return [\n    `=== Zimmer ${r.chambre} – ${r.civilite} ${r.prenom} ${r.nom} (Etage ${r.etage}) ===`,\n    r.texte.trim(),\n    `Quellen: ${sources || 'keine'}`,\n    `Bestätigt von ${r.valide_par} am ${v.jour} um ${v.heure}.`,\n  ].join('\\n');\n});\nconst texte = [\n  sujet,\n  '',\n  'Diese Nachricht enthält die Dienstberichte der letzten 12 Stunden, die von einer Pflegekraft gelesen und bestätigt wurden. Sie wurden mit Hilfe eines KI-Assistenten für Pflegeteams verfasst; im Zweifelsfall ist die Pflegedokumentation maßgeblich.',\n  '',\n  blocs.join('\\n\\n'),\n].join('\\n');\n\nreturn [\n  {\n    json: {\n      sujet,\n      texte,\n      destinataire: DESTINATAIRE,\n      portee,\n      etage,\n      patient_ids: rapports.map((r) => r.patient_id),\n      validation_ids: rapports.map((r) => r.validation_id),\n      mailpit: {\n        From: { Email: 'transmission@sonnenhof.example.test', Name: 'AI-Care – Dienstübergabe' },\n        To: [{ Email: DESTINATAIRE, Name: 'Nächstes Team' }],\n        Subject: sujet,\n        Text: texte,\n      },\n    },\n  },\n];\n"
       },
       "id": "a1c3e000-0146-4000-8000-000000000146",
-      "name": "Message de transmission",
+      "name": "Übergabenachricht",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -95,13 +95,13 @@
         "specifyBody": "json",
         "method": "POST",
         "url": "http://mailpit:8025/api/v1/send",
-        "jsonBody": "={{ JSON.stringify($('Message de transmission').first().json.mailpit) }}",
+        "jsonBody": "={{ JSON.stringify($('Übergabenachricht').first().json.mailpit) }}",
         "options": {
           "timeout": 60000
         }
       },
       "id": "a1c3e000-0147-4000-8000-000000000147",
-      "name": "Envoyer (Mailpit)",
+      "name": "Senden (Mailpit)",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
@@ -115,11 +115,11 @@
         "operation": "executeQuery",
         "query": "INSERT INTO soins.transmissions (portee, etage, patient_ids, validation_ids, destinataire, canal, sujet, statut, detail) VALUES ($1, NULLIF($2, '')::int, $3::text[], $4::bigint[], $5, 'mailpit', $6, $7, $8::jsonb) RETURNING id",
         "options": {
-          "queryReplacement": "={{ [ $('Message de transmission').first().json.portee, String($('Message de transmission').first().json.etage ?? ''), '{' + $('Message de transmission').first().json.patient_ids.join(',') + '}', '{' + $('Message de transmission').first().json.validation_ids.join(',') + '}', $('Message de transmission').first().json.destinataire, $('Message de transmission').first().json.sujet, $('Envoyer (Mailpit)').first().json.error ? 'echec' : 'envoye', JSON.stringify($('Envoyer (Mailpit)').first().json.error ? { erreur: String($('Envoyer (Mailpit)').first().json.error.message ?? $('Envoyer (Mailpit)').first().json.error).slice(0, 200) } : { mailpit_id: $('Envoyer (Mailpit)').first().json.ID ?? null }) ] }}"
+          "queryReplacement": "={{ [ $('Übergabenachricht').first().json.portee, String($('Übergabenachricht').first().json.etage ?? ''), '{' + $('Übergabenachricht').first().json.patient_ids.join(',') + '}', '{' + $('Übergabenachricht').first().json.validation_ids.join(',') + '}', $('Übergabenachricht').first().json.destinataire, $('Übergabenachricht').first().json.sujet, $('Senden (Mailpit)').first().json.error ? 'echec' : 'envoye', JSON.stringify($('Senden (Mailpit)').first().json.error ? { erreur: String($('Senden (Mailpit)').first().json.error.message ?? $('Senden (Mailpit)').first().json.error).slice(0, 200) } : { mailpit_id: $('Senden (Mailpit)').first().json.ID ?? null }) ] }}"
         }
       },
       "id": "a1c3e000-0148-4000-8000-000000000148",
-      "name": "Noter la transmission",
+      "name": "Übergabe vermerken",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
@@ -137,10 +137,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Après validation – résultat : combien de rapports ajoutés au RAG, et la transmission (envoyée ou en échec).\nconst m = $('Message de transmission').first().json;\nconst envoi = $('Envoyer (Mailpit)').first().json;\nconst note = $('Noter la transmission').first().json;\nconst rag = $('Indexer (RAG)').first().json ?? {};\nconst echec = Boolean(envoi?.error);\nreturn [\n  {\n    json: {\n      rag: { ajoutes: rag.morceaux_indexes ?? 0, ignores_deja_importes: rag.ignores_deja_importes ?? 0 },\n      transmission: {\n        id: note.id,\n        statut: echec ? 'echec' : 'envoye',\n        destinataire: m.destinataire,\n        sujet: m.sujet,\n        portee: m.portee,\n        nb_rapports: m.validation_ids.length,\n      },\n      evenements_journal: [\n        {\n          evenement: 'ajout_rag',\n          patient_id: m.patient_ids.length === 1 ? m.patient_ids[0] : null,\n          mode: 'a',\n          action: 'generer_sbar',\n          details: { validations: m.validation_ids, morceaux: rag.morceaux_indexes ?? 0 },\n        },\n        {\n          evenement: 'transmission',\n          patient_id: m.patient_ids.length === 1 ? m.patient_ids[0] : null,\n          mode: 'a',\n          action: 'generer_sbar',\n          details: { transmission_id: note.id, statut: echec ? 'echec' : 'envoye', portee: m.portee, etage: m.etage, validations: m.validation_ids },\n        },\n      ],\n    },\n  },\n];\n"
+        "jsCode": "// Nach der Bestätigung – Ergebnis: wie viele Berichte dem RAG hinzugefügt wurden und die Weitergabe (gesendet oder fehlgeschlagen).\nconst m = $('Übergabenachricht').first().json;\nconst envoi = $('Senden (Mailpit)').first().json;\nconst note = $('Übergabe vermerken').first().json;\nconst rag = $('Indizieren (RAG)').first().json ?? {};\nconst echec = Boolean(envoi?.error);\nreturn [\n  {\n    json: {\n      rag: { ajoutes: rag.morceaux_indexes ?? 0, ignores_deja_importes: rag.ignores_deja_importes ?? 0 },\n      transmission: {\n        id: note.id,\n        statut: echec ? 'echec' : 'envoye',\n        destinataire: m.destinataire,\n        sujet: m.sujet,\n        portee: m.portee,\n        nb_rapports: m.validation_ids.length,\n      },\n      evenements_journal: [\n        {\n          evenement: 'ajout_rag',\n          patient_id: m.patient_ids.length === 1 ? m.patient_ids[0] : null,\n          mode: 'a',\n          action: 'generer_sbar',\n          details: { validations: m.validation_ids, morceaux: rag.morceaux_indexes ?? 0 },\n        },\n        {\n          evenement: 'transmission',\n          patient_id: m.patient_ids.length === 1 ? m.patient_ids[0] : null,\n          mode: 'a',\n          action: 'generer_sbar',\n          details: { transmission_id: note.id, statut: echec ? 'echec' : 'envoye', portee: m.portee, etage: m.etage, validations: m.validation_ids },\n        },\n      ],\n    },\n  },\n];\n"
       },
       "id": "a1c3e000-0149-4000-8000-000000000149",
-      "name": "Résumé",
+      "name": "Zusammenfassung",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -150,10 +150,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Après validation – un élément par événement d'audit à écrire dans le journal.\nreturn $input.first().json.evenements_journal.map((e) => ({ json: e }));\n"
+        "jsCode": "// Nach der Bestätigung – ein Element pro Prüfereignis, das ins Protokoll zu schreiben ist.\nreturn $input.first().json.evenements_journal.map((e) => ({ json: e }));\n"
       },
       "id": "a1c3e000-0150-4000-8000-000000000150",
-      "name": "Événements",
+      "name": "Ereignisse",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -175,7 +175,7 @@
         }
       },
       "id": "a1c3e000-0151-4000-8000-000000000151",
-      "name": "Journal",
+      "name": "Protokoll",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.2,
       "position": [
@@ -185,10 +185,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Après validation – sortie du sous-workflow (sans les événements de journal).\nconst { evenements_journal, ...resultat } = $('Résumé').first().json;\nreturn [{ json: resultat }];\n"
+        "jsCode": "// Nach der Bestätigung – Ausgang des Unter-Workflows (ohne die Protokollereignisse).\nconst { evenements_journal, ...resultat } = $('Zusammenfassung').first().json;\nreturn [{ json: resultat }];\n"
       },
       "id": "a1c3e000-0152-4000-8000-000000000152",
-      "name": "Sortie",
+      "name": "Ausgabe",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -198,110 +198,110 @@
     }
   ],
   "connections": {
-    "Entrée": {
+    "Eingang": {
       "main": [
         [
           {
-            "node": "Rapports validés",
+            "node": "Bestätigte Berichte",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Rapports validés": {
+    "Bestätigte Berichte": {
       "main": [
         [
           {
-            "node": "Documents RAG",
+            "node": "RAG-Dokumente",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Documents RAG": {
+    "RAG-Dokumente": {
       "main": [
         [
           {
-            "node": "Indexer (RAG)",
+            "node": "Indizieren (RAG)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Indexer (RAG)": {
+    "Indizieren (RAG)": {
       "main": [
         [
           {
-            "node": "Message de transmission",
+            "node": "Übergabenachricht",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Message de transmission": {
+    "Übergabenachricht": {
       "main": [
         [
           {
-            "node": "Envoyer (Mailpit)",
+            "node": "Senden (Mailpit)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Envoyer (Mailpit)": {
+    "Senden (Mailpit)": {
       "main": [
         [
           {
-            "node": "Noter la transmission",
+            "node": "Übergabe vermerken",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Noter la transmission": {
+    "Übergabe vermerken": {
       "main": [
         [
           {
-            "node": "Résumé",
+            "node": "Zusammenfassung",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Résumé": {
+    "Zusammenfassung": {
       "main": [
         [
           {
-            "node": "Événements",
+            "node": "Ereignisse",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Événements": {
+    "Ereignisse": {
       "main": [
         [
           {
-            "node": "Journal",
+            "node": "Protokoll",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Journal": {
+    "Protokoll": {
       "main": [
         [
           {
-            "node": "Sortie",
+            "node": "Ausgabe",
             "type": "main",
             "index": 0
           }

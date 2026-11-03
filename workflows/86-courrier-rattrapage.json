@@ -1,6 +1,6 @@
 {
   "id": "aicarecourrierrat1",
-  "name": "AI-Care – Rattrapage des courriers (toutes les 2 minutes)",
+  "name": "AI-Care – Nachholen der Post (alle 2 Minuten)",
   "active": false,
   "nodes": [
     {
@@ -15,7 +15,7 @@
         }
       },
       "id": "a1c3e000-0300-4000-8000-000000000300",
-      "name": "Toutes les 2 minutes",
+      "name": "Alle 2 Minuten",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
       "position": [
@@ -26,7 +26,7 @@
     {
       "parameters": {},
       "id": "a1c3e000-0301-4000-8000-000000000301",
-      "name": "Démarrage manuel",
+      "name": "Manueller Start",
       "type": "n8n-nodes-base.manualTrigger",
       "typeVersion": 1,
       "position": [
@@ -41,7 +41,7 @@
         "options": {}
       },
       "id": "a1c3e000-0302-4000-8000-000000000302",
-      "name": "Courriers déjà traités",
+      "name": "Bereits verarbeitete Post",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
@@ -64,7 +64,7 @@
         }
       },
       "id": "a1c3e000-0303-4000-8000-000000000303",
-      "name": "Messages récents",
+      "name": "Aktuelle Nachrichten",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
@@ -74,10 +74,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Rattrapage des courriers – messages de Mailpit avec une pièce jointe, arrivés il y a plus d'une minute (le webhook s'en occupe\n// peut-être) et ni traités ni déjà pris. Le verrou (soins.courriers_traites, état « en_cours » pendant 15 minutes) évite tout double traitement.\nconst traites = new Set($('Courriers déjà traités').all().map((i) => i.json.message_id).filter(Boolean));\nconst messages = $input.first().json?.messages ?? [];\nreturn messages\n  .filter((m) => m.Attachments > 0 && !traites.has(m.ID) && Date.now() - new Date(m.Created).getTime() > 60000)\n  .map((m) => ({ json: { id: m.ID } }));\n"
+        "jsCode": "// Nachholen der Post – Mailpit-Nachrichten mit Anhang, die vor mehr als einer Minute eingegangen sind (der Webhook kümmert sich\n// vielleicht darum) und weder verarbeitet noch bereits in Bearbeitung sind. Die Sperre (soins.courriers_traites, Status « en_cours » für 15 Minuten) verhindert jede doppelte Verarbeitung.\nconst traites = new Set($('Bereits verarbeitete Post').all().map((i) => i.json.message_id).filter(Boolean));\nconst messages = $input.first().json?.messages ?? [];\nreturn messages\n  .filter((m) => m.Attachments > 0 && !traites.has(m.ID) && Date.now() - new Date(m.Created).getTime() > 60000)\n  .map((m) => ({ json: { id: m.ID } }));\n"
       },
       "id": "a1c3e000-0304-4000-8000-000000000304",
-      "name": "Courriers à rattraper",
+      "name": "Nachzuholende Post",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -99,7 +99,7 @@
         }
       },
       "id": "a1c3e000-0305-4000-8000-000000000305",
-      "name": "Traiter le courrier",
+      "name": "Post verarbeiten",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.2,
       "position": [
@@ -110,55 +110,55 @@
     }
   ],
   "connections": {
-    "Toutes les 2 minutes": {
+    "Alle 2 Minuten": {
       "main": [
         [
           {
-            "node": "Courriers déjà traités",
+            "node": "Bereits verarbeitete Post",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Démarrage manuel": {
+    "Manueller Start": {
       "main": [
         [
           {
-            "node": "Courriers déjà traités",
+            "node": "Bereits verarbeitete Post",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Courriers déjà traités": {
+    "Bereits verarbeitete Post": {
       "main": [
         [
           {
-            "node": "Messages récents",
+            "node": "Aktuelle Nachrichten",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Messages récents": {
+    "Aktuelle Nachrichten": {
       "main": [
         [
           {
-            "node": "Courriers à rattraper",
+            "node": "Nachzuholende Post",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Courriers à rattraper": {
+    "Nachzuholende Post": {
       "main": [
         [
           {
-            "node": "Traiter le courrier",
+            "node": "Post verarbeiten",
             "type": "main",
             "index": 0
           }

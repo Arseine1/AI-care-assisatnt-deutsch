@@ -1,13 +1,13 @@
-// Paramètres d'un prompt (période, mots de recherche, protocoles) : lus dans prompts/*.md, jamais fournis par
-// l'interface. L'interface ne peut donc ni choisir ni modifier ce qui est demandé à l'IA, seulement quelle
-// action lancer et pour quel résident.
+// Parameter eines Prompts (Zeitraum, Suchbegriffe, Protokolle): gelesen aus prompts/*.md, nie von der Oberfläche
+// geliefert. Die Oberfläche kann also weder wählen noch ändern, was von der KI verlangt wird, sondern nur, welche
+// Aktion gestartet wird und für welchen Bewohner.
 const PROMPTS = __PROMPTS__;
 
-// Corps de la requête HTTP du webhook, ou objet déjà contrôlé par un workflow d'entrée : seuls patient_id et prompt_id sont lus.
+// Body der HTTP-Anfrage des Webhooks oder ein bereits von einem Eingangs-Workflow geprüftes Objekt: Gelesen werden nur patient_id und prompt_id.
 const e = $input.first().json?.body ?? $input.first().json ?? {};
 const prompt_id = String(e.prompt_id ?? '');
 const p = PROMPTS[prompt_id];
-if (!p) throw new Error(`Prompt inconnu : « ${prompt_id} »`);
+if (!p) throw new Error(`Unbekannter Prompt: « ${prompt_id} »`);
 return [
   {
     json: {

@@ -1,4 +1,4 @@
-// Connexion – contrôle de la forme des identifiants. L'identifiant est un nom de compte (minuscules, chiffres, . _ -), le code PIN a 4 à 8 chiffres.
+// Anmeldung – Prüfung der Form der Zugangsdaten. Die Kennung ist ein Kontoname (Kleinbuchstaben, Ziffern, . _ -), die PIN hat 4 bis 8 Ziffern.
 const b = $input.first().json?.body ?? {};
 const identifiant = String(b.identifiant ?? '').trim().toLowerCase();
 const pin = String(b.pin ?? '');

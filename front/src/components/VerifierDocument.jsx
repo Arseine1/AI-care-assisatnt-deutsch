@@ -3,8 +3,8 @@ import { t } from '../i18n';
 import { lireReglageAnalyseIA, ecrireReglageAnalyseIA } from '../api.js';
 import SelecteurResident, { trouverResident } from './SelecteurResident.jsx';
 
-// Vérifier à la demande la lettre en attente d'un résident : les règles de contrôle répondent tout de suite, l'analyse
-// complémentaire de l'assistant IA suit en tâche de fond (réglage ci-dessous).
+// Den ausstehenden Brief eines Bewohners auf Anforderung prüfen: Die Kontrollregeln antworten sofort, die ergänzende
+// Analyse des KI-Assistenten folgt im Hintergrund (Einstellung unten).
 export default function VerifierDocument({ onVerifier, enCours }) {
   const [chambre, setChambre] = useState('');
   const [analyseIA, setAnalyseIA] = useState(true);

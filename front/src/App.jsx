@@ -14,7 +14,7 @@ import Connexion from './components/Connexion.jsx';
 import PageCotisations from './components/PageCotisations.jsx';
 import { demander, enregistrer, listerDossiersCotisations, seDeconnecter, soignantCourant, surSessionPerdue } from './api.js';
 
-// Les résidents d'un étage, une seule fois par étage choisi (référence stable pour le composant).
+// Die Bewohner eines Stockwerks, nur einmal pro gewähltem Stockwerk (stabile Referenz für die Komponente).
 const parEtage = new Map();
 function residentsDe(numero) {
   if (!parEtage.has(numero)) parEtage.set(numero, residents.filter((r) => r.etage === numero));
@@ -39,9 +39,9 @@ function texteContexte(demande) {
       });
 }
 
-// Initiales de la pastille du soignant : « Mme Claudia Martin (soins) » -> « CM » (civilités et parenthèses ignorées)
+// Initialen im Avatar der Pflegekraft: „Frau Claudia Martin (Pflege)“ -> „CM“ (Anreden und Klammern werden ignoriert)
 function initiales(nom) {
-  const mots = String(nom).replace(/\(.*?\)/g, '').split(/\s+/).filter((m) => m && !/^(M|Mme|Mlle|Dr|Pr)\.?$/i.test(m));
+  const mots = String(nom).replace(/\(.*?\)/g, '').split(/\s+/).filter((m) => m && !/^(Herr|Frau|Dr|Prof)\.?$/i.test(m));
   return ((mots[0]?.[0] ?? '?') + (mots.length > 1 ? mots[mots.length - 1][0] : '')).toUpperCase();
 }
 
@@ -54,9 +54,9 @@ function IconeTexte() {
   );
 }
 
-// Application protégée : n'est affichée qu'avec un soignant connecté (session contrôlée par n8n à chaque appel).
+// Geschützte Anwendung: wird nur mit angemeldeter Pflegekraft angezeigt (Sitzung wird bei jedem Aufruf von n8n geprüft).
 function Application({ soignant, onDeconnexion }) {
-  const [page, setPage] = useState('garde'); // garde | alarmes | documents | cotisations : un processus métier par page
+  const [page, setPage] = useState('garde'); // garde | alarmes | documents | cotisations: ein Fachprozess pro Seite
   const [dossiersCot, setDossiersCot] = useState([]);
   const [modeleCot, setModeleCot] = useState({ defaut: '', modeles: [] });
   const [erreurCot, setErreurCot] = useState(false);
@@ -68,16 +68,16 @@ function Application({ soignant, onDeconnexion }) {
   const cotisationsException = dossiersCot.some((d) => d.statut === 'exception');
   const { alarmes, documents, historiqueAlarmes, historiqueDocuments, acquitter, connexionPerdue, observerHistorique } = useAlarmes();
   const documentsRouges = documents.filter((d) => d.faits?.gravite === 'rouge').length;
-  // Dernière demande (Mode A : {action, chambre} ; Mode B : {consigne, chambre}) et sa réponse.
+  // Letzte Anfrage (Modus A: {action, chambre}; Modus B: {consigne, chambre}) und ihre Antwort.
   const [demande, setDemande] = useState(null);
   const [reponse, setReponse] = useState(null);
   const [enCours, setEnCours] = useState(false);
   const [erreur, setErreur] = useState(false);
-  const [alertesSupp, setAlertesSupp] = useState([]); // alertes ajoutées plus tard par l'analyse complémentaire
+  const [alertesSupp, setAlertesSupp] = useState([]); // Meldungen, die später durch die ergänzende Analyse hinzukommen
   const ajouterAlertes = useCallback((a) => setAlertesSupp(a), []);
-  const [etage, setEtage] = useState(null); // { numero, id } : rapport de garde d'un étage entier
+  const [etage, setEtage] = useState(null); // { numero, id }: Übergabebericht für ein ganzes Stockwerk
 
-  // Alerte d'un courrier : ouvre « Vérifier le document » pour ce résident (les règles répondent tout de suite)
+  // Meldung zu einem Schreiben: öffnet „Dokument prüfen“ für diesen Bewohner (die Regeln antworten sofort)
   function ouvrirVerification(alarme) {
     setPage('documents');
     lancer({ mode: 'a', action: 'verifier_document', chambre: alarme.chambre, resident: trouverResident(alarme.chambre), ref: alarme.faits?.courrier?.ref });
@@ -100,7 +100,7 @@ function Application({ soignant, onDeconnexion }) {
   }
 
   async function lancer(d) {
-    // `id` unique : chaque demande remet la zone de réponse à zéro.
+    // Eindeutige `id`: Jede Anfrage setzt den Antwortbereich zurück.
     const nouvelle = { ...d, id: Date.now() };
     setEtage(null);
     setAlertesSupp([]);
@@ -165,7 +165,7 @@ function Application({ soignant, onDeconnexion }) {
 
       <div className="zone-page">
       {connexionPerdue && <p className="connexion-perdue" role="alert">{t('alarmes.connexionPerdue')}</p>}
-      {/* les alarmes de capteurs ne s'affichent que dans leur page ; ailleurs, seul le compteur de l'onglet les signale */}
+      {/* Sensoralarme erscheinen nur auf ihrer Seite; anderswo zeigt nur der Zähler im Reiter sie an */}
       <Alertes alertes={[...(reponse?.alertes ?? []), ...alertesSupp]} />
 
       {page === 'alarmes' ? (
@@ -231,7 +231,7 @@ function Application({ soignant, onDeconnexion }) {
 }
 
 export default function App() {
-  const [soignant, setSoignant] = useState(undefined); // undefined : session en cours de vérification ; null : non connecté
+  const [soignant, setSoignant] = useState(undefined); // undefined: Sitzung wird geprüft; null: nicht angemeldet
   const [expiree, setExpiree] = useState(false);
 
   useEffect(() => {
@@ -239,7 +239,7 @@ export default function App() {
     soignantCourant()
       .then((s) => actif && setSoignant(s))
       .catch(() => actif && setSoignant(null));
-    // n8n a refusé la session (expirée, fermée ailleurs) : retour à la page de connexion, avec le motif
+    // n8n hat die Sitzung abgelehnt (abgelaufen, anderswo beendet): zurück zur Anmeldeseite, mit Begründung
     const arreter = surSessionPerdue(() => {
       setExpiree(true);
       setSoignant(null);

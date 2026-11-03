@@ -1,5 +1,5 @@
 {
-  "_note": "Caisse de dépendance SIMULÉE (Pflegekasse fictive). Données entièrement fictives. Chaque dossier : personne soignée, degré, prestation, expertise du Medizinischer Dienst (heures de soins par aidant) et aidants connus.",
+  "_note": "SIMULIERTE Pflegekasse (fiktive Pflegekasse). Vollständig fiktive Daten. Jede Akte: pflegebedürftige Person, Pflegegrad, Leistung, Gutachten des Medizinischen Dienstes (Pflegestunden pro Pflegeperson) und bekannte Pflegepersonen.",
   "dossiers": [
     {
       "id": "PK-2026-0101",

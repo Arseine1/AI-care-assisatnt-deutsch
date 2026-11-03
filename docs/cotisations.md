@@ -1,133 +1,133 @@
-# Cotisations retraite des aidants familiaux (agent IA, données fictives)
+# Rentenbeiträge pflegender Angehöriger (KI-Agent, fiktive Daten)
 
-Page « Cotisations retraite » : un agent traite les questionnaires des aidants familiaux (cotisations retraite payées par la caisse de dépendance, § 3 et § 166 SGB VI, § 44 SGB XI). **Données entièrement fictives.** L'agent lit, contrôle, calcule et prépare ; **valider, refuser ou demander une revue reste un acte humain**.
+Seite « Rentenbeiträge »: Ein Agent bearbeitet die Fragebögen pflegender Angehöriger (Rentenbeiträge, die von der Pflegekasse gezahlt werden, § 3 und § 166 SGB VI, § 44 SGB XI). **Vollständig fiktive Daten.** Der Agent liest, prüft, berechnet und bereitet vor; **Validieren, Ablehnen oder eine Überprüfung anfordern bleibt eine menschliche Handlung**.
 
-Deux modes, un seul moteur de règles (`workflows/code/sgb6/regles.js`) :
+Zwei Modi, ein einziges Regelwerk (`workflows/code/sgb6/regles.js`):
 
-| Mode | Réglage | Ce qui répond |
+| Modus | Einstellung | Was antwortet |
 |---|---|---|
-| simulé | `VITE_MOCK=true` | le moteur de règles tourne dans le navigateur, état gardé en mémoire |
-| réel | `VITE_MOCK=false` (`.env`) | n8n + PostgreSQL ; le moteur est recopié tel quel dans les nœuds de n8n |
+| simuliert | `VITE_MOCK=true` | das Regelwerk läuft im Browser, Zustand im Speicher gehalten |
+| real | `VITE_MOCK=false` (`.env`) | n8n + PostgreSQL; das Regelwerk wird unverändert in die Knoten von n8n kopiert |
 
-## Webhooks n8n (tous protégés : clé `X-AICare-Cle` + session du soignant, comme les autres)
+## n8n-Webhooks (alle geschützt: Schlüssel `X-AICare-Cle` + Sitzung der Pflegekraft, wie die anderen)
 
-| Webhook | Corps | Réponse |
+| Webhook | Body | Antwort |
 |---|---|---|
 | `aicare-sgb6-lister` | `{}` | `{ dossiers: [{ id, aidant, personne_soignee, recu_le, statut, revue, traite }] }` |
-| `aicare-sgb6-deposer` | `{ nom, contenu_base64 }` : `.txt`, ou PDF contenant du texte (pas un scan), 1 Mo au plus | `{ ok: true, id }` ou `{ ok: false, erreur: format \| taille \| vide \| scan \| lecture \| pas_un_questionnaire, message }` |
-| `aicare-sgb6-lancer` | `{ id, lecture_ia }` | **tout de suite** : `{ ok, tache_id, id, etapes }` ; l'agent travaille en tâche de fond. Refus : `inconnu`, `decide` (déjà validé ou refusé). Un traitement déjà en cours renvoie sa tâche. |
-| `aicare-sgb6-tache` | `{ tache_id }` | `{ statut, fait, total, etapes: [{ etape, outil, resultat, duree_ms, choisi_par }], resultat }` (le résultat une fois terminé) |
-| `aicare-sgb6-dossier` | `{ id }` | le dernier résultat enregistré, la dernière décision : se revoit sans relancer l'agent |
-| `aicare-sgb6-decider` | `{ id, decision: valider \| revue \| refuser, motif }` | `{ ok, statut, revue }` ou `{ ok: false, erreur }` |
+| `aicare-sgb6-deposer` | `{ nom, contenu_base64 }`: `.txt` oder PDF mit Text (kein Scan), höchstens 1 MB | `{ ok: true, id }` oder `{ ok: false, erreur: format \| taille \| vide \| scan \| lecture \| pas_un_questionnaire, message }` |
+| `aicare-sgb6-lancer` | `{ id, lecture_ia }` | **sofort**: `{ ok, tache_id, id, etapes }`; der Agent arbeitet als Hintergrundaufgabe. Ablehnungen: `inconnu`, `decide` (bereits validiert oder abgelehnt). Eine bereits laufende Verarbeitung liefert ihre Aufgabe zurück. |
+| `aicare-sgb6-tache` | `{ tache_id }` | `{ statut, fait, total, etapes: [{ etape, outil, resultat, duree_ms, choisi_par }], resultat }` (das Ergebnis, sobald beendet) |
+| `aicare-sgb6-dossier` | `{ id }` | das zuletzt gespeicherte Ergebnis, die letzte Entscheidung: kann ohne erneuten Start des Agenten wieder angesehen werden |
+| `aicare-sgb6-decider` | `{ id, decision: valider \| revue \| refuser, motif }` | `{ ok, statut, revue }` oder `{ ok: false, erreur }` |
 
-Décisions, jugées par n8n sur le **résultat enregistré**, jamais sur la requête :
+Entscheidungen, von n8n anhand des **gespeicherten Ergebnisses** beurteilt, niemals anhand der Anfrage:
 
-- **valider** : refusé (`regle_non_ok`) si le dossier n'est pas « prêt à valider » ou si une règle ou un écart n'est pas « ok » ;
-- **refuser** : `motif_obligatoire` sans motif (les blancs ne comptent pas) ; `refus_hors_exception` si le dossier n'est pas en exception ;
-- **revue** : une seule tâche de revue par dossier (`revue_deja_creee`) ; le dossier reste en exception ;
-- un dossier non traité, déjà validé ou refusé ne peut plus être décidé (`pas_en_attente`) ; un dossier décidé ne peut plus être retraité ;
-- le soignant qui signe est celui de la **session** (nœud « Session »), jamais celui du corps de la requête (testé : un `soignant` glissé dans la requête est ignoré).
+- **valider**: abgelehnt (`regle_non_ok`), wenn der Vorgang nicht « Bereit zur Bestätigung » ist oder wenn eine Regel oder Abweichung nicht « ok » ist;
+- **refuser**: `motif_obligatoire` ohne Begründung (Leerzeichen zählen nicht); `refus_hors_exception`, wenn der Vorgang nicht in der Ausnahme ist;
+- **revue**: nur eine Überprüfungsaufgabe pro Vorgang (`revue_deja_creee`); der Vorgang bleibt in der Ausnahme;
+- ein nicht bearbeiteter, bereits validierter oder abgelehnter Vorgang kann nicht mehr entschieden werden (`pas_en_attente`); ein entschiedener Vorgang kann nicht mehr neu bearbeitet werden;
+- die signierende Pflegekraft ist die der **Sitzung** (Knoten « Sitzung »), niemals die im Body der Anfrage (getestet: Ein in die Anfrage geschobenes `soignant` wird ignoriert).
 
-## L'agent (workflow `93-sgb6-agent`, tâche de fond dans `soins.taches`)
+## Der Agent (Workflow `93-sgb6-agent`, Hintergrundaufgabe in `soins.taches`)
 
 ```mermaid
 flowchart TD
-  L[aicare-sgb6-lancer] --> T[crée la tâche, répond avec tache_id]
-  T --> A1[1 lire le document + repérer les consignes cachées]
-  A1 --> J1[journal + battement de coeur]
-  J1 --> Q{lecture par l'IA ?}
-  Q -- non --> R[2 extraction par règles]
-  Q -- oui --> P[préparer : consigne fixe, température 0, schéma JSON]
-  P --> O[llama3.2 via Ollama, 5 min au plus]
-  O --> C[contrôle : chaque valeur doit figurer dans le texte, sinon écartée ; échec = repli sur les règles]
-  R --> J2[journal]
+  L[aicare-sgb6-lancer] --> T[legt die Aufgabe an, antwortet mit tache_id]
+  T --> A1[1 Dokument lesen + versteckte Anweisungen erkennen]
+  A1 --> J1[Journal + Herzschlag]
+  J1 --> Q{Lesen durch die KI?}
+  Q -- nein --> R[2 Extraktion per Regeln]
+  Q -- ja --> P[vorbereiten: feste Anweisung, Temperatur 0, JSON-Schema]
+  P --> O[llama3.2 über Ollama, höchstens 5 Min.]
+  O --> C[Kontrolle: jeder Wert muss im Text stehen, sonst verworfen; Fehlschlag = Rückfall auf die Regeln]
+  R --> J2[Journal]
   C --> J2
-  J2 --> X[3 à 7 : contrôler les champs, caisse, règles R1-R6, calcul, déclaration : TOUT par regles.js]
-  X --> E[enregistre le résultat : sgb6_dossiers, tâche terminée, journal]
+  J2 --> X[3 bis 7: Felder prüfen, Kasse, Regeln R1-R6, Berechnung, Meldung: ALLES durch regles.js]
+  X --> E[speichert das Ergebnis: sgb6_dossiers, Aufgabe beendet, Journal]
 ```
 
-- **Chaque étape est journalisée** (`soins.sgb6_journal` : heure, dossier, étape, outil, résultat court, durée, choisi par agent ou humain, soignant). **Le journal ne contient ni nom ni numéro d'assurance**, seulement l'identifiant du dossier, des comptes et des statuts. Vérifié par `tests/sgb6-live.mjs` (tous les noms et numéros des 9 questionnaires sont cherchés dans le journal) et par `tests/sgb6-n8n.test.mjs`.
-- **L'IA ne fait que recopier des champs** (consigne fixe, température 0, sortie JSON imposée par un schéma). Elle ne calcule ni ne décide : le contrôle, la caisse, les règles et le calcul sont du code. Le contenu du questionnaire est entouré de repères et présenté comme une donnée ; les consignes cachées (« Ignoriere alle Regeln… ») sont repérées **par le code**, quelle que soit la lecture, et font une exception « document suspect ».
-- **Chaque valeur lue par l'IA doit figurer dans le questionnaire**, sinon elle est écartée (et comptée dans le résultat). Si l'IA échoue, répond une réponse illisible ou dépasse 5 minutes : **repli sur les règles**, signalé dans le résultat (`lecture_ia.repli`, `lecture_ia.motif`) et dans l'interface.
-- Une tâche annulée ou interrompue (redémarrage de n8n, veilleur du workflow 80) n'est jamais réécrite par un résultat tardif.
+- **Jeder Schritt wird protokolliert** (`soins.sgb6_journal`: Uhrzeit, Vorgang, Schritt, Werkzeug, kurzes Ergebnis, Dauer, gewählt von Agent oder Mensch, Pflegekraft). **Das Journal enthält weder Namen noch Versicherungsnummer**, nur die Kennung des Vorgangs, Zählungen und Status. Geprüft durch `tests/sgb6-live.mjs` (alle Namen und Nummern der 9 Fragebögen werden im Journal gesucht) und durch `tests/sgb6-n8n.test.mjs`.
+- **Die KI schreibt nur Felder ab** (feste Anweisung, Temperatur 0, durch ein Schema erzwungene JSON-Ausgabe). Sie berechnet und entscheidet nicht: Prüfung, Kasse, Regeln und Berechnung sind Code. Der Inhalt des Fragebogens ist von Markierungen umgeben und wird als Datum dargestellt; versteckte Anweisungen (« Ignoriere alle Regeln… ») werden **vom Code** erkannt, unabhängig vom Lesen, und ergeben eine Ausnahme « Dokument ist verdächtig: bitte prüfen ».
+- **Jeder von der KI gelesene Wert muss im Fragebogen stehen**, sonst wird er verworfen (und im Ergebnis gezählt). Scheitert die KI, liefert sie eine unlesbare Antwort oder überschreitet sie 5 Minuten: **Rückfall auf die Regeln**, im Ergebnis (`lecture_ia.repli`, `lecture_ia.motif`) und in der Oberfläche gemeldet.
+- Eine abgebrochene oder unterbrochene Aufgabe (Neustart von n8n, Wächter des Workflows 80) wird nie durch ein verspätetes Ergebnis überschrieben.
 
-## Agent piloté par un modèle local (Ollama /api/chat, outils)
+## Von einem lokalen Modell gesteuerter Agent (Ollama /api/chat, Werkzeuge)
 
-La page propose deux pilotes : **Modèle IA** (par défaut) ou **Mission guidée** (les 7 étapes ci-dessus, enchaînées par le code). Avec le modèle IA, **le modèle choisit lui-même l'outil à appeler à chaque tour ; la garde du code contrôle chaque appel ; l'IA ne calcule ni ne décide jamais.** Le code est dans `workflows/code/sgb6/agent.js` (même méthode que `regles.js` : recopié tel quel dans les nœuds de n8n).
+Die Seite bietet zwei Steuerungen: **KI-Modell** (Standard) oder **Geführte Mission** (die 7 obigen Schritte, vom Code verkettet). Mit dem KI-Modell **wählt das Modell bei jeder Runde selbst das aufzurufende Werkzeug; die Wache des Codes kontrolliert jeden Aufruf; die KI berechnet und entscheidet niemals.** Der Code liegt in `workflows/code/sgb6/agent.js` (gleiche Methode wie `regles.js`: unverändert in die Knoten von n8n kopiert).
 
-**Le modèle se règle dans la page** (liste déroulante « Modèle », à côté de « Modèle IA ») : les modèles permis (`qwen2.5:7b` par défaut, le gagnant du comparatif ; `qwen3:8b`, `llama3.1:8b`, `llama3.2`) avec leur état (« non installé » si Ollama ne les a pas). Le choix part à chaque lancement (`aicare-sgb6-lancer`, champ `modele`) et n8n le **contrôle contre une liste fermée** (jamais un nom libre). Le modèle par défaut vient de la variable d'environnement `SGB6_MODELE` à la génération (`SGB6_MODELES` pour changer la liste) ; il est ensuite recopié dans la liste de la page (`aicare-sgb6-lister`).
+**Das Modell wird in der Seite eingestellt** (Auswahlliste « Modell » neben « KI-Modell »): die erlaubten Modelle (`qwen2.5:7b` als Standard, Sieger des Vergleichs; `qwen3:8b`, `llama3.1:8b`, `llama3.2`) mit ihrem Zustand (« nicht installiert », wenn Ollama sie nicht hat). Die Wahl wird bei jedem Start gesendet (`aicare-sgb6-lancer`, Feld `modele`), und n8n **prüft sie gegen eine geschlossene Liste** (niemals ein freier Name). Das Standardmodell stammt bei der Generierung aus der Umgebungsvariablen `SGB6_MODELE` (`SGB6_MODELES`, um die Liste zu ändern); es wird anschließend in die Liste der Seite kopiert (`aicare-sgb6-lister`).
 
-| Outil | Paramètres (strict : tout autre paramètre est refusé) | Ce qu'il fait |
+| Werkzeug | Parameter (strikt: jeder andere Parameter wird abgelehnt) | Was es tut |
 |---|---|---|
-| `lire_questionnaire` | dossier_id, raison | lit le questionnaire, repère les consignes cachées (par le code) |
-| `extraire_champs_par_regles` | dossier_id, raison | extrait les champs par les règles |
-| `extraire_champs_par_ia` | dossier_id, raison | extrait les champs avec llama3.2 (/api/generate, température 0, schéma imposé) : lent, moins fiable |
-| `lire_dossier_caisse` | reference, raison | lit le dossier de la caisse (la référence doit être celle de l'extraction) |
-| `controler_champs` | raison | champs obligatoires, dates, numéro d'assurance |
-| `verifier_regles` | raison | R1 à R6 et écarts |
-| `calculer_cotisation` | raison | calcul par le code (refusé si une règle est « non ») |
-| `preparer_brouillon` | raison | les 8 données du § 44 Abs. 3 SGB XI |
-| `creer_tache_revue` | motif, raison | une tâche de revue pour un collègue |
-| `terminer` | compte_rendu, raison | fin, avec un compte rendu de 3 à 5 phrases |
+| `lire_questionnaire` | dossier_id, raison | liest den Fragebogen, erkennt versteckte Anweisungen (durch den Code) |
+| `extraire_champs_par_regles` | dossier_id, raison | extrahiert die Felder per Regeln |
+| `extraire_champs_par_ia` | dossier_id, raison | extrahiert die Felder mit llama3.2 (/api/generate, Temperatur 0, erzwungenes Schema): langsam, weniger verlässlich |
+| `lire_dossier_caisse` | reference, raison | liest den Vorgang der Kasse (die Referenz muss die der Extraktion sein) |
+| `controler_champs` | raison | Pflichtfelder, Daten, Versicherungsnummer |
+| `verifier_regles` | raison | R1 bis R6 und Abweichungen |
+| `calculer_cotisation` | raison | Berechnung durch den Code (abgelehnt, wenn eine Regel « non » ist) |
+| `preparer_brouillon` | raison | die 8 Angaben des § 44 Abs. 3 SGB XI |
+| `creer_tache_revue` | motif, raison | eine Überprüfungsaufgabe für eine Kollegin bzw. einen Kollegen |
+| `terminer` | compte_rendu, raison | Ende, mit einem Bericht von 3 bis 5 Sätzen |
 
-- **Aucun outil « valider » ni « refuser »** (gestes humains, dans la page). **Aucun paramètre de montant, de degré ni de résultat de règle** : les outils travaillent sur l'état que le code garde ; un test le vérifie sur le schéma.
-- **Le modèle ne voit jamais le questionnaire** : seulement des résultats courts (moins de 800 caractères) sans nom, adresse ni numéro d'assurance, et un alias (« dossier-1 ») à la place de l'identifiant réel. Une consigne cachée dans le questionnaire n'arrive donc jamais jusqu'à lui ; le code la repère et en fait une exception « document suspect ».
-- **Raison** : une phrase obligatoire à chaque appel, donnée dans le paramètre `raison` (les petits modèles oublient le texte avant l'appel ; le paramètre est plus fiable). Écrite par le modèle, elle est **épurée** (noms, adresse, numéros retirés) avant d'être enregistrée.
-- **Garde** avant chaque exécution : outil connu ; paramètres valides au schéma ; dossier et référence exacts ; ordre logique (`verifier_regles` après `lire_dossier_caisse` et `controler_champs` ; `calculer_cotisation` seulement après `verifier_regles` et si aucune règle n'est « non » ; `preparer_brouillon` après `calculer_cotisation` ; `terminer` après `verifier_regles`) ; un outil une seule fois. Un appel refusé est **renvoyé au modèle avec la raison** (« REFUSÉ par la garde : … ») et journalisé.
-- **Limites** : 2 réponses invalides de suite (pas d'appel d'outil, modèle injoignable, arguments illisibles), plus de 12 tours, plus de 15 minutes, ou une réponse du modèle de plus de 5 minutes : **abandon du pilotage**, puis mission guidée, avec la mention « pilotage par le modèle abandonné : <raison> » (page, résultat, journal).
-- **Le statut final et les montants viennent du code** (`regles.js`). Les étapes que le modèle a omises sont complétées par le code (« étapes complétées par le code » dans le résultat). Un **compte rendu qui contredit les règles** (« prêt » alors que c'est une exception, un montant différent du calcul, un montant alors qu'aucun n'est calculé) est **signalé** dans la page ; le résultat des règles est celui qui s'affiche.
-- **Journal** (`sgb6_journal`) : une ligne par tour : outil choisi, raison, accepté ou refusé par la garde, durée, résultat court ; `choisi_par = 'modele'`. Sans nom ni numéro d'assurance (testé, y compris avec un modèle qui les écrit exprès dans ses raisons).
-- **Page** : chaque tour s'affiche dès qu'il est fait (outil, raison, pastille verte « acceptée » ou rouge « refusée par la garde », durée) ; le compte rendu du modèle s'affiche sous « Compte rendu de l'agent ». Le reste (règles, calcul, brouillon, décisions humaines) ne change pas.
-- **Mode simulé** (`VITE_MOCK=true`) : un **modèle simulé** (sans réseau) suit l'ordre habituel avec la même boucle, la même garde et les mêmes outils.
-- **Mémoire** : voir « Mémoire et modèles » plus bas.
+- **Kein Werkzeug « valider » oder « refuser »** (menschliche Handlungen, in der Seite). **Kein Parameter für Betrag, Pflegegrad oder Ergebnis einer Regel**: Die Werkzeuge arbeiten auf dem Zustand, den der Code hält; ein Test prüft das am Schema.
+- **Das Modell sieht den Fragebogen nie**: nur kurze Ergebnisse (unter 800 Zeichen) ohne Namen, Adresse oder Versicherungsnummer und einen Alias (« dossier-1 ») anstelle der echten Kennung. Eine im Fragebogen versteckte Anweisung erreicht es daher nie; der Code erkennt sie und macht daraus eine Ausnahme « Dokument ist verdächtig: bitte prüfen ».
+- **Begründung** (`raison`): ein bei jedem Aufruf obligatorischer Satz, im Parameter `raison` angegeben (kleine Modelle vergessen den Text vor dem Aufruf; der Parameter ist verlässlicher). Vom Modell geschrieben, wird sie vor der Speicherung **bereinigt** (Namen, Adresse, Nummern entfernt).
+- **Wache** vor jeder Ausführung: bekanntes Werkzeug; schemagültige Parameter; exakter Vorgang und exakte Referenz; logische Reihenfolge (`verifier_regles` nach `lire_dossier_caisse` und `controler_champs`; `calculer_cotisation` erst nach `verifier_regles` und wenn keine Regel « non » ist; `preparer_brouillon` nach `calculer_cotisation`; `terminer` nach `verifier_regles`); jedes Werkzeug nur einmal. Ein abgelehnter Aufruf wird **mit dem Grund an das Modell zurückgegeben** (« ABGELEHNT: … ») und protokolliert.
+- **Grenzen**: 2 ungültige Antworten in Folge (kein Werkzeugaufruf, Modell nicht erreichbar, unlesbare Argumente), mehr als 12 Runden, mehr als 15 Minuten oder eine Antwort des Modells von mehr als 5 Minuten: **Abbruch der Steuerung**, dann geführte Mission, mit dem Vermerk « Steuerung durch das Modell abgebrochen: <Grund> » (Seite, Ergebnis, Journal).
+- **Der Endstatus und die Beträge stammen vom Code** (`regles.js`). Vom Modell ausgelassene Schritte werden vom Code ergänzt (« Vom Code ergänzte Schritte » im Ergebnis). Ein **Bericht, der den Regeln widerspricht** (« bereit », obwohl es eine Ausnahme ist, ein vom Ergebnis der Berechnung abweichender Betrag, ein Betrag, obwohl keiner berechnet wurde), wird in der Seite **gemeldet**; angezeigt wird das Ergebnis der Regeln.
+- **Journal** (`sgb6_journal`): eine Zeile pro Runde: gewähltes Werkzeug, Begründung, von der Wache akzeptiert oder abgelehnt, Dauer, kurzes Ergebnis; `choisi_par = 'modele'`. Ohne Namen und Versicherungsnummer (getestet, auch mit einem Modell, das sie absichtlich in seine Begründungen schreibt).
+- **Seite**: Jede Runde wird angezeigt, sobald sie erfolgt ist (Werkzeug, Begründung, grüner Punkt « akzeptiert » oder roter « Vom Wächter abgelehnt », Dauer); der Bericht des Modells erscheint unter « Bericht des Agenten ». Der Rest (Regeln, Berechnung, Entwurf, menschliche Entscheidungen) ändert sich nicht.
+- **Simulierter Modus** (`VITE_MOCK=true`): Ein **simuliertes Modell** (ohne Netzwerk) folgt der üblichen Reihenfolge mit derselben Schleife, derselben Wache und denselben Werkzeugen.
+- **Speicher**: siehe « Speicher und Modelle » weiter unten.
 
-## Comparatif des modèles pilotes (28.10.2026, `node tests/sgb6-modeles.mjs --cas=a,d,i`)
+## Vergleich der steuernden Modelle (28.10.2026, `node tests/sgb6-modeles.mjs --cas=a,d,i`)
 
-Poste sans carte graphique (Intel UHD 620 inutilisable), 15,9 Go de RAM, Ollama natif Windows, quantification 4 bits. Cas **a** (clair), **d** (règle « non », pas de brouillon), **i** (document piégé). « Conforme » = statut final et montant conformes à `attendus.json` : comme le statut et les montants viennent du code, cela mesure surtout si le modèle MÈNE le traitement sans abandon (un abandon donne la mission guidée, conforme mais signalé). Mise en veille du PC désactivée pendant le test. qwen3 : mode réflexion désactivé (`think: false`, accepté par l'API).
+Rechner ohne Grafikkarte (Intel UHD 620 unbrauchbar), 15,9 GB RAM, natives Ollama unter Windows, 4-Bit-Quantisierung. Fall **a** (klar), **d** (Regel « non », kein Entwurf), **i** (präpariertes Dokument). « Konform » = Endstatus und Betrag entsprechen `attendus.json`: Da Status und Beträge vom Code stammen, misst das vor allem, ob das Modell die Verarbeitung ohne Abbruch FÜHRT (ein Abbruch ergibt die geführte Mission, konform, aber gemeldet). Ruhezustand des PCs während des Tests deaktiviert. qwen3: Denkmodus deaktiviert (`think: false`, von der API akzeptiert).
 
-| Modèle | Cas | Conforme | Tours | Refus garde | Abandon | Durée | Contradictions du compte rendu |
+| Modell | Fall | Konform | Runden | Ablehnungen der Wache | Abbruch | Dauer | Widersprüche des Berichts |
 |---|---|---|---|---|---|---|---|
-| qwen2.5:7b | a | oui | 8 | 0 | non | 458 s | 0 |
-| qwen2.5:7b | d | oui | 8 | 1 | non | 261 s | 0 |
-| qwen2.5:7b | i | oui | 8 | 0 | non | 284 s | 0 |
-| **qwen2.5:7b** | **3 cas** | **3 conformes sans abandon** | 8,0 en moyenne | 1 | 0 | **334 s en moyenne** | 0 |
-| qwen3:8b | a | oui (par repli) | 9 | 1 | **durée de 15 minutes dépassée** | 1028 s | 0 |
-| qwen3:8b | d | oui | 8 | 1 | non | 814 s | 0 |
-| qwen3:8b | i | oui | 9 | 1 | non | 344 s | 1 |
-| **qwen3:8b** | **3 cas** | **2 conformes sans abandon** | 8,7 en moyenne | 3 | 1 | 729 s en moyenne | 1 |
-| llama3.1:8b | a | oui (par repli) | 12 | 8 | **plus de 12 tours** | 678 s | 0 |
-| llama3.1:8b | d | oui (par repli) | 12 | 9 | **plus de 12 tours** | 322 s | 0 |
-| llama3.1:8b | i | oui (par repli) | 12 | 9 | **plus de 12 tours** | 343 s | 0 |
-| **llama3.1:8b** | **3 cas** | **0 conforme sans abandon** | 12,0 | 26 | 3 | 448 s en moyenne | 0 |
+| qwen2.5:7b | a | ja | 8 | 0 | nein | 458 s | 0 |
+| qwen2.5:7b | d | ja | 8 | 1 | nein | 261 s | 0 |
+| qwen2.5:7b | i | ja | 8 | 0 | nein | 284 s | 0 |
+| **qwen2.5:7b** | **3 Fälle** | **3 konform ohne Abbruch** | 8,0 im Mittel | 1 | 0 | **334 s im Mittel** | 0 |
+| qwen3:8b | a | ja (durch Rückfall) | 9 | 1 | **Dauer von 15 Minuten überschritten** | 1028 s | 0 |
+| qwen3:8b | d | ja | 8 | 1 | nein | 814 s | 0 |
+| qwen3:8b | i | ja | 9 | 1 | nein | 344 s | 1 |
+| **qwen3:8b** | **3 Fälle** | **2 konform ohne Abbruch** | 8,7 im Mittel | 3 | 1 | 729 s im Mittel | 1 |
+| llama3.1:8b | a | ja (durch Rückfall) | 12 | 8 | **mehr als 12 Runden** | 678 s | 0 |
+| llama3.1:8b | d | ja (durch Rückfall) | 12 | 9 | **mehr als 12 Runden** | 322 s | 0 |
+| llama3.1:8b | i | ja (durch Rückfall) | 12 | 9 | **mehr als 12 Runden** | 343 s | 0 |
+| **llama3.1:8b** | **3 Fälle** | **0 konform ohne Abbruch** | 12,0 | 26 | 3 | 448 s im Mittel | 0 |
 
-**Modèle retenu par défaut : qwen2.5:7b** : le seul à mener les 3 cas sans abandon, avec le moins de refus de la garde (1 sur 24 tours) et le plus rapide (334 s en moyenne, soit 5 à 8 minutes par dossier).
+**Standardmäßig gewähltes Modell: qwen2.5:7b**: das einzige, das die 3 Fälle ohne Abbruch führt, mit den wenigsten Ablehnungen der Wache (1 bei 24 Runden) und am schnellsten (334 s im Mittel, also 5 bis 8 Minuten pro Vorgang).
 
-- **qwen3:8b** (le préféré de l'utilisateur) suit l'ordre des outils mais commet une erreur d'ordre à chaque dossier (`verifier_regles` avant `controler_champs`, corrigée après le refus), et surtout il est **2 fois plus lent** : 6,7 Go chargés laissent 0,3 à 1,3 Go de RAM libre, le poste swappe, un dossier a dépassé 15 minutes (abandon, mission guidée). Il reste **sélectionnable dans la page**. À retester après le passage de WSL à 8 Go (voir ci-dessous). Un compte rendu a été signalé comme contradictoire (cas i).
-- **llama3.1:8b** appelle `controler_champs` avant la lecture du dossier, se fait refuser, puis boucle (réponse sans appel d'outil, outils déjà exécutés) : 12 tours, 8 à 9 refus, abandon dans les 3 cas. Inutilisable en pilote avec ce prompt.
-- **llama3.2 (3B)** : abandon dans l'essai du 27.10 (ajoute `dossier_id` à chaque appel).
-- **Limites du comparatif** : 3 cas sur 9 par modèle (demande de l'utilisateur), un seul passage par cas (température 0 mais pas de répétition) : les écarts de 1 refus ne sont pas significatifs. Seul le comptage « sans abandon » départage nettement.
+- **qwen3:8b** (der Favorit des Nutzers) folgt der Reihenfolge der Werkzeuge, macht aber bei jedem Vorgang einen Reihenfolgefehler (`verifier_regles` vor `controler_champs`, nach der Ablehnung korrigiert), und vor allem ist es **2-mal langsamer**: 6,7 GB geladen lassen 0,3 bis 1,3 GB freien RAM, der Rechner lagert aus, ein Vorgang überschritt 15 Minuten (Abbruch, geführte Mission). Es bleibt **in der Seite wählbar**. Nach der Umstellung von WSL auf 8 GB erneut zu testen (siehe unten). Ein Bericht wurde als widersprüchlich gemeldet (Fall i).
+- **llama3.1:8b** ruft `controler_champs` vor dem Lesen des Vorgangs auf, wird abgelehnt und gerät dann in eine Schleife (Antwort ohne Werkzeugaufruf, bereits ausgeführte Werkzeuge): 12 Runden, 8 bis 9 Ablehnungen, Abbruch in allen 3 Fällen. Mit diesem Prompt als Steuerung unbrauchbar.
+- **llama3.2 (3B)**: Abbruch im Versuch vom 27.10. (fügt bei jedem Aufruf `dossier_id` hinzu).
+- **Grenzen des Vergleichs**: 3 von 9 Fällen je Modell (Wunsch des Nutzers), nur ein Durchlauf pro Fall (Temperatur 0, aber keine Wiederholung): Abweichungen von 1 Ablehnung sind nicht signifikant. Nur die Zählung « ohne Abbruch » entscheidet deutlich.
 
-### Mémoire et modèles
+### Speicher und Modelle
 
-| Modèle | Mémoire du modèle chargé (num_ctx 8192) | RAM libre minimale pendant un dossier |
+| Modell | Speicher des geladenen Modells (num_ctx 8192) | Minimaler freier RAM während eines Vorgangs |
 |---|---|---|
-| qwen2.5:7b | 5,5 Go | 1,9 à 2,4 Go |
-| llama3.1:8b | 6,3 Go | 0,5 à 1,0 Go |
-| qwen3:8b | 6,7 Go | 0,3 à 1,3 Go |
+| qwen2.5:7b | 5,5 GB | 1,9 bis 2,4 GB |
+| llama3.1:8b | 6,3 GB | 0,5 bis 1,0 GB |
+| qwen3:8b | 6,7 GB | 0,3 bis 1,3 GB |
 
-Le PC a 15,9 Go ; `.wslconfig` donnait 11 Go à WSL (Docker 10,7 Go) alors que les conteneurs n'en utilisent que 3,5 à 4,5 Go. Observé le 27.10 : avec qwen2.5:7b chargé, 0,7 Go de RAM libre et des **« segmentation fault » intermittents du CLI n8n** (`docker compose exec` pendant un import de workflows). Remède appliqué : décharger le modèle avant un import (`keep_alive: 0`), et **WSL ramené à 8 Go** (voir DECISIONS.md).
+Der PC hat 15,9 GB; `.wslconfig` gab WSL 11 GB (Docker 10,7 GB), obwohl die Container nur 3,5 bis 4,5 GB nutzen. Beobachtet am 27.10.: Mit geladenem qwen2.5:7b 0,7 GB freier RAM und **zeitweilige « Segmentation fault » der n8n-CLI** (`docker compose exec` während eines Workflow-Imports). Angewandte Abhilfe: das Modell vor einem Import entladen (`keep_alive: 0`) und **WSL auf 8 GB zurücksetzen** (siehe DECISIONS.md).
 
-## Tables PostgreSQL (`data/sql/01_schema.sql`)
+## PostgreSQL-Tabellen (`data/sql/01_schema.sql`)
 
-| Table | Contenu |
+| Tabelle | Inhalt |
 |---|---|
-| `soins.sgb6_dossiers` | questionnaire (texte), statut, dernier résultat (JSON), revue, date de réception. **Seule table qui contient des noms** (nécessaires pour relire le dossier). |
-| `soins.sgb6_journal` | une ligne par étape de l'agent ou par décision humaine |
-| `soins.sgb6_decisions` | valider, revue ou refuser : motif, soignant de la session, heure |
+| `soins.sgb6_dossiers` | Fragebogen (Text), Status, letztes Ergebnis (JSON), Überprüfung, Eingangsdatum. **Einzige Tabelle, die Namen enthält** (nötig, um den Vorgang erneut zu lesen). |
+| `soins.sgb6_journal` | eine Zeile pro Schritt des Agenten oder pro menschlicher Entscheidung |
+| `soins.sgb6_decisions` | valider, revue oder refuser: Begründung, Pflegekraft der Sitzung, Uhrzeit |
 
-Les 9 questionnaires de `data/sgb6/questionnaires/` sont importés comme dossiers « à traiter » par `data/sql/03_sgb6.sql` (généré par `node data/scripts/generer-sgb6.mjs`, appliqué par `npm run postgres` dans `data/` ; `ON CONFLICT DO NOTHING` : un dossier déjà traité n'est jamais écrasé).
+Die 9 Fragebögen aus `data/sgb6/questionnaires/` werden von `data/sql/03_sgb6.sql` als Vorgänge « Zu bearbeiten » importiert (erzeugt mit `node data/scripts/generer-sgb6.mjs`, angewendet mit `npm run postgres` in `data/`; `ON CONFLICT DO NOTHING`: Ein bereits bearbeiteter Vorgang wird nie überschrieben).
 
-## Mise en route
+## Inbetriebnahme
 
 ```bash
 node data/scripts/generer-sgb6.mjs
@@ -139,42 +139,42 @@ node workflows/generer.mjs
 node workflows/importer.mjs --seulement=90,91,92,93,94,95,96
 ```
 
-(le schéma et les dossiers s'appliquent avec `npm run postgres` dans `data/`, qui recharge aussi les données de soins ; sur une base déjà chargée, appliquer seulement `01_schema.sql` et `03_sgb6.sql` avec `psql`.)
+(Das Schema und die Vorgänge werden mit `npm run postgres` in `data/` angewendet, was auch die Pflegedaten neu lädt; bei einer bereits geladenen Datenbank nur `01_schema.sql` und `03_sgb6.sql` mit `psql` anwenden.)
 
 ## Tests
 
-| Test | Ce qu'il vérifie |
+| Test | Was er prüft |
 |---|---|
-| `node --test tests/sgb6-regles.test.mjs tests/sgb6-attendus.test.mjs` | moteur de règles, calcul, 9 questionnaires contre `attendus.json` (sans n8n) |
-| `node tests/sgb6-n8n.test.mjs` | graphes générés : session et clé avant tout traitement, moteur recopié à l'identique, journal sans donnée personnelle, décision tirée de la session |
-| `node tests/chemins-ia.test.mjs` | l'appel à l'IA des cotisations : consigne fixe, température 0, schéma imposé, jamais sur le chemin du calcul |
-| `node tests/sgb6-live.mjs` | **avec n8n** : les 9 questionnaires sans IA (strict), dépôt valide et refusés, décisions refusées, sans session / sans clé, journal (environ 1 minute) |
-| `node --test tests/sgb6-agent.test.mjs` | **sans modèle** (modèle simulé) : outils, garde (outil inconnu, paramètre en trop, calculer avant verifier_regles, terminer trop tôt…), repli après 2 réponses invalides / 12 tours / 15 minutes, compte rendu contradictoire signalé, journal sans nom ni numéro, résultats d'outils courts |
-| `node tests/sgb6-live.mjs --pilote --modele=qwen3:8b` | **avec n8n et un vrai modèle** : cas a, d, i pilotés (`--pilote=tous` pour les 9), journal par tour, avancement tour par tour |
-| `node tests/sgb6-modeles.mjs` | le comparatif des modèles (voir plus bas) ; `--modeles=… --cas=a,d` pour un essai court |
-| `node tests/sgb6-live.mjs --ia` | ajoute les 9 questionnaires avec lecture par l'IA (20 à 40 minutes) ; résultats dans `tests/resultats/sgb6-live.json` |
+| `node --test tests/sgb6-regles.test.mjs tests/sgb6-attendus.test.mjs` | Regelwerk, Berechnung, 9 Fragebögen gegen `attendus.json` (ohne n8n) |
+| `node tests/sgb6-n8n.test.mjs` | erzeugte Graphen: Sitzung und Schlüssel vor jeder Verarbeitung, Regelwerk identisch kopiert, Journal ohne personenbezogene Daten, Entscheidung aus der Sitzung |
+| `node tests/chemins-ia.test.mjs` | der KI-Aufruf der Rentenbeiträge: feste Anweisung, Temperatur 0, erzwungenes Schema, nie auf dem Weg der Berechnung |
+| `node tests/sgb6-live.mjs` | **mit n8n**: die 9 Fragebögen ohne KI (strikt), gültige und abgelehnte Ablage, abgelehnte Entscheidungen, ohne Sitzung / ohne Schlüssel, Journal (etwa 1 Minute) |
+| `node --test tests/sgb6-agent.test.mjs` | **ohne Modell** (simuliertes Modell): Werkzeuge, Wache (unbekanntes Werkzeug, überzähliger Parameter, berechnen vor verifier_regles, zu frühes Beenden …), Rückfall nach 2 ungültigen Antworten / 12 Runden / 15 Minuten, widersprüchlicher Bericht gemeldet, Journal ohne Namen und Nummern, kurze Werkzeugergebnisse |
+| `node tests/sgb6-live.mjs --pilote --modele=qwen3:8b` | **mit n8n und einem echten Modell**: Fälle a, d, i gesteuert (`--pilote=tous` für alle 9), Journal pro Runde, Fortschritt Runde für Runde |
+| `node tests/sgb6-modeles.mjs` | der Modellvergleich (siehe oben); `--modeles=… --cas=a,d` für einen kurzen Versuch |
+| `node tests/sgb6-live.mjs --ia` | fügt die 9 Fragebögen mit Lesen durch die KI hinzu (20 bis 40 Minuten); Ergebnisse in `tests/resultats/sgb6-live.json` |
 
-## Résultats mesurés (27.10.2026, `node tests/sgb6-live.mjs` et `--ia`, llama3.2 sur le poste de 16 Go sans carte graphique)
+## Gemessene Ergebnisse (27.10.2026, `node tests/sgb6-live.mjs` und `--ia`, llama3.2 auf dem Rechner mit 16 GB ohne Grafikkarte)
 
-| Cas | Attendu | Sans IA (règles) | Durée sans IA | Avec lecture par l'IA | Durée avec IA | Lecture IA : champs gardés / écartés / différents des règles |
+| Fall | Erwartet | Ohne KI (Regeln) | Dauer ohne KI | Mit Lesen durch die KI | Dauer mit KI | Lesen durch die KI: behaltene / verworfene Felder / von den Regeln abweichend |
 |---|---|---|---|---|---|---|
-| a clair, degré 3 | prêt, 316,32 € | prêt, 316,32 € ✓ | 1,9 s | **exception**, aucun montant ✗ | 81 s | 17 / 1 / 5 |
-| b degré 5, combinée | prêt, 625,29 € | prêt, 625,29 € ✓ | 1,3 s | **exception**, « Montant non calculé : données à vérifier » ✗ (avant la correction : 312,64 €, la moitié du bon montant, parts égales appliquées à tort) | 102 s | 17 / 2 / 3 |
-| c deux aidants 60/40 | prêt, 308,96 € | prêt, 308,96 € ✓ | 1,5 s | **exception**, aucun montant ✗ | 79 s | 16 / 5 / 7 |
-| d 8 h d'expertise | exception (R3 non), pas de brouillon | ✓ | 1,3 s | exception, mais R3 « à vérifier » au lieu de « non » et R2 « non » à tort ✗ | 80 s | 17 / 1 / 4 |
-| e travail 35 h | exception (R4 non) | ✓ | 1,3 s | exception, R4 « non » ✓ mais R6 « à vérifier » à tort | 84 s | 17 / 3 / 4 |
-| f numéro faux | exception, 316,32 € provisoire | ✓ | 1,3 s | exception, aucun calcul ✗ (R1, R3, R6 mal lues) | 75 s | 16 / 2 / 4 |
-| g degré 3 / 2 | exception (écart), 198,62 € provisoire | ✓ | 1,3 s | exception, écart de degré **non vu** (l'IA n'a pas lu le degré) ✗ | 75 s | 12 / 6 / 9 |
-| h degré 1 | exception (R1 non) | ✓ | 1,7 s | exception, R1 « à vérifier » au lieu de « non » ; **un brouillon existe** ✗ | 84 s | 17 / 2 / 4 |
-| i document piégé | exception (suspect), 316,32 € provisoire | ✓ | 1,3 s | exception, **piège repéré** ✓ (par le code) ; montant non calculé ✗ | 96 s | 18 / 3 / 3 |
+| a klar, Pflegegrad 3 | bereit, 316,32 € | bereit, 316,32 € ✓ | 1,9 s | **Ausnahme**, kein Betrag ✗ | 81 s | 17 / 1 / 5 |
+| b Pflegegrad 5, kombiniert | bereit, 625,29 € | bereit, 625,29 € ✓ | 1,3 s | **Ausnahme**, « Betrag nicht berechnet: Daten sind zu prüfen » ✗ (vor der Korrektur: 312,64 €, die Hälfte des richtigen Betrags, gleiche Anteile fälschlich angewendet) | 102 s | 17 / 2 / 3 |
+| c zwei Pflegepersonen 60/40 | bereit, 308,96 € | bereit, 308,96 € ✓ | 1,5 s | **Ausnahme**, kein Betrag ✗ | 79 s | 16 / 5 / 7 |
+| d 8 Std. Gutachten | Ausnahme (R3 nein), kein Entwurf | ✓ | 1,3 s | Ausnahme, aber R3 « zu prüfen » statt « nein » und R2 fälschlich « nein » ✗ | 80 s | 17 / 1 / 4 |
+| e Arbeit 35 Std. | Ausnahme (R4 nein) | ✓ | 1,3 s | Ausnahme, R4 « nein » ✓, aber R6 fälschlich « zu prüfen » | 84 s | 17 / 3 / 4 |
+| f falsche Nummer | Ausnahme, 316,32 € vorläufig | ✓ | 1,3 s | Ausnahme, keine Berechnung ✗ (R1, R3, R6 falsch gelesen) | 75 s | 16 / 2 / 4 |
+| g Pflegegrad 3 / 2 | Ausnahme (Abweichung), 198,62 € vorläufig | ✓ | 1,3 s | Ausnahme, Abweichung beim Pflegegrad **nicht gesehen** (die KI hat den Pflegegrad nicht gelesen) ✗ | 75 s | 12 / 6 / 9 |
+| h Pflegegrad 1 | Ausnahme (R1 nein) | ✓ | 1,7 s | Ausnahme, R1 « zu prüfen » statt « nein »; **ein Entwurf existiert** ✗ | 84 s | 17 / 2 / 4 |
+| i präpariertes Dokument | Ausnahme (verdächtig), 316,32 € vorläufig | ✓ | 1,3 s | Ausnahme, **Falle erkannt** ✓ (durch den Code); Betrag nicht berechnet ✗ | 96 s | 18 / 3 / 3 |
 
-Lecture : **sans IA, 9 cas sur 9 conformes à `attendus.json`**, en moins de 2 secondes chacun. **Avec lecture par l'IA, 0 cas sur 9 entièrement conforme** : les 3 dossiers qui devaient être « prêts » deviennent des exceptions, le degré, les cases à cocher (« [X] Ja ») et les parts sont souvent mal lus ou absents. Les garde-fous ont tenu : l'IA n'a jamais rendu « prêt à valider » un dossier qui devait être en exception, le piège du cas i a été repéré, les statuts restent « exception » (un humain décide) et, depuis la correction du 27.10, **aucun montant n'est affiché sur une lecture par l'IA qui reste à vérifier** (les 9 passages : « Montant non calculé : données à vérifier » ou pas de brouillon ; le test le vérifie). Une IA qui se trompe peut encore provoquer de fausses exceptions et de faux motifs. **Conclusion : garder la lecture par les règles comme défaut ; la lecture par l'IA reste facultative et ne devrait servir que de second regard** (la liste « lue autrement que par les règles » s'affiche dans la page). Un modèle plus grand ou un prompt travaillé champ par champ serait à essayer ; non fait ici.
+Lesart: **Ohne KI 9 von 9 Fällen konform mit `attendus.json`**, jeweils in unter 2 Sekunden. **Mit Lesen durch die KI 0 von 9 Fällen vollständig konform**: Die 3 Vorgänge, die « bereit » sein sollten, werden zu Ausnahmen, der Pflegegrad, die Kontrollkästchen (« [X] Ja ») und die Anteile werden oft falsch gelesen oder fehlen. Die Schutzvorrichtungen hielten: Die KI hat nie einen Vorgang als « Bereit zur Bestätigung » gemeldet, der eine Ausnahme sein sollte, die Falle in Fall i wurde erkannt, die Status bleiben « Ausnahme » (ein Mensch entscheidet) und, seit der Korrektur vom 27.10., **wird bei einem noch zu prüfenden Lesen durch die KI kein Betrag angezeigt** (alle 9 Durchläufe: « Betrag nicht berechnet: Daten sind zu prüfen » oder kein Entwurf; der Test prüft das). Eine KI, die sich irrt, kann weiterhin falsche Ausnahmen und falsche Begründungen verursachen. **Fazit: das Lesen per Regeln als Standard beibehalten; das Lesen durch die KI bleibt optional und sollte nur als zweiter Blick dienen** (die Liste « anders als per Regeln gelesen » wird in der Seite angezeigt). Ein größeres Modell oder ein Feld für Feld ausgearbeiteter Prompt wäre zu versuchen; hier nicht erfolgt.
 
-## Limites connues
+## Bekannte Grenzen
 
-- **Lecture par l'IA : moins fiable que les règles** sur ce poste (llama3.2, 3 milliards de paramètres, sans carte graphique), voir le tableau ci-dessus. Elle ne peut rien décider : au pire, une valeur mal lue provoque une exception ou est écartée.
-- **PDF** : seul un PDF contenant du texte est accepté (le service d'extraction de texte du dépôt, `compose/ocr`, essaie d'abord le texte natif). Un scan est refusé après que ce service a tenté l'OCR : le refus d'un scan n'est donc pas instantané.
-- **Étapes 3 à 7** : un nœud par étape ; le journal, l'avancement (`fait`) et le battement de coeur sont écrits après **chacune**, avec un contrôle d'annulation. Le calcul lui-même prend quelques millisecondes : une pause d'affichage de 1,1 s précède chaque étape (`PAUSE_ETAPE_MS` dans les nœuds, interrogation de l'interface chaque seconde) pour que la page montre l'agent avancer. Ce rythme est voulu, pas une lenteur du calcul : environ 7 s par dossier sans IA. Le détail du résultat (données, règles, protocole) n'apparaît qu'à la fin ; seules les cases des étapes avancent en cours de route.
-- **Montant avec la lecture par l'IA** : tant qu'un champ est invalide, qu'une règle ou un écart n'est pas « ok » ou qu'un document est suspect, **aucun montant n'est calculé ni affiché, même provisoire** : « Montant non calculé : données à vérifier » (page, brouillon et journal). Sans IA, le montant provisoire du dossier de la caisse reste affiché (cas f, g, i).
-- **Année** : le moteur utilise l'année courante ; une année absente de `valeurs-legales.json` (2027, tant que le fichier n'est pas complété) donne une exception explicite « valeurs légales absentes », jamais une valeur par défaut.
-- **Caisse simulée** : `data/sgb6/caisse.json` est embarqué dans les nœuds ; relancer `node workflows/generer.mjs` et réimporter après toute modification.
+- **Lesen durch die KI: weniger verlässlich als die Regeln** auf diesem Rechner (llama3.2, 3 Milliarden Parameter, ohne Grafikkarte), siehe obige Tabelle. Sie kann nichts entscheiden: Im schlimmsten Fall löst ein falsch gelesener Wert eine Ausnahme aus oder wird verworfen.
+- **PDF**: Nur ein PDF mit Text wird akzeptiert (der Textextraktionsdienst des Repositorys, `compose/ocr`, versucht zuerst den nativen Text). Ein Scan wird abgelehnt, nachdem dieser Dienst die OCR versucht hat: Die Ablehnung eines Scans erfolgt also nicht sofort.
+- **Schritte 3 bis 7**: ein Knoten pro Schritt; das Journal, der Fortschritt (`fait`) und der Herzschlag werden nach **jedem** geschrieben, mit einer Abbruchkontrolle. Die Berechnung selbst dauert wenige Millisekunden: Eine Anzeigepause von 1,1 s geht jedem Schritt voraus (`PAUSE_ETAPE_MS` in den Knoten, Abfrage der Oberfläche jede Sekunde), damit die Seite den Fortschritt des Agenten zeigt. Dieser Rhythmus ist gewollt, keine Langsamkeit der Berechnung: etwa 7 s pro Vorgang ohne KI. Das Detail des Ergebnisses (Daten, Regeln, Protokoll) erscheint erst am Ende; nur die Kästchen der Schritte schreiten unterwegs voran.
+- **Betrag mit dem Lesen durch die KI**: Solange ein Feld ungültig ist, eine Regel oder Abweichung nicht « ok » ist oder ein Dokument verdächtig ist, wird **kein Betrag berechnet oder angezeigt, auch kein vorläufiger**: « Betrag nicht berechnet: Daten sind zu prüfen » (Seite, Entwurf und Journal). Ohne KI bleibt der vorläufige Betrag des Vorgangs der Kasse angezeigt (Fälle f, g, i).
+- **Jahr**: Das Regelwerk verwendet das laufende Jahr; ein in `valeurs-legales.json` fehlendes Jahr (2027, solange die Datei nicht ergänzt ist) ergibt eine ausdrückliche Ausnahme « Gesetzliche Werte <Jahr> fehlen in valeurs-legales.json », niemals einen Standardwert.
+- **Simulierte Kasse**: `data/sgb6/caisse.json` ist in die Knoten eingebettet; nach jeder Änderung `node workflows/generer.mjs` erneut ausführen und neu importieren.

@@ -1,10 +1,10 @@
-// Connecteur « ePA » : diagnostics et eML -> texte, un document par résident et par type, source « ePA ».
-// Les patients des exemples de gematik (KVNR inconnu de la maison) sont ignorés.
+// ePA-Konnektor: Diagnosen und eML -> Text, ein Dokument je Bewohner und Typ, Quelle « ePA ».
+// Die Patienten der gematik-Beispiele (der Einrichtung unbekannte KVNR) werden ignoriert.
 const parKvnr = {};
-for (const { json: r } of $('Correspondance').all()) parKvnr[r.kvnr] = r;
+for (const { json: r } of $('Zuordnung').all()) parKvnr[r.kvnr] = r;
 
-const etiquette = (r) => `${r.civilite} ${r.prenom} ${r.nom} (chambre ${r.chambre})`;
-const jour = (d) => new Date(d).toLocaleDateString('fr-FR', { timeZone: 'Europe/Berlin' });
+const etiquette = (r) => `${r.civilite} ${r.prenom} ${r.nom} (Zimmer ${r.chambre})`;
+const jour = (d) => new Date(d).toLocaleDateString('de-DE', { timeZone: 'Europe/Berlin' });
 const kvnrDe = (r) => r.subject?.identifier?.value;
 
 const conditions = [];
@@ -41,9 +41,9 @@ for (const [kvnr, { diag, med }] of Object.entries(parPatient)) {
     docs.push({
       ...commun,
       type: 'diagnostic',
-      titre: 'Diagnostics (ePA)',
-      texte: `Diagnostics du dossier ePA de ${etiquette(p)} :\n${diag
-        .map((c) => `- ${c.code?.text ?? 'diagnostic'}${c.code?.coding?.[0]?.code ? ` (CIM-10 ${c.code.coding[0].code})` : ''}`)
+      titre: 'Diagnosen (ePA)',
+      texte: `Diagnosen aus der ePA-Akte von ${etiquette(p)}:\n${diag
+        .map((c) => `- ${c.code?.text ?? 'Diagnose'}${c.code?.coding?.[0]?.code ? ` (ICD-10 ${c.code.coding[0].code})` : ''}`)
         .sort()
         .join('\n')}`,
       source_ref: `epa/${kvnr}/diagnostics`,
@@ -54,17 +54,17 @@ for (const [kvnr, { diag, med }] of Object.entries(parPatient)) {
   if (med.length) {
     const lignes = med.map((o) => {
       const m = medicaments[o.medicationReference?.reference];
-      const nom = m?.code?.text ?? m?.code?.coding?.[0]?.display ?? 'médicament';
-      const dose = o.dosageInstruction?.[0]?.text ?? 'posologie non précisée';
-      const note = o.note?.[0]?.text ? ` Remarque : ${o.note[0].text}` : '';
-      return `- ${nom} : ${dose} (prescrit le ${jour(o.authoredOn)}).${note}`;
+      const nom = m?.code?.text ?? m?.code?.coding?.[0]?.display ?? 'Medikament';
+      const dose = o.dosageInstruction?.[0]?.text ?? 'Dosierung nicht angegeben';
+      const note = o.note?.[0]?.text ? ` Hinweis: ${o.note[0].text}` : '';
+      return `- ${nom}: ${dose} (verordnet am ${jour(o.authoredOn)}).${note}`;
     });
     const maj = med.map((o) => o.authoredOn).filter(Boolean).sort().pop();
     docs.push({
       ...commun,
       type: 'medication',
-      titre: 'Liste de médication eML (ePA)',
-      texte: `Liste de médication (eML) du dossier ePA de ${etiquette(p)} :\n${lignes.sort().join('\n')}`,
+      titre: 'Medikationsliste eML (ePA)',
+      texte: `Medikationsliste (eML) aus der ePA-Akte von ${etiquette(p)}:\n${lignes.sort().join('\n')}`,
       source_ref: `epa/${kvnr}/eml`,
       date: new Date(maj ?? Date.now()).toISOString(),
     });

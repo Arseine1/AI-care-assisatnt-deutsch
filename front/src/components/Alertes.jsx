@@ -1,6 +1,6 @@
 import { t } from '../i18n';
 
-// Bandeau rouge : alarmes capteurs et contradictions entre documents.
+// Rotes Banner: Sensoralarme und Widersprüche zwischen Dokumenten.
 export default function Alertes({ alertes }) {
   if (!alertes?.length) return null;
 

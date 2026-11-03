@@ -27,7 +27,7 @@ services:
       WEBHOOK_URL: http://localhost:5679/
       GENERIC_TIMEZONE: Europe/Berlin
       TZ: Europe/Berlin
-      # Les workflows de connecteurs calculent des empreintes SHA-256 dans des nœuds Code.
+      # Die Connector-Workflows berechnen SHA-256-Fingerabdrücke in Code-Knoten.
       NODE_FUNCTION_ALLOW_BUILTIN: crypto
     extra_hosts:
       - "host.docker.internal:host-gateway"
@@ -35,8 +35,8 @@ services:
       - "5679:5678"
     volumes:
       - n8n_data:/home/node/.n8n
-      # Dossier surveillé par le connecteur « fichiers » (lecture seule). n8n 2 n'autorise la lecture
-      # de fichiers que dans ~/.n8n-files.
+      # Vom Connector „Dateien“ überwachter Ordner (nur lesend). n8n 2 erlaubt das Lesen
+      # von Dateien nur in ~/.n8n-files.
       - ../data/fichiers:/home/node/.n8n-files/fichiers:ro
     depends_on:
       postgres:
@@ -52,12 +52,12 @@ services:
       - qdrant_data:/qdrant/storage
     networks: [aicare]
 
-  # Ollama (modèle de langage + modèle d'embeddings). Par défaut, le projet réutilise l'Ollama INSTALLÉ SUR LE POSTE (port 11434) :
-  # une seule copie des modèles, et sur ce poste de 8 Go un conteneur de plus coûterait de la mémoire. Ce service est donc dans le
-  # profil « ollama » : il ne démarre pas avec `docker compose up -d`, seulement avec
+  # Ollama (Sprachmodell + Embedding-Modell). Standardmäßig verwendet das Projekt das AUF DEM RECHNER INSTALLIERTE Ollama (Port 11434):
+  # nur eine Kopie der Modelle, und auf diesem Rechner mit 8 GB würde ein weiterer Container Speicher kosten. Dieser Dienst liegt daher im
+  # Profil „ollama“: Er startet nicht mit `docker compose up -d`, sondern nur mit
   #     docker compose --profile ollama up -d
-  # Il publie le même port 11434 : arrêter d'abord l'Ollama du poste. n8n l'appelle déjà par host.docker.internal:11434 (rien à changer).
-  # Ensuite : docker compose exec ollama ollama pull llama3.2 && docker compose exec ollama ollama pull nomic-embed-text
+  # Er veröffentlicht denselben Port 11434: zuerst das Ollama des Rechners beenden. n8n ruft es bereits über host.docker.internal:11434 auf (nichts zu ändern).
+  # Danach: docker compose exec ollama ollama pull llama3.2 && docker compose exec ollama ollama pull nomic-embed-text
   ollama:
     image: ollama/ollama:latest
     profiles: ["ollama"]
@@ -68,7 +68,7 @@ services:
       - ollama_data:/root/.ollama
     networks: [aicare]
 
-  # OCR (OCRmyPDF + Tesseract) pour les PDF scannés du connecteur « fichiers ».
+  # OCR (OCRmyPDF + Tesseract) für die gescannten PDFs des Connectors „Dateien“.
   ocr:
     build: ./ocr
     restart: unless-stopped
@@ -91,12 +91,12 @@ services:
     image: axllent/mailpit:v1.32.0
     restart: unless-stopped
     environment:
-      # Mailpit n'a pas de serveur IMAP (seulement SMTP et POP3) : il prévient n8n par webhook à chaque nouveau courrier.
-      # n8n relit ensuite le message par l'API de Mailpit ; le contenu de la notification n'est pas utilisé.
+      # Mailpit hat keinen IMAP-Server (nur SMTP und POP3): Es benachrichtigt n8n bei jedem neuen Brief per Webhook.
+      # n8n liest die Nachricht anschließend über die API von Mailpit erneut; der Inhalt der Benachrichtigung wird nicht verwendet.
       MP_WEBHOOK_URL: http://n8n:5678/webhook/courrier-recu
-      # Mailpit n'envoie qu'UNE notification par seconde et abandonne les suivantes : 5 lettres arrivées d'un coup = 1 seule notification.
-      # Le rattrapage planifié (workflow 86, toutes les 2 minutes) traite les autres. Ne pas régler MP_WEBHOOK_LIMIT : mesuré, une valeur
-      # plus grande (50) fait perdre aussi les messages espacés de quelques secondes.
+      # Mailpit sendet nur EINE Benachrichtigung pro Sekunde und verwirft die folgenden: 5 auf einmal eingegangene Briefe = nur 1 Benachrichtigung.
+      # Der geplante Nachlauf (Workflow 86, alle 2 Minuten) verarbeitet die übrigen. MP_WEBHOOK_LIMIT nicht einstellen: gemessen, ein
+      # größerer Wert (50) lässt auch Nachrichten verloren gehen, die einige Sekunden auseinanderliegen.
     ports:
       - "8025:8025"
       - "1025:1025"
@@ -105,8 +105,8 @@ services:
   hapi-fhir:
     image: hapiproject/hapi:v8.12.0-1
     restart: unless-stopped
-    # L'image tourne par défaut en utilisateur non privilégié et ne peut pas écrire dans le volume
-    # (base H2) : on le lance en root. Acceptable en développement local uniquement.
+    # Das Image läuft standardmäßig als nicht privilegierter Benutzer und kann nicht in das Volume schreiben
+    # (H2-Datenbank): Wir starten es als root. Nur in der lokalen Entwicklung akzeptabel.
     user: "0:0"
     ports:
       - "8090:8080"

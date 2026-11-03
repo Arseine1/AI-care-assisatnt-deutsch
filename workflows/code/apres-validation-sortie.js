@@ -1,3 +1,3 @@
-// Après validation – sortie du sous-workflow (sans les événements de journal).
-const { evenements_journal, ...resultat } = $('Résumé').first().json;
+// Nach der Bestätigung – Ausgang des Unter-Workflows (ohne die Protokollereignisse).
+const { evenements_journal, ...resultat } = $('Zusammenfassung').first().json;
 return [{ json: resultat }];

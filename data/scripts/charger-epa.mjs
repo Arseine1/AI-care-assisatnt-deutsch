@@ -1,12 +1,12 @@
-// ePA de test : charge la liste de médication (eML) et les diagnostics des 8 résidents fictifs
-// dans le « medication-service » des mocks gematik (HAPI FHIR, port 8084), en plus des exemples de gematik.
-// PUT à identifiants fixes => rejouable sans doublon.
+// Test-ePA: lädt die Medikationsliste (eML) und die Diagnosen der 8 fiktiven Bewohner
+// in den „medication-service“ der gematik-Mocks (HAPI FHIR, Port 8084), zusätzlich zu den gematik-Beispielen.
+// PUT mit festen Kennungen => wiederholbar ohne Duplikate.
 //
-// Particularité du mock : le service ne sait pas chercher par patient (limite connue de HAPI sur les
-// références logiques). Les consommateurs (workflow n8n ePA) lisent donc la liste puis filtrent sur
-// subject.identifier (= KVNR du résident).
+// Besonderheit des Mocks: Der Dienst kann nicht nach Patient suchen (bekannte Einschränkung von HAPI bei
+// logischen Referenzen). Die Verbraucher (n8n-Workflow ePA) lesen daher die Liste und filtern dann nach
+// subject.identifier (= KVNR des Bewohners).
 //
-// Usage : node scripts/charger-epa.mjs [url]   (défaut : http://localhost:8084/fhir)
+// Aufruf: node scripts/charger-epa.mjs [url]   (Standard: http://localhost:8084/fhir)
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -16,7 +16,7 @@ const FHIR = (process.argv[2] || 'http://localhost:8084/fhir').replace(/\/$/, ''
 const KVNR = 'http://fhir.de/sid/gkv/kvid-10';
 const jours = (j) => new Date(Date.now() - j * 86400000).toISOString();
 
-// Prescripteur fictif commun : le service de rendu exige un « requester » (PractitionerRole -> Practitioner + Organization).
+// Gemeinsamer fiktiver Verordner: Der Rendering-Dienst verlangt einen „requester“ (PractitionerRole -> Practitioner + Organization).
 const ressources = [
   {
     resourceType: 'Organization',
@@ -86,17 +86,17 @@ try {
   const m = await fetch(`${FHIR}/metadata`);
   if (!m.ok) throw new Error(`HTTP ${m.status}`);
 } catch (e) {
-  console.error(`medication-service injoignable sur ${FHIR} (${e.message}). Lancez les mocks ePA (voir README).`);
+  console.error(`medication-service nicht erreichbar unter ${FHIR} (${e.message}). Starten Sie die ePA-Mocks (siehe README).`);
   process.exit(1);
 }
 
-// Exemples de gematik (transaction) : chargés une seule fois, car une transaction POST n'est pas idempotente.
+// gematik-Beispiele (Transaktion): nur einmal geladen, da eine POST-Transaktion nicht idempotent ist.
 const exemple = await (await fetch(`${FHIR}/Patient?identifier=Z123456783&_summary=count`)).json();
 if (exemple.total === 0) {
   const chemin = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'compose', 'epa-deployment', 'medication', 'samples', 'transaction.json');
   if (existsSync(chemin)) {
     const rep = await fetch(FHIR, { method: 'POST', headers: { 'Content-Type': 'application/fhir+json' }, body: readFileSync(chemin, 'utf8') });
-    console.log(rep.ok ? 'Exemples gematik chargés (patient Z123456783).' : `Exemples gematik : échec HTTP ${rep.status}`);
+    console.log(rep.ok ? 'gematik-Beispiele geladen (Patient Z123456783).' : `gematik-Beispiele: Fehler HTTP ${rep.status}`);
   }
 }
 
@@ -108,9 +108,9 @@ for (const res of ressources) {
     body: JSON.stringify(res),
   });
   if (!rep.ok) {
-    console.error(`ÉCHEC ${res.resourceType}/${res.id} : HTTP ${rep.status} ${(await rep.text()).slice(0, 300)}`);
+    console.error(`FEHLER ${res.resourceType}/${res.id}: HTTP ${rep.status} ${(await rep.text()).slice(0, 300)}`);
     process.exit(1);
   }
   ok++;
 }
-console.log(`ePA de test : ${ok} ressources chargées (eML + diagnostics des ${residents.length} résidents).`);
+console.log(`Test-ePA: ${ok} Ressourcen geladen (eML + Diagnosen der ${residents.length} Bewohner).`);

@@ -1,5 +1,5 @@
-// Mode A – associe la demande au résident de la chambre (table soins.residents).
-const d = $('Contrôler la demande').first().json;
-const r = $('Résident de la chambre').first().json;
-if (!r?.patient_id) throw new Error(`Aucun résident dans la chambre ${d.chambre}`);
+// Modus A – ordnet die Anfrage dem Bewohner des Zimmers zu (Tabelle soins.residents).
+const d = $('Anfrage prüfen').first().json;
+const r = $('Bewohner des Zimmers').first().json;
+if (!r?.patient_id) throw new Error(`Kein Bewohner im Zimmer ${d.chambre}`);
 return [{ json: { ...d, patient_id: r.patient_id } }];

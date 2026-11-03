@@ -8,7 +8,7 @@ requete: risque chute allergie anticoagulant hypoglycémie contre-indication sur
 protocoles: true
 ---
 ## INSTRUCTION
-Établis la liste des points de vigilance pour l'équipe qui prend le relais, à partir des seuls faits : risques connus du résident, allergies, médicaments à surveiller, contre-indications, incidents des {periode_heures} dernières heures et mesures de surveillance déjà prévues. Classe-les par importance pour la sécurité : allergies et risques vitaux d'abord. Un point n'est retenu que s'il s'appuie sur un fait. Les protocoles de la maison (source [Fichiers]) servent seulement à rappeler la mesure qu'ils prévoient pour un risque déjà présent chez ce résident.
+Erstelle die Liste der Aufmerksamkeitspunkte für das übernehmende Team, ausschließlich anhand der Fakten: bekannte Risiken der Person, Allergien, zu überwachende Medikamente, Kontraindikationen, Vorfälle der letzten {periode_heures} Stunden und bereits vorgesehene Überwachungsmaßnahmen. Ordne sie nach ihrer Bedeutung für die Sicherheit: zuerst Allergien und lebensbedrohliche Risiken. Ein Punkt wird nur aufgenommen, wenn er sich auf einen Fakt stützt. Die Protokolle des Hauses (Quelle [Fichiers]) dienen nur dazu, an die Maßnahme zu erinnern, die sie für ein bei dieser Person bereits vorhandenes Risiko vorsehen.
 
 ## FORMAT DE SORTIE
-Donne 6 points au plus, un par phrase, chacun avec le fait qui le justifie. Si aucun point ne s'appuie sur un fait, ne donne aucune phrase. Aucune phrase d'introduction, aucune conclusion, aucune recommandation de traitement.
+Gib höchstens 6 Punkte aus, einen pro Satz, jeweils mit dem Fakt, der ihn begründet. Stützt sich kein Punkt auf einen Fakt, gib keinen Satz aus. Kein Einleitungssatz, kein Schluss, keine Behandlungsempfehlung.

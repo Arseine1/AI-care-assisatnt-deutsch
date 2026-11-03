@@ -1,50 +1,50 @@
-# Documents en automatique (courriers de médecin, nouveautés de l'ePA)
+# Dokumente automatisch (Arztbriefe, Neuigkeiten der ePA)
 
-Un courrier arrive dans la boîte KIM (simulée par Mailpit) : n8n le lit, extrait son texte (OCR si c'est un scan), le rattache à un résident, applique les règles de sécurité et crée une alerte sur la page **Documents**. Rien n'est ajouté aux sources d'intelligence tant qu'un soignant n'a pas validé.
+Ein Brief trifft im KIM-Postfach ein (simuliert durch Mailpit): n8n liest ihn, extrahiert seinen Text (OCR, wenn es ein Scan ist), ordnet ihn einer Bewohnerin bzw. einem Bewohner zu, wendet die Sicherheitsregeln an und legt auf der Seite **Documents** eine Warnung an. Den Intelligenzquellen wird nichts hinzugefügt, solange keine Pflegekraft validiert hat.
 
-## Déclenchement
+## Auslösung
 
-| Mécanisme | Rôle |
+| Mechanismus | Aufgabe |
 |---|---|
-| **Notification de Mailpit** (webhook `courrier-recu`, workflow `83`) | traite un courrier dès son arrivée (27 à 33 s mesurés) |
-| **Rattrapage toutes les 2 minutes** (workflow `86`) | traite tout courrier non encore traité : notification perdue, n8n arrêté à l'arrivée du courrier, **rafale** |
-| **Verrou par courrier** (`soins.courriers_traites`) | un courrier pris depuis moins de 15 minutes n'est pas repris : jamais deux traitements en même temps |
+| **Benachrichtigung von Mailpit** (Webhook `courrier-recu`, Workflow `83`) | verarbeitet einen Brief sofort nach Eintreffen (27 bis 33 s gemessen) |
+| **Nachholen alle 2 Minuten** (Workflow `86`) | verarbeitet jeden noch nicht verarbeiteten Brief: verlorene Benachrichtigung, n8n beim Eintreffen des Briefs angehalten, **Schub** |
+| **Sperre pro Brief** (`soins.courriers_traites`) | ein seit weniger als 15 Minuten übernommener Brief wird nicht erneut aufgegriffen: nie zwei Verarbeitungen gleichzeitig |
 
-**Pourquoi pas un « Email Trigger (IMAP) »** : Mailpit n'a pas de serveur IMAP (seulement SMTP et POP3). Il prévient n8n par webhook (`MP_WEBHOOK_URL`) ; n8n relit ensuite le message par l'API de Mailpit et **n'utilise que son identifiant**, jamais le contenu de la notification. Avec une vraie boîte KIM, il suffirait de remplacer le nœud « Webhook » du workflow `83` par un « Email Trigger (IMAP) » : le reste ne change pas.
+**Warum kein « Email Trigger (IMAP) »**: Mailpit hat keinen IMAP-Server (nur SMTP und POP3). Es benachrichtigt n8n per Webhook (`MP_WEBHOOK_URL`); n8n liest die Nachricht dann über die API von Mailpit erneut und **verwendet nur ihre Kennung**, niemals den Inhalt der Benachrichtigung. Mit einem echten KIM-Postfach genügte es, den Knoten « Webhook » des Workflows `83` durch einen « Email Trigger (IMAP) » zu ersetzen: Der Rest ändert sich nicht.
 
-**Piège mesuré** : Mailpit n'envoie qu'**une notification par seconde** et abandonne les suivantes (5 lettres d'un coup = 1 notification). La valeur de réglage `MP_WEBHOOK_LIMIT` n'est pas à toucher : à 50, même des messages espacés de 6 s sont perdus. C'est le rattrapage qui couvre les rafales.
+**Gemessene Falle**: Mailpit sendet nur **eine Benachrichtigung pro Sekunde** und verwirft die folgenden (5 Briefe auf einmal = 1 Benachrichtigung). Der Einstellwert `MP_WEBHOOK_LIMIT` darf nicht angetastet werden: Bei 50 gehen sogar im Abstand von 6 s gesendete Nachrichten verloren. Schübe deckt das Nachholen ab.
 
-## Le traitement d'un courrier (sous-workflow `85`)
+## Die Verarbeitung eines Briefs (Unter-Workflow `85`)
 
-1. **Verrou**, puis lecture du message dans Mailpit : seules les pièces jointes PDF comptent (un message de transmission n'en a pas : rien ne se passe).
-2. **Texte du PDF** par le service OCR (OCRmyPDF : le texte d'un PDF, l'OCR pour un scan ; 2 à 3 minutes pour un scan sur ce poste).
-3. **Identification par le code** : le nom **et** la date de naissance du courrier doivent correspondre à UN seul résident (les deux « Heinz Müller » ne se distinguent que par la date). Sinon le courrier reste sans résident : « identité inconnue » ou « identité ambiguë ». **On ne devine jamais**, et l'identification ne dépend pas du modèle de langue.
-4. **Indexation** dans la collection `a_verifier` (le contenu d'une lettre n'est pas présenté comme fiable avant contrôle).
-5. **Règles de sécurité** (allergie, double anticoagulation, AINS avec insuffisance rénale) par le point d'entrée « Vérifier le document » (`aicare-verifier`) : réponse en quelques secondes, l'analyse de l'IA suit en tâche de fond si le réglage est activé.
-6. **Alerte** (une seule par courrier) sur la page Documents :
+1. **Sperre**, dann Lesen der Nachricht in Mailpit: Nur PDF-Anhänge zählen (eine Übermittlungsnachricht hat keine: nichts geschieht).
+2. **Text des PDF** durch den OCR-Dienst (OCRmyPDF: der Text eines PDF, OCR bei einem Scan; 2 bis 3 Minuten für einen Scan auf diesem Rechner).
+3. **Identifizierung durch den Code**: Name **und** Geburtsdatum des Briefs müssen genau EINER Person entsprechen (die beiden « Heinz Müller » unterscheiden sich nur durch das Datum). Sonst bleibt der Brief ohne Bewohner: « Schreiben nicht zugeordnet » (Motiv `identite_inconnue` bzw. `identite_ambigue`). **Es wird nie erraten**, und die Identifizierung hängt nicht vom Sprachmodell ab.
+4. **Indexierung** in der Collection `a_verifier` (der Inhalt eines Briefs wird vor der Prüfung nicht als verlässlich dargestellt).
+5. **Sicherheitsregeln** (Allergie, doppelte Antikoagulation, NSAR bei Niereninsuffizienz) über den Einstiegspunkt « Dokument prüfen » (`aicare-verifier`): Antwort in wenigen Sekunden, die Analyse der KI folgt als Hintergrundaufgabe, wenn die Einstellung aktiviert ist.
+6. **Warnung** (nur eine pro Brief) auf der Seite Documents:
 
-| Gravité | Cas |
+| Schweregrad | Fall |
 |---|---|
-| **rouge** | contradiction détectée par les règles |
-| **attention** | courrier non identifié, ou vérification automatique impossible |
-| **info** | aucune contradiction : le courrier reste à valider |
+| **rot** | von den Regeln erkannter Widerspruch |
+| **Achtung** | nicht identifizierter Brief oder automatische Prüfung unmöglich |
+| **Info** | kein Widerspruch: Der Brief ist noch zu validieren |
 
-## Validation et ajout au RAG (workflow `84`)
+## Validierung und Aufnahme ins RAG (Workflow `84`)
 
-Dans « Vérifier un document » (ou par le bouton « Ouvrir la vérification » d'une alerte), le soignant relit le rapport et le valide. **Seule la validation d'un rapport de vérification** peut faire entrer la lettre dans le RAG, et seulement si les règles n'y ont trouvé **aucune contradiction** :
+In « Dokument prüfen » (oder über die Schaltfläche « Prüfung öffnen » einer Warnung) liest die Pflegekraft den Bericht gegen und validiert ihn. **Nur die Validierung eines Prüfberichts** kann den Brief ins RAG bringen, und nur, wenn die Regeln darin **keinen Widerspruch** gefunden haben:
 
-- sans contradiction : la lettre est ajoutée à la collection `patients` (type `lettre_validee`, source « KIM (lettre de médecin) ») et n'est plus « à vérifier » ;
-- avec contradiction : la validation du rapport est enregistrée, mais la lettre **reste à vérifier** tant que le médecin n'a pas clarifié le point.
+- ohne Widerspruch: Der Brief wird der Collection `patients` hinzugefügt (Typ `lettre_validee`, Quelle « KIM (Arztbrief) ») und ist nicht mehr in `a_verifier`;
+- mit Widerspruch: Die Validierung des Berichts wird gespeichert, aber der Brief **bleibt zu prüfen**, solange die Ärztin bzw. der Arzt den Punkt nicht geklärt hat.
 
-Le texte vient de la base (collection `a_verifier`), pas de la requête ; le résident de la lettre doit être celui de la validation ; la décision est tracée au journal d'audit (`lettre_validee` ou `lettre_non_ajoutee`).
+Der Text stammt aus der Datenbank (Collection `a_verifier`), nicht aus der Anfrage; die Person des Briefs muss die der Validierung sein; die Entscheidung wird im Audit-Journal protokolliert (`lettre_validee` oder `lettre_non_ajoutee`).
 
-## Nouveautés de l'ePA
+## Neuigkeiten der ePA
 
-À la fin du connecteur ePA (workflow `40`, planifié 4 fois par jour), un résident dont l'ePA avait **déjà** été importée et dont du contenu nouveau ou modifié vient d'être indexé reçoit une alerte d'information sur la page Documents. La première importation d'un résident ne notifie rien. Vérifié sur la requête réelle, dans une transaction annulée (les mocks ePA, arrêtés pour économiser la mémoire, n'ont pas été relancés pour cet essai).
+Am Ende des ePA-Konnektors (Workflow `40`, 4-mal täglich geplant) erhält eine Person, deren ePA **bereits** importiert war und bei der gerade neuer oder geänderter Inhalt indexiert wurde, eine Informationswarnung auf der Seite Documents. Der erste Import einer Person meldet nichts. Geprüft an der echten Abfrage, in einer abgebrochenen Transaktion (die ePA-Mocks, zur Speicherersparnis angehalten, wurden für diesen Versuch nicht neu gestartet).
 
-## Essais
+## Versuche
 
 ```bash
-node tests/courriers.test.mjs    # hors ligne : identification, alertes, chemins, validation, rattrapage, verrou
-node tests/courrier-live.mjs     # réel : de vrais PDF envoyés dans Mailpit (dont un scan), validations, ePA ; 8 à 12 minutes
+node tests/courriers.test.mjs    # offline: Identifizierung, Warnungen, Wege, Validierung, Nachholen, Sperre
+node tests/courrier-live.mjs     # real: echte PDFs an Mailpit gesendet (darunter ein Scan), Validierungen, ePA; 8 bis 12 Minuten
 ```

@@ -1,49 +1,49 @@
-# Architecture
+# Architektur
 
-Tout tourne en local sur un poste (Docker). Les données sont fictives. Ollama (le modèle de langage) est installé sur le poste, hors Docker.
+Alles läuft lokal auf einem Rechner (Docker). Die Daten sind fiktiv. Ollama (das Sprachmodell) ist auf dem Rechner installiert, außerhalb von Docker.
 
-## Vue d'ensemble
+## Überblick
 
 ```mermaid
 flowchart LR
-  subgraph Soignant
-    UI["Interface React<br/>3 pages : Rapport de garde, Alarmes, Documents<br/>connexion identifiant + PIN"]
+  subgraph Soignant["Pflegekraft"]
+    UI["React-Oberfläche<br/>3 Seiten: Dienstbericht, Alarme, Dokumente<br/>Anmeldung Kennung + PIN"]
   end
 
-  subgraph n8n["n8n : tous les traitements"]
-    SEC["Sécurité : clé + session<br/>AVANT tout traitement"]
-    CTRL["Contrôle de la consigne (Mode B)<br/>règles de code, sans IA"]
-    CH["chercher<br/>faits d'UN résident, classés par pertinence"]
-    TPL["template verrouillé<br/>4 blocs"]
-    RED["rédiger<br/>(seul appel au modèle)"]
-    FIL["filtre anti-invention<br/>retire toute phrase sans source"]
-    ENR["enregistrer / valider<br/>signature = session"]
-    ALM["alarmes MQTT<br/>faits codés d'abord, contexte IA ensuite"]
-    DOC["courriers : OCR, identification<br/>nom + date de naissance, règles"]
+  subgraph n8n["n8n: alle Verarbeitungen"]
+    SEC["Sicherheit: Schlüssel + Sitzung<br/>VOR jeder Verarbeitung"]
+    CTRL["Prüfung der Anweisung (Modus B)<br/>Coderegeln, ohne KI"]
+    CH["Suchen<br/>Fakten EINER Person, nach Relevanz geordnet"]
+    TPL["Gesperrte Vorlage<br/>4 Blöcke"]
+    RED["Verfassen<br/>(einziger Aufruf des Modells)"]
+    FIL["Anti-Erfindungs-Filter<br/>entfernt jeden Satz ohne Quelle"]
+    ENR["Speichern / Bestätigen<br/>Signatur = Sitzung"]
+    ALM["MQTT-Alarme<br/>zuerst codierte Fakten, dann KI-Kontext"]
+    DOC["Briefe: OCR, Identifizierung<br/>Name + Geburtsdatum, Regeln"]
   end
 
-  subgraph Sources["Sources d'intelligence"]
-    PG[("PostgreSQL<br/>logiciel de soins fictif<br/>brouillons, validations, journal d'audit")]
-    QD[("Qdrant : RAG<br/>patients, connaissances, a_verifier")]
-    FHIR["Base hôpital FHIR"]
-    EPA["ePA gematik (mock)"]
-    FIC["Fichiers : protocoles, scans"]
-    KIM["Boîte KIM simulée<br/>Mailpit"]
+  subgraph Sources["Intelligenzquellen"]
+    PG[("PostgreSQL<br/>fiktive Pflegesoftware<br/>Entwürfe, Validierungen, Audit-Journal")]
+    QD[("Qdrant: RAG<br/>patients, connaissances, a_verifier")]
+    FHIR["Krankenhausdatenbank FHIR"]
+    EPA["ePA gematik (Mock)"]
+    FIC["Dateien: Protokolle, Scans"]
+    KIM["Simuliertes KIM-Postfach<br/>Mailpit"]
   end
 
-  OL["Ollama (poste)<br/>llama3.2 + nomic-embed-text"]
-  MQ["Mosquitto<br/>broker fermé"]
-  TTN["The Things Network<br/>capteurs LoRaWAN"]
+  OL["Ollama (Rechner)<br/>llama3.2 + nomic-embed-text"]
+  MQ["Mosquitto<br/>geschlossener Broker"]
+  TTN["The Things Network<br/>LoRaWAN-Sensoren"]
 
-  UI -- "Bearer + clé" --> SEC
+  UI -- "Bearer + Schlüssel" --> SEC
   SEC --> CTRL --> CH --> TPL --> RED --> FIL --> ENR
   SEC --> CH
   CH --> PG
   CH --> QD
   RED --> OL
-  CH -. "embedding" .-> OL
+  CH -. "Embedding" .-> OL
   ENR --> PG
-  ENR -- "rapport validé" --> QD
+  ENR -- "validierter Bericht" --> QD
   TTN -- "MQTT TLS" --> ALM
   MQ --> ALM
   ALM --> PG
@@ -56,60 +56,60 @@ flowchart LR
   PG --> QD
 ```
 
-Les cinq connecteurs (logiciel de soins, FHIR, ePA, fichiers, KIM) alimentent le RAG quatre fois par jour (00:00, 06:00, 12:00, 18:00, heure de Berlin) par un sous-workflow commun (« Indexeur ») avec anti-doublon par empreinte. Le logiciel de soins est en plus lu **en direct** à chaque demande, car le RAG peut avoir six heures de retard.
+Die fünf Konnektoren (Pflegesoftware, FHIR, ePA, Dateien, KIM) speisen das RAG viermal täglich (00:00, 06:00, 12:00, 18:00, Berliner Zeit) über einen gemeinsamen Unter-Workflow (« Indexierer ») mit Duplikatsperre per Fingerabdruck. Die Pflegesoftware wird zusätzlich bei jeder Anfrage **live** gelesen, da das RAG sechs Stunden Verspätung haben kann.
 
-## Le chemin d'une demande (Mode B)
+## Der Weg einer Anfrage (Modus B)
 
 ```mermaid
 sequenceDiagram
-  participant S as Soignant
+  participant S as Pflegekraft
   participant N as n8n
-  participant B as Base + RAG
+  participant B as Datenbank + RAG
   participant L as Llama (Ollama)
-  S->>N: consigne + chambre + jeton de session
-  N->>N: session valide ? sinon refus, rien d'autre ne s'exécute
-  N->>N: contrôle de la consigne (300 caractères, règles, autre résident, données personnelles)
-  alt consigne refusée
-    N-->>S: refus + motif (aucune IA, journal : motif, longueur, empreinte)
-  else consigne acceptée
-    N->>B: faits d'UN résident (classés selon la demande)
-    alt aucun fait ne parle du sujet
-      N-->>S: « information non disponible » (Llama non sollicité pour affirmer quoi que ce soit)
+  S->>N: Anweisung + Zimmer + Sitzungstoken
+  N->>N: Sitzung gültig? sonst Ablehnung, nichts anderes wird ausgeführt
+  N->>N: Prüfung der Anweisung (300 Zeichen, Regeln, andere Person, personenbezogene Daten)
+  alt Anweisung abgelehnt
+    N-->>S: Ablehnung + Grund (keine KI, Journal: Grund, Länge, Fingerabdruck)
+  else Anweisung akzeptiert
+    N->>B: Fakten EINER Person (nach der Anfrage geordnet)
+    alt kein Fakt behandelt das Thema
+      N-->>S: « Information nicht verfügbar » (Llama wird nicht bemüht, um irgendetwas zu behaupten)
     else
-      N->>L: template verrouillé : règles, faits, consigne, format
-      L-->>N: phrases JSON (une phrase = un fait)
-      N->>N: filtre : retire toute phrase dont chiffre, dose, heure, médicament, jugement ou négation n'est pas dans SON fait
-      N-->>S: texte assemblé par le code, source entre crochets
+      N->>L: gesperrtes Template: Regeln, Fakten, Anweisung, Format
+      L-->>N: JSON-Sätze (ein Satz = ein Fakt)
+      N->>N: Filter: entfernt jeden Satz, dessen Zahl, Dosis, Uhrzeit, Medikament, Urteil oder Verneinung nicht in SEINEM Fakt steht
+      N-->>S: vom Code zusammengesetzter Text, Quelle in eckigen Klammern
     end
   end
-  S->>N: Valider & Enregistrer (texte relu)
-  N->>B: validation signée par le compte connecté + journal d'audit
+  S->>N: Bestätigen & Speichern (gegengelesener Text)
+  N->>B: von dem angemeldeten Konto signierte Validierung + Audit-Journal
 ```
 
-## Ce qui garantit quoi
+## Was was garantiert
 
-| Garantie | Où elle est tenue | Test |
+| Garantie | Wo sie eingehalten wird | Test |
 |---|---|---|
-| Le texte libre d'un soignant n'atteint l'IA que par le contrôle, puis le bloc INSTRUCTION SOIGNANT | graphe des workflows | `tests/chemins-ia.test.mjs` |
-| Un seul appel à l'IA générative dans tout le dépôt | « rédiger » | `tests/briques.test.mjs` |
-| Aucune phrase sans source dans un texte assemblé | filtre « Contrôler la réponse » | `tests/anti-invention.test.mjs` |
-| Aucun accès sans session ; signature prise dans la session | nœuds « Session » de chaque entrée | `tests/securite.test.mjs`, `tests/securite-live.mjs` |
-| Les règles de contradiction passent avant toute IA | « Règles seules » | `tests/taches.test.mjs`, `tests/regles.test.mjs` |
-| Une alarme est enregistrée avant toute étape d'IA | workflow 81 | `tests/alarmes.test.mjs` |
-| Deux résidents ne se mélangent pas (homonymes Müller) | identification par nom ET date de naissance | `tests/batterie.mjs` |
-| Un rapport validé n'est pas relu comme un fait | « chercher » | `tests/apres-validation.test.mjs` |
+| Der freie Text einer Pflegekraft erreicht die KI nur über die Prüfung, dann über den Block ANWEISUNG PFLEGEKRAFT | Graph der Workflows | `tests/chemins-ia.test.mjs` |
+| Nur ein Aufruf der generativen KI im gesamten Repository | « Verfassen » | `tests/briques.test.mjs` |
+| Kein Satz ohne Quelle in einem zusammengesetzten Text | Filter « Antwort prüfen » | `tests/anti-invention.test.mjs` |
+| Kein Zugriff ohne Sitzung; Signatur wird der Sitzung entnommen | Knoten « Sitzung » jedes Eingangs | `tests/securite.test.mjs`, `tests/securite-live.mjs` |
+| Die Widerspruchsregeln laufen vor jeder KI | « Nur Regeln » | `tests/taches.test.mjs`, `tests/regles.test.mjs` |
+| Ein Alarm wird vor jedem KI-Schritt gespeichert | Workflow 81 | `tests/alarmes.test.mjs` |
+| Zwei Bewohner werden nicht vermischt (Namensvettern Müller) | Identifizierung nach Name UND Geburtsdatum | `tests/batterie.mjs` |
+| Ein validierter Bericht wird nicht als Fakt erneut gelesen | « Suchen » | `tests/apres-validation.test.mjs` |
 
-## Les services
+## Die Dienste
 
-| Service | Rôle | Port (poste) |
+| Dienst | Aufgabe | Port (Rechner) |
 |---|---|---|
-| n8n | tous les workflows | 5679 |
-| PostgreSQL | logiciel de soins fictif (`soins`), brouillons, validations, sessions, journal | — |
-| Qdrant | RAG (768 dimensions, Cosine) | 6335 |
-| Mosquitto | alarmes de capteurs (comptes `capteurs` et `n8n`) | 1884 |
-| Mailpit | boîte KIM simulée, transmission à l'équipe suivante | 8025 |
-| OCR (OCRmyPDF) | lettres scannées | — |
-| HAPI FHIR, mocks ePA | base de l'hôpital, ePA (démarrage à la demande, gourmands en mémoire) | 8090, 8082–8085 |
-| Ollama (poste) | `llama3.2`, `nomic-embed-text` | 11434 |
+| n8n | alle Workflows | 5679 |
+| PostgreSQL | fiktive Pflegesoftware (`soins`), Entwürfe, Validierungen, Sitzungen, Journal | — |
+| Qdrant | RAG (768 Dimensionen, Cosine) | 6335 |
+| Mosquitto | Sensoralarme (Konten `capteurs` und `n8n`) | 1884 |
+| Mailpit | simuliertes KIM-Postfach, Übermittlung an das nächste Team | 8025 |
+| OCR (OCRmyPDF) | gescannte Briefe | — |
+| HAPI FHIR, ePA-Mocks | Krankenhausdatenbank, ePA (Start auf Abruf, speicherhungrig) | 8090, 8082–8085 |
+| Ollama (Rechner) | `llama3.2`, `nomic-embed-text` | 11434 |
 
-Détails : [schéma du RAG](schema-rag.md), [briques IA](briques-ia.md), [interface et contrat n8n](interface-n8n.md), [alarmes](alarmes.md), [documents](documents.md), [sécurité](securite.md).
+Details: [Schema des RAG](schema-rag.md), [KI-Bausteine](briques-ia.md), [Oberfläche und n8n-Vertrag](interface-n8n.md), [Alarme](alarmes.md), [Dokumente](documents.md), [Sicherheit](securite.md).

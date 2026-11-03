@@ -1,3 +1,3 @@
-// Lettre validée – sortie du sous-workflow (sans l'événement de journal).
-const { evenement_journal, ...r } = $('Résultat').first().json;
+// Bestätigter Arztbrief – Ausgang des Unter-Workflows (ohne das Protokollereignis).
+const { evenement_journal, ...r } = $('Ergebnis').first().json;
 return [{ json: r }];

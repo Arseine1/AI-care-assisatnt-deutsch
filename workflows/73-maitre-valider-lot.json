@@ -1,6 +1,6 @@
 {
   "id": "aicaremaitrelot01",
-  "name": "AI-Care – Entrée Valider le lot d'un étage",
+  "name": "AI-Care – Eingang Stapel einer Etage bestätigen",
   "active": false,
   "nodes": [
     {
@@ -31,10 +31,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Valider le lot d'un étage – contrôle du corps de la requête. Chaque rapport doit rester rattaché à son BROUILLON\n// (contrôlé ensuite par la brique « enregistrer ») : rien d'autre que ces textes n'est enregistré.\nconst b = $input.first().json?.body ?? {};\nconst etage = Number(b.etage);\nif (!Number.isInteger(etage) || etage < 0 || etage > 20) throw new Error('étage invalide');\nif (!Array.isArray(b.rapports) || b.rapports.length === 0 || b.rapports.length > 60) throw new Error('rapports : 1 à 60 attendus');\n// Le nom du soignant qui valide vient de sa SESSION (jeton), jamais du corps de la requête : on ne peut pas valider « au nom de » quelqu'un d'autre.\nconst s = $('Session').first().json.soignant;\nreturn b.rapports.map((r) => ({ json: { brouillon_id: r?.brouillon_id, texte: r?.texte, valide_par: s.nom, soignant_id: s.identifiant, etage } }));\n"
+        "jsCode": "// Stapel einer Etage bestätigen – Prüfung des Anfragekörpers. Jeder Bericht muss an seinen ENTWURF gebunden bleiben\n// (anschließend vom Baustein « enregistrer » geprüft): Nichts anderes als diese Texte wird gespeichert.\nconst b = $input.first().json?.body ?? {};\nconst etage = Number(b.etage);\nif (!Number.isInteger(etage) || etage < 0 || etage > 20) throw new Error('Ungültige Etage');\nif (!Array.isArray(b.rapports) || b.rapports.length === 0 || b.rapports.length > 60) throw new Error('Berichte: 1 bis 60 erwartet');\n// Der Name der bestätigenden Pflegekraft stammt aus ihrer SITZUNG (Token), nie aus dem Anfragekörper: Man kann nicht „im Namen von“ jemand anderem bestätigen.\nconst s = $('Sitzung').first().json.soignant;\nreturn b.rapports.map((r) => ({ json: { brouillon_id: r?.brouillon_id, texte: r?.texte, valide_par: s.nom, soignant_id: s.identifiant, etage } }));\n"
       },
       "id": "a1c3e000-0168-4000-8000-000000000168",
-      "name": "Corps du lot",
+      "name": "Inhalt des Stapels",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -56,7 +56,7 @@
         }
       },
       "id": "a1c3e000-0169-4000-8000-000000000169",
-      "name": "Enregistrer",
+      "name": "Speichern",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.2,
       "position": [
@@ -67,10 +67,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Valider le lot d'un étage – rassemble les validations réussies ; les refus (déjà validé, introuvable, texte vide) sont listés.\nconst etage = $('Corps du lot').first().json.etage;\nconst sorties = $input.all().map((i) => i.json);\nconst valides = sorties.filter((s) => s.ok === true && s.action === 'generer_sbar');\nconst refuses = sorties\n  .filter((s) => !(s.ok === true && s.action === 'generer_sbar'))\n  .map((s) => ({ brouillon_id: s.brouillon_id ?? null, erreur: String(s.erreur ?? s.error?.message ?? s.error ?? 'Validation refusée').slice(0, 200) }));\nreturn [{ json: { portee: 'etage', etage, validation_ids: valides.map((s) => s.validation_id), nb_valides: valides.length, refuses } }];\n"
+        "jsCode": "// Stapel einer Etage bestätigen – fasst die erfolgreichen Bestätigungen zusammen; die Ablehnungen (bereits bestätigt, nicht gefunden, leerer Text) werden aufgelistet.\nconst etage = $('Inhalt des Stapels').first().json.etage;\nconst sorties = $input.all().map((i) => i.json);\nconst valides = sorties.filter((s) => s.ok === true && s.action === 'generer_sbar');\nconst refuses = sorties\n  .filter((s) => !(s.ok === true && s.action === 'generer_sbar'))\n  .map((s) => ({ brouillon_id: s.brouillon_id ?? null, erreur: String(s.erreur ?? s.error?.message ?? s.error ?? 'Bestätigung abgelehnt').slice(0, 200) }));\nreturn [{ json: { portee: 'etage', etage, validation_ids: valides.map((s) => s.validation_id), nb_valides: valides.length, refuses } }];\n"
       },
       "id": "a1c3e000-0170-4000-8000-000000000170",
-      "name": "Rassembler le lot",
+      "name": "Stapel zusammenführen",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -89,7 +89,7 @@
           },
           "conditions": [
             {
-              "id": "Des rapports validés ?",
+              "id": "Bestätigte Berichte vorhanden?",
               "leftValue": "={{ $json.nb_valides > 0 }}",
               "rightValue": "",
               "operator": {
@@ -104,7 +104,7 @@
         "options": {}
       },
       "id": "a1c3e000-0171-4000-8000-000000000171",
-      "name": "Des rapports validés ?",
+      "name": "Bestätigte Berichte vorhanden?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
@@ -126,7 +126,7 @@
         }
       },
       "id": "a1c3e000-0172-4000-8000-000000000172",
-      "name": "Après validation",
+      "name": "Nach der Bestätigung",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.2,
       "position": [
@@ -137,10 +137,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Valider le lot d'un étage – réponse à l'interface.\nconst l = $('Rassembler le lot').first().json;\nconst a = $input.first().json ?? {};\nreturn [\n  {\n    json: {\n      ok: l.nb_valides > 0,\n      nb_valides: l.nb_valides,\n      refuses: l.refuses,\n      apres_validation: l.nb_valides === 0 ? null : a.error ? { erreur: String(a.error.message ?? a.error).slice(0, 200) } : { rag: a.rag, transmission: a.transmission },\n    },\n  },\n];\n"
+        "jsCode": "// Stapel einer Etage bestätigen – Antwort an die Oberfläche.\nconst l = $('Stapel zusammenführen').first().json;\nconst a = $input.first().json ?? {};\nreturn [\n  {\n    json: {\n      ok: l.nb_valides > 0,\n      nb_valides: l.nb_valides,\n      refuses: l.refuses,\n      apres_validation: l.nb_valides === 0 ? null : a.error ? { erreur: String(a.error.message ?? a.error).slice(0, 200) } : { rag: a.rag, transmission: a.transmission },\n    },\n  },\n];\n"
       },
       "id": "a1c3e000-0173-4000-8000-000000000173",
-      "name": "Réponse du lot",
+      "name": "Antwort des Stapels",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -150,10 +150,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Valider le lot d'un étage – réponse à l'interface.\nconst l = $('Rassembler le lot').first().json;\nconst a = $input.first().json ?? {};\nreturn [\n  {\n    json: {\n      ok: l.nb_valides > 0,\n      nb_valides: l.nb_valides,\n      refuses: l.refuses,\n      apres_validation: l.nb_valides === 0 ? null : a.error ? { erreur: String(a.error.message ?? a.error).slice(0, 200) } : { rag: a.rag, transmission: a.transmission },\n    },\n  },\n];\n"
+        "jsCode": "// Stapel einer Etage bestätigen – Antwort an die Oberfläche.\nconst l = $('Stapel zusammenführen').first().json;\nconst a = $input.first().json ?? {};\nreturn [\n  {\n    json: {\n      ok: l.nb_valides > 0,\n      nb_valides: l.nb_valides,\n      refuses: l.refuses,\n      apres_validation: l.nb_valides === 0 ? null : a.error ? { erreur: String(a.error.message ?? a.error).slice(0, 200) } : { rag: a.rag, transmission: a.transmission },\n    },\n  },\n];\n"
       },
       "id": "a1c3e000-0174-4000-8000-000000000174",
-      "name": "Réponse du lot (aucun)",
+      "name": "Antwort des Stapels (keine)",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -163,10 +163,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Contrôle de session – le jeton « Bearer » de l'en-tête Authorization (43 caractères URL-safe) est haché (SHA-256) : seul le haché est en base.\nconst entetes = $input.first().json?.headers ?? {};\nconst m = String(entetes.authorization ?? '').match(/^Bearer ([A-Za-z0-9_-]{43})$/);\nif (!m) return [{ json: { hash: '' } }];\nreturn [{ json: { hash: require('crypto').createHash('sha256').update(m[1]).digest('hex') } }];\n"
+        "jsCode": "// Sitzungsprüfung – das « Bearer »-Token im Authorization-Header (43 URL-sichere Zeichen) wird gehasht (SHA-256): Nur der Hash steht in der Datenbank.\nconst entetes = $input.first().json?.headers ?? {};\nconst m = String(entetes.authorization ?? '').match(/^Bearer ([A-Za-z0-9_-]{43})$/);\nif (!m) return [{ json: { hash: '' } }];\nreturn [{ json: { hash: require('crypto').createHash('sha256').update(m[1]).digest('hex') } }];\n"
       },
       "id": "a1c3e000-0393-4000-8000-000000000393",
-      "name": "Session (jeton)",
+      "name": "Sitzung (Token)",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -183,7 +183,7 @@
         }
       },
       "id": "a1c3e000-0394-4000-8000-000000000394",
-      "name": "Session (base)",
+      "name": "Sitzung (Datenbank)",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
@@ -201,10 +201,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Contrôle de session – résultat : un soignant identifié (session ouverte, non expirée, compte actif) ou rien.\nconst r = $input.first().json ?? {};\nif (!r.identifiant) return [{ json: { ok: false } }];\nreturn [{ json: { ok: true, soignant: { identifiant: r.identifiant, nom: r.nom }, jeton_hash: r.jeton_hash } }];\n"
+        "jsCode": "// Sitzungsprüfung – Ergebnis: eine identifizierte Pflegekraft (Sitzung offen, nicht abgelaufen, Konto aktiv) oder nichts.\nconst r = $input.first().json ?? {};\nif (!r.identifiant) return [{ json: { ok: false } }];\nreturn [{ json: { ok: true, soignant: { identifiant: r.identifiant, nom: r.nom }, jeton_hash: r.jeton_hash } }];\n"
       },
       "id": "a1c3e000-0395-4000-8000-000000000395",
-      "name": "Session",
+      "name": "Sitzung",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -223,7 +223,7 @@
           },
           "conditions": [
             {
-              "id": "Session valide ?",
+              "id": "Sitzung gültig?",
               "leftValue": "={{ $json.ok === true }}",
               "rightValue": "",
               "operator": {
@@ -238,7 +238,7 @@
         "options": {}
       },
       "id": "a1c3e000-0396-4000-8000-000000000396",
-      "name": "Session valide ?",
+      "name": "Sitzung gültig?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
@@ -248,10 +248,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Contrôle de session – la session est valide : on rend aux nœuds suivants la requête d'origine (en-têtes, corps) telle que reçue.\nreturn [{ json: $('Webhook').first().json }];\n"
+        "jsCode": "// Sitzungsprüfung – die Sitzung ist gültig: Die ursprüngliche Anfrage (Header, Body) wird unverändert an die folgenden Knoten zurückgegeben.\nreturn [{ json: $('Webhook').first().json }];\n"
       },
       "id": "a1c3e000-0397-4000-8000-000000000397",
-      "name": "Requête",
+      "name": "Anfrage",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -261,10 +261,10 @@
     },
     {
       "parameters": {
-        "jsCode": "// Contrôle de session – refus : aucune donnée, seulement le motif. L'interface rouvre alors la page de connexion.\nreturn [{ json: { erreur: 'session' } }];\n"
+        "jsCode": "// Sitzungsprüfung – Ablehnung: keine Daten, nur der Grund. Die Oberfläche öffnet dann wieder die Anmeldeseite.\nreturn [{ json: { erreur: 'session' } }];\n"
       },
       "id": "a1c3e000-0398-4000-8000-000000000398",
-      "name": "Refus (session)",
+      "name": "Ablehnung (Sitzung)",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -278,131 +278,131 @@
       "main": [
         [
           {
-            "node": "Session (jeton)",
+            "node": "Sitzung (Token)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Corps du lot": {
+    "Inhalt des Stapels": {
       "main": [
         [
           {
-            "node": "Enregistrer",
+            "node": "Speichern",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Enregistrer": {
+    "Speichern": {
       "main": [
         [
           {
-            "node": "Rassembler le lot",
+            "node": "Stapel zusammenführen",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Rassembler le lot": {
+    "Stapel zusammenführen": {
       "main": [
         [
           {
-            "node": "Des rapports validés ?",
+            "node": "Bestätigte Berichte vorhanden?",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Des rapports validés ?": {
+    "Bestätigte Berichte vorhanden?": {
       "main": [
         [
           {
-            "node": "Après validation",
+            "node": "Nach der Bestätigung",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Réponse du lot (aucun)",
+            "node": "Antwort des Stapels (keine)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Après validation": {
+    "Nach der Bestätigung": {
       "main": [
         [
           {
-            "node": "Réponse du lot",
+            "node": "Antwort des Stapels",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Session (jeton)": {
+    "Sitzung (Token)": {
       "main": [
         [
           {
-            "node": "Session (base)",
+            "node": "Sitzung (Datenbank)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Session (base)": {
+    "Sitzung (Datenbank)": {
       "main": [
         [
           {
-            "node": "Session",
+            "node": "Sitzung",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Session": {
+    "Sitzung": {
       "main": [
         [
           {
-            "node": "Session valide ?",
+            "node": "Sitzung gültig?",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Session valide ?": {
+    "Sitzung gültig?": {
       "main": [
         [
           {
-            "node": "Requête",
+            "node": "Anfrage",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Refus (session)",
+            "node": "Ablehnung (Sitzung)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Requête": {
+    "Anfrage": {
       "main": [
         [
           {
-            "node": "Corps du lot",
+            "node": "Inhalt des Stapels",
             "type": "main",
             "index": 0
           }

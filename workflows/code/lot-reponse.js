@@ -1,5 +1,5 @@
-// Valider le lot d'un étage – réponse à l'interface.
-const l = $('Rassembler le lot').first().json;
+// Stapel einer Etage bestätigen – Antwort an die Oberfläche.
+const l = $('Stapel zusammenführen').first().json;
 const a = $input.first().json ?? {};
 return [
   {

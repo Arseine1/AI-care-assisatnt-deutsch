@@ -1,5 +1,5 @@
-// Connexion – jeton de session : 32 octets aléatoires (43 caractères). Il n'est renvoyé qu'une fois ; la base ne garde que son SHA-256.
+// Anmeldung – Sitzungstoken: 32 zufällige Bytes (43 Zeichen). Es wird nur einmal zurückgegeben; die Datenbank speichert nur den SHA-256-Hash.
 const crypto = require('crypto');
-const v = $('Vérifier le PIN').first().json;
+const v = $('PIN überprüfen').first().json;
 const jeton = crypto.randomBytes(32).toString('base64url');
 return [{ json: { jeton, hash: crypto.createHash('sha256').update(jeton).digest('hex'), identifiant: v.identifiant, nom: v.nom } }];

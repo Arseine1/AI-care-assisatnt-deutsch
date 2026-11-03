@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "Données de test fictives et scripts de chargement (PostgreSQL, HAPI FHIR, Mailpit).",
+  "description": "Fiktive Testdaten und Ladeskripte (PostgreSQL, HAPI FHIR, Mailpit).",
   "scripts": {
     "generer": "node scripts/generer-sql.mjs && node scripts/generer-sgb6.mjs && node scripts/generer-front.mjs",
     "postgres": "node scripts/charger-postgres.mjs",

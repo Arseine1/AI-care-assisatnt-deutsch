@@ -1,5 +1,5 @@
-// Métadonnées des 5 lettres de médecin de la boîte KIM simulée (données fictives, courriers en allemand).
-// Utilisé par generer-lettres.mjs (PDF) et envoyer-kim.mjs (Mailpit).
+// Metadaten der 5 Arztbriefe des simulierten KIM-Postfachs (fiktive Daten, Briefe auf Deutsch).
+// Verwendet von generer-lettres.mjs (PDF) und envoyer-kim.mjs (Mailpit).
 
 export const LETTRES = [
   {
@@ -7,7 +7,7 @@ export const LETTRES = [
     expediteur: { nom: 'Dr. med. Annika Berger', email: 'praxis-berger@kim.example.test', fonction: 'Hausärztin, Allgemeinmedizin' },
     objet: 'Arztbrief – Hans Weber, geb. 23.11.1941',
     patient: 'Herr Hans Weber, geb. 23.11.1941',
-    attendu: 'contradiction',
+    attendu: 'Widerspruch',
     corps: [
       ['Diagnose', 'Akute Bronchitis.'],
       ['Befund', 'Husten mit gelblichem Auswurf seit zwei Tagen, Temperatur 37,8 °C, Lunge: spastisch-feuchte Rasselgeräusche beidseits. CRP 18 mg/l.'],
@@ -20,7 +20,7 @@ export const LETTRES = [
     expediteur: { nom: 'Dr. med. Thomas Lindner', email: 'kardiologie-lindner@kim.example.test', fonction: 'Facharzt für Kardiologie' },
     objet: 'Arztbrief – Greta Schulz, geb. 14.03.1938',
     patient: 'Frau Greta Schulz, geb. 14.03.1938',
-    attendu: 'contradiction',
+    attendu: 'Widerspruch',
     corps: [
       ['Diagnose', 'Permanentes Vorhofflimmern, arterielle Hypertonie.'],
       ['Befund', 'Ruhe-EKG: Vorhofflimmern, Kammerfrequenz 74/min. Blutdruck 134/80 mmHg. Echokardiographie ohne wesentliche Veränderung.'],
@@ -33,7 +33,7 @@ export const LETTRES = [
     expediteur: { nom: 'Dr. med. Sabine Krause', email: 'urologie-krause@kim.example.test', fonction: 'Fachärztin für Urologie' },
     objet: 'Arztbrief – Herr Müller, geb. 01.12.1947',
     patient: 'Herr Heinz Müller, geb. 01.12.1947',
-    attendu: 'contradiction (visible seulement avec la bonne date de naissance)',
+    attendu: 'Widerspruch (nur mit dem richtigen Geburtsdatum sichtbar)',
     corps: [
       ['Diagnose', 'Unkomplizierter Harnwegsinfekt.'],
       ['Befund', 'Dysurie seit zwei Tagen, Urin trüb, Leukozyten im Urin positiv, Temperatur 37,9 °C.'],
@@ -46,7 +46,7 @@ export const LETTRES = [
     expediteur: { nom: 'Dr. med. Markus Vogel', email: 'orthopaedie-vogel@kim.example.test', fonction: 'Facharzt für Orthopädie' },
     objet: 'Arztbrief – Elisabeth Fischer, geb. 19.04.1943',
     patient: 'Frau Elisabeth Fischer, geb. 19.04.1943',
-    attendu: 'aucune contradiction',
+    attendu: 'kein Widerspruch',
     corps: [
       ['Diagnose', 'Gonarthrose rechts, Osteoporose, Hypothyreose.'],
       ['Befund', 'Belastungsabhängige Schmerzen im rechten Knie, kein Erguss, Beweglichkeit 0-0-110°.'],
@@ -56,11 +56,11 @@ export const LETTRES = [
   },
 ];
 
-// Lettre scannée (image) : Ibuprofène pour un patient en insuffisance rénale stade 4.
+// Gescannter Brief (Bild): Ibuprofen bei einem Patienten mit Niereninsuffizienz Stadium 4.
 export const LETTRE_SCAN = {
   fichier: 'arztbrief-wagner-scan.pdf',
   expediteur: { nom: 'Dr. med. Peter Neumann', email: 'praxis-neumann@kim.example.test', fonction: 'Hausarzt, Allgemeinmedizin' },
   objet: 'Arztbrief (Scan) – Otto Wagner, geb. 05.08.1936',
   patient: 'Herr Otto Wagner, geb. 05.08.1936',
-  attendu: 'contradiction rénale (OCR obligatoire)',
+  attendu: 'renaler Widerspruch (OCR erforderlich)',
 };

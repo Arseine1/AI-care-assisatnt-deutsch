@@ -1,6 +1,6 @@
 {
   "id": "aicarebrqjourn01",
-  "name": "AI-Care – Brique journal",
+  "name": "AI-Care – Baustein Protokoll",
   "active": false,
   "nodes": [
     {
@@ -8,7 +8,7 @@
         "inputSource": "passthrough"
       },
       "id": "a1c3e000-0060-4000-8000-000000000060",
-      "name": "Entrée",
+      "name": "Eingang",
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1.1,
       "position": [
@@ -25,7 +25,7 @@
         }
       },
       "id": "a1c3e000-0061-4000-8000-000000000061",
-      "name": "Écrire au journal",
+      "name": "Ins Protokoll schreiben",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
@@ -43,11 +43,11 @@
     }
   ],
   "connections": {
-    "Entrée": {
+    "Eingang": {
       "main": [
         [
           {
-            "node": "Écrire au journal",
+            "node": "Ins Protokoll schreiben",
             "type": "main",
             "index": 0
           }
