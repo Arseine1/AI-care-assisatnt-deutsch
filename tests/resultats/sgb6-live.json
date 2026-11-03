@@ -1,56 +1,56 @@
 {
-  "date": "2026-10-28T07:06:09.334Z",
+  "date": "2026-11-03T18:20:30.226Z",
   "sans_ia": {
     "a-becker-clair": {
-      "secondes": 7.9,
+      "secondes": 27.762,
       "ecarts": [],
       "statut": "pret_a_valider",
       "cotisation": 316.32
     },
     "b-krueger-degre5-combinee": {
-      "secondes": 7.245,
+      "secondes": 18.132,
       "ecarts": [],
       "statut": "pret_a_valider",
       "cotisation": 625.29
     },
     "c-vogel-deux-aidants": {
-      "secondes": 7.062,
+      "secondes": 15.278,
       "ecarts": [],
       "statut": "pret_a_valider",
       "cotisation": 308.96
     },
     "d-lehmann-8-heures": {
-      "secondes": 7.442,
+      "secondes": 15.316,
       "ecarts": [],
       "statut": "exception",
       "cotisation": null
     },
     "e-neumann-travail-35h": {
-      "secondes": 7.155,
+      "secondes": 18.33,
       "ecarts": [],
       "statut": "exception",
       "cotisation": null
     },
     "f-schaefer-numero-faux": {
-      "secondes": 7.359,
+      "secondes": 56.187,
       "ecarts": [],
       "statut": "exception",
       "cotisation": 316.32
     },
     "g-wolf-ecart-degre": {
-      "secondes": 6.892,
+      "secondes": 29.097,
       "ecarts": [],
       "statut": "exception",
       "cotisation": 198.62
     },
     "h-fischer-degre1": {
-      "secondes": 6.973,
+      "secondes": 36.68,
       "ecarts": [],
       "statut": "exception",
       "cotisation": null
     },
     "i-richter-piege": {
-      "secondes": 7.403,
+      "secondes": 41.505,
       "ecarts": [],
       "statut": "exception",
       "cotisation": 316.32

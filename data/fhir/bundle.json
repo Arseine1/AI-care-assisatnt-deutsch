@@ -265,7 +265,7 @@
         "subject": {
           "reference": "Patient/aicare-schulz"
         },
-        "effectiveDateTime": "2026-11-02T12:21:01.568Z",
+        "effectiveDateTime": "2026-11-02T18:03:26.503Z",
         "valueQuantity": {
           "value": 2.6,
           "unit": ""
@@ -776,7 +776,7 @@
         "subject": {
           "reference": "Patient/aicare-weber"
         },
-        "effectiveDateTime": "2026-11-01T12:21:01.570Z",
+        "effectiveDateTime": "2026-11-01T18:03:26.505Z",
         "valueQuantity": {
           "value": 18,
           "unit": "mg/L"
@@ -1019,7 +1019,7 @@
         "subject": {
           "reference": "Patient/aicare-becker"
         },
-        "effectiveDateTime": "2026-10-14T12:21:01.570Z",
+        "effectiveDateTime": "2026-10-14T18:03:26.505Z",
         "valueQuantity": {
           "value": 8.1,
           "unit": "%"
@@ -1321,7 +1321,7 @@
         "subject": {
           "reference": "Patient/aicare-wagner"
         },
-        "effectiveDateTime": "2026-11-02T12:21:01.570Z",
+        "effectiveDateTime": "2026-11-02T18:03:26.505Z",
         "valueQuantity": {
           "value": 22,
           "unit": "ml/min/1,73 m²"
@@ -1354,7 +1354,7 @@
         "subject": {
           "reference": "Patient/aicare-wagner"
         },
-        "effectiveDateTime": "2026-11-02T12:21:01.570Z",
+        "effectiveDateTime": "2026-11-02T18:03:26.505Z",
         "valueQuantity": {
           "value": 2.9,
           "unit": "mg/dl"
@@ -1387,7 +1387,7 @@
         "subject": {
           "reference": "Patient/aicare-wagner"
         },
-        "effectiveDateTime": "2026-11-02T12:21:01.570Z",
+        "effectiveDateTime": "2026-11-02T18:03:26.505Z",
         "valueQuantity": {
           "value": 5.1,
           "unit": "mmol/l"
@@ -1632,7 +1632,7 @@
         "subject": {
           "reference": "Patient/aicare-mueller-2"
         },
-        "effectiveDateTime": "2026-10-09T12:21:01.570Z",
+        "effectiveDateTime": "2026-10-09T18:03:26.505Z",
         "valueQuantity": {
           "value": 7.2,
           "unit": "%"
