@@ -1,5 +1,0 @@
-# Geheimnisse und lokaler Zustand: nie versionieren
-sms-proxy.env
-voice.env
-.sms-counter.json
-sms-recipients.json
