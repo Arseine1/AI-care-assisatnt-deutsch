@@ -72,7 +72,7 @@ Git, Node.js LTS, Docker Desktop (mit Docker Compose).
 
 ## Vollständige Inbetriebnahme (leerer Stack)
 
-**Geführte Installation mit einem Befehl: `node scripts/installer.mjs --modeles`**, danach `node scripts/installer.mjs --verifier`. Anleitung für einen anderen Rechner, Dauer der Tests und Fehlerbehebung: [docs/INSTALLATION.md](docs/INSTALLATION.md). Die manuellen Schritte unten tun dasselbe.
+**Installation mit einem Befehl, ohne Fragen und ohne einzugebenden Schlüssel: `node scripts/installer.mjs`** (unter Windows: Doppelklick auf `INSTALLER.cmd`). Eine `.env.prototype` (Schlüssel und PINs NUR ZUM TESTEN) wird nach `.env` kopiert, fehlende Ollama-Modelle werden geladen. Danach `node scripts/installer.mjs --verifier`. Anleitung für einen anderen Rechner, Dauer der Tests und Fehlerbehebung: [docs/INSTALLATION.md](docs/INSTALLATION.md). Die manuellen Schritte unten tun dasselbe.
 
 In dieser Reihenfolge, vom Projektstamm aus. Auf einem Rechner mit 8 GB etwa 25 Minuten einplanen (der Import der Workflows ist langsam).
 

@@ -82,3 +82,7 @@ Das neue Konto funktioniert sofort, ohne n8n oder die Oberfläche neu zu starten
 node tests/securite.test.mjs        # Struktur, Sitzung, PIN, Signatur, kein Secret im Repository (außerhalb von n8n)
 node tests/securite-live.mjs        # gegen n8n: Ablehnung ohne Schlüssel, ohne Sitzung, mit falscher Sitzung, Sperrung, CORS, Signatur
 ```
+
+## Ausnahme des Prototyps: .env.prototype
+
+Das Repository enthält absichtlich `.env.prototype`: die Schlüssel, Passwörter und PINs der TESTKONTEN dieses Prototyps, einschließlich des TTN-Schlüssels, damit die Installation mit einem einzigen Befehl und ohne jede Eingabe auskommt. Die Daten sind fiktiv, die Konten dienen nur Versuchen. **Das Repository ist öffentlich: Jeder kann diese Werte lesen.** Für einen echten Einsatz niemals beibehalten: die Datei aus dem Repository und seiner Historie entfernen, den TTN-Schlüssel neu erzeugen und `node scripts/generer-secrets.mjs` zufällige Geheimnisse erstellen lassen. Der Test `tests/securite.test.mjs` nimmt nur diese eine Datei von der Suche nach Geheimnissen aus.

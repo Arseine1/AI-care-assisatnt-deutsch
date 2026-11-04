@@ -29,25 +29,25 @@ Dann in einem Terminal: `wsl --shutdown`, und Docker Desktop neu starten. Nicht 
 ## 2. Installation mit einem Befehl
 
 ```bash
-git clone https://github.com/Arseine1/IA-care-assistant
+git clone https://github.com/Arseine1/AI-care-assisatnt-deutsch
 ```
 ```bash
-cd IA-care-assistant
+cd AI-care-assisatnt-deutsch
 ```
 ```bash
-node scripts/installer.mjs --modeles
+node scripts/installer.mjs
 ```
 
-`--modeles` erlaubt den Download der fehlenden Ollama-Modelle: `llama3.2` (2,0 GB) und `nomic-embed-text` (0,3 GB) aus dem offiziellen Ollama-Register. Ohne diese Option hält das Skript bei Schritt 4 an und listet auf, was fehlt. Mit `--pilote` wird zusätzlich `qwen2.5:7b` (4,7 GB) heruntergeladen, das Modell, das den Agenten der Seite Rentenbeiträge steuert.
+**Es werden keine Fragen gestellt, und es ist kein Schlüssel einzugeben**: In Schritt 2 wird die im Repository mitgelieferte Datei `.env.prototype` (Schlüssel, Passwörter und PINs **nur zum Testen**) nach `.env` kopiert, und fehlende Ollama-Modelle werden automatisch aus dem offiziellen Ollama-Register geladen: `llama3.2` (2,0 GB), `nomic-embed-text` (0,3 GB) und `qwen2.5:7b` (4,7 GB, das Modell, das den Agenten der Seite Rentenbeiträge steuert). Unter Windows genügt auch ein Doppelklick auf `INSTALLER.cmd`. Optionen: `--sans-pilote` (ohne `qwen2.5:7b`), `--sans-modeles` (nichts herunterladen: Das Skript hält in Schritt 4 an und listet auf, was fehlt). Die Datei enthält auch den TTN-Schlüssel des Prototyps, die TTN-Anbindung ist also aktiv. **Nur Prototyp**: vor jedem echten Einsatz `.env.prototype` aus dem Repository (und seiner Historie) entfernen, den TTN-Schlüssel neu erzeugen und das Installationsskript zufällige Geheimnisse erstellen lassen.
 
 Dauer: **30 bis 45 Minuten**, davon etwa 15 Minuten für den Import der n8n-Workflows und 5 bis 10 Minuten für die ePA-Mocks. Das Skript zeigt den Fortschritt an und zeigt niemals ein Passwort.
 
 | Schritt | Was geschieht |
 |---|---|
 | 1 | Prüfung von Node, Docker, Arbeitsspeicher |
-| 2 | Anlegen von `.env` und **aller** Secrets zufällig (PostgreSQL-Passwort, n8n-Schlüssel, Zugriffsschlüssel, PINs der Konten) |
+| 2 | Anlegen von `.env` aus `.env.prototype`; fehlende Werte werden zufällig erzeugt |
 | 3 | Start der Docker-Dienste und der ePA-Mocks; Warten, bis sie antworten |
-| 4 | Prüfung (und Download mit `--modeles`) der Ollama-Modelle |
+| 4 | Prüfung und Download der fehlenden Ollama-Modelle |
 | 5 | Laden der fiktiven Daten (PostgreSQL, FHIR, KIM-Postfach, ePA) und Anlegen der Qdrant-Collections |
 | 6 | Import und Veröffentlichung der n8n-Workflows (n8n startet neu) |
 | 7 | Anlegen der Konten der Pflegekräfte, Installation der Oberfläche, `VITE_MOCK=false` |

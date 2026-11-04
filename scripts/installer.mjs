@@ -2,8 +2,10 @@
 // Wiederholbar: Jeder Schritt prüft zuerst, ob er bereits erledigt ist. Es wird kein Geheimnis angezeigt.
 //
 // Aufruf: node scripts/installer.mjs                   vollständige Installation (etwa 30 bis 45 Minuten)
-//         node scripts/installer.mjs --modeles         + lädt fehlende Ollama-Modelle herunter (llama3.2 2,0 GB, nomic-embed-text 0,3 GB)
-//         node scripts/installer.mjs --modeles --pilote  + qwen2.5:7b (4,7 GB), Modell des Agenten „Rentenbeiträge“
+//                                                      OHNE JEDE FRAGE: .env.prototype wird nach .env kopiert, fehlende Ollama-Modelle werden geladen
+//                                                      (llama3.2 2,0 GB, nomic-embed-text 0,3 GB, qwen2.5:7b 4,7 GB)
+//         node scripts/installer.mjs --sans-pilote     ohne qwen2.5:7b (Agent „Rentenbeiträge“; spart 4,7 GB)
+//         node scripts/installer.mjs --sans-modeles    lädt nichts herunter: hält an und listet die fehlenden Modelle auf
 //         node scripts/installer.mjs --sans-epa        ohne die ePA-Mocks von gematik (spart ~1,5 GB Speicher, 5 Min.)
 //         node scripts/installer.mjs --depuis=6        setzt bei Schritt 6 fort (--jusqua=2: hält nach Schritt 2 an)
 //         node scripts/installer.mjs --verifier        ändert nichts: prüft die Dienste und startet die Tests ohne KI
@@ -96,8 +98,10 @@ async function etape1_prerequis() {
 async function etape2_secrets() {
   titre(2, 'Datei .env und Geheimnisse');
   if (!existsSync(join(racine, '.env'))) {
-    copyFileSync(join(racine, '.env.exemple'), join(racine, '.env'));
-    ok('.env aus .env.exemple erstellt');
+    // Prototyp: eine gebrauchsfertige .env (Schlüssel, Passwörter und PINs NUR ZUM TESTEN) liegt im Repository; sonst wird alles erzeugt
+    const prototyp = existsSync(join(racine, '.env.prototype'));
+    copyFileSync(join(racine, prototyp ? '.env.prototype' : '.env.exemple'), join(racine, '.env'));
+    ok(prototyp ? '.env aus .env.prototype erstellt (Test-Schlüssel und -PINs mitgeliefert, nichts einzugeben)' : '.env aus .env.exemple erstellt (Geheimnisse werden unten erzeugt)');
   } else ok('.env existiert bereits (beibehalten)');
   const r = lancer('node', ['scripts/generer-secrets.mjs']);
   if (r.status !== 0) arreter('Die Erzeugung der Geheimnisse ist fehlgeschlagen.', 'Docker muss laufen (die MQTT-Passwortdatei wird in einem Container erstellt).');
@@ -143,10 +147,11 @@ async function etape4_modeles() {
     arreter('Ollama antwortet nicht unter http://localhost:11434.', 'Ollama installieren (https://ollama.com/download) und starten.\nLinux: mit OLLAMA_HOST=0.0.0.0 starten, damit die Container es aufrufen können.\nDann mit --depuis=4 neu starten.');
   }
   ok(`Ollama antwortet (${liste.length} Modell(e): ${liste.join(', ') || 'keine'})`);
-  const voulus = MODELES.filter((m) => m.requis || option('pilote'));
+  // ohne Frage: fehlende Modelle werden automatisch geladen (offizielles Ollama-Register); --sans-modeles / --sans-pilote zum Verzichten
+  const voulus = MODELES.filter((m) => m.requis || !option('sans-pilote'));
   const manquants = voulus.filter((m) => !aLeModele(liste, m.nom));
-  if (manquants.length && !option('modeles')) {
-    arreter(`Fehlende(s) Modell(e): ${manquants.map((m) => `${m.nom} (${m.taille})`).join(', ')}.`, 'Herunterladen: mit --modeles neu starten (--pilote für qwen2.5:7b hinzufügen) oder von Hand:\n' + manquants.map((m) => `ollama pull ${m.nom}`).join('\n'));
+  if (manquants.length && option('sans-modeles')) {
+    arreter(`Fehlende(s) Modell(e): ${manquants.map((m) => `${m.nom} (${m.taille})`).join(', ')}.`, 'Von Hand herunterladen:\n' + manquants.map((m) => `ollama pull ${m.nom}`).join('\n'));
   }
   for (const m of manquants) {
     info(`Download von ${m.nom} (${m.taille}, aus der offiziellen Ollama-Registry)…`);

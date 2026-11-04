@@ -241,7 +241,8 @@ test('GEHEIMNISSE: kein Schlüssel, kein Passwort aus .env erscheint in einer Da
   assert.ok(secrets.length >= 6);
   const git = spawnSync('git', ['ls-files', '-co', '--exclude-standard'], { cwd: racine, encoding: 'utf8' });
   assert.equal(git.status, 0, 'git ls-files ist fehlgeschlagen');
-  const fichiers = git.stdout.split('\n').filter((f) => f && !/\.(pdf|png|jpe?g|ico|woff2?)$/i.test(f) && existsSync(join(racine, f)));
+  // bewusste Ausnahme des PROTOTYPS: .env.prototype liefert absichtlich Test-Schlüssel und -PINs mit (siehe docs/securite.md); vor jedem echten Einsatz löschen
+  const fichiers = git.stdout.split('\n').filter((f) => f && f !== '.env.prototype' && !/\.(pdf|png|jpe?g|ico|woff2?)$/i.test(f) && existsSync(join(racine, f)));
   assert.ok(fichiers.length > 100);
   for (const f of fichiers) {
     const contenu = readFileSync(join(racine, f), 'utf8');
